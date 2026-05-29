@@ -1,0 +1,286 @@
+:root {
+    --bg-start: #081225;
+    --bg-end: #0f172a;
+    --accent: #06b6d4;
+    --accent-600: #0891b2;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --surface: rgba(15,23,42,.92);
+    --surface-light: rgba(255,255,255,.03);
+    --border: rgba(255,255,255,.08);
+}
+
+html,
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+}
+
+/* -------------------------------------------------
+   LAYOUT
+------------------------------------------------- */
+
+.page {
+    display: flex;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1 1 auto;
+    padding: 2rem;
+}
+
+.content {
+    padding-top: 1rem;
+}
+
+/* -------------------------------------------------
+   SIDEBAR
+------------------------------------------------- */
+
+.sidebar {
+    width: 220px;
+    background: linear-gradient( 180deg, var(--bg-start) 0%, var(--bg-end) 100% );
+    padding: 1.5rem .75rem;
+    box-shadow: 2px 0 20px rgba(2,6,23,.60);
+}
+
+    .sidebar .nav-link {
+        color: rgba(255,255,255,.92);
+        padding: .75rem 1rem;
+        border-radius: 10px;
+        display: block;
+        margin: .25rem 0;
+        transition: .2s ease;
+    }
+
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,.05);
+        }
+
+        .sidebar .nav-link.active {
+            color: #d9fbff;
+            background: linear-gradient( 90deg, rgba(6,182,212,.12), rgba(6,182,212,.05) );
+            box-shadow: inset 0 0 12px rgba(6,182,212,.06);
+        }
+
+/* -------------------------------------------------
+   PANEL CS2
+------------------------------------------------- */
+
+.card {
+    max-width: 900px;
+    margin: 2rem auto;
+    border: 0;
+    border-radius: 20px;
+    background: var(--surface);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 40px rgba(0,0,0,.35), 0 0 30px rgba(6,182,212,.08);
+    overflow: hidden;
+}
+
+.card-header {
+    background: var(--surface-light);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+}
+
+    .card-header h3,
+    .card-header h5 {
+        color: white;
+        margin: 0;
+        font-weight: 700;
+    }
+
+.card-body {
+    padding: 2rem;
+    color: var(--text);
+}
+
+/* -------------------------------------------------
+   ALERTS
+------------------------------------------------- */
+
+.alert {
+    border: 0;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+}
+
+.alert-success {
+    background: rgba(25,135,84,.15);
+    color: #7ee7a8;
+}
+
+.alert-danger {
+    background: rgba(220,53,69,.15);
+    color: #ff9aa5;
+}
+
+.alert-info {
+    background: rgba(13,202,240,.12);
+    color: #9de8ff;
+}
+
+/* -------------------------------------------------
+   BUTTONS
+------------------------------------------------- */
+
+.btn {
+    height: 52px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+    .btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+
+    .btn:disabled {
+        opacity: .65;
+    }
+
+.btn-success {
+    background: #16a34a;
+    border-color: #16a34a;
+}
+
+    .btn-success:hover {
+        background: #15803d;
+        border-color: #15803d;
+    }
+
+.btn-warning {
+    background: #d97706;
+    border-color: #d97706;
+    color: white;
+}
+
+    .btn-warning:hover {
+        background: #b45309;
+        border-color: #b45309;
+        color: white;
+    }
+
+.btn-danger {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+    .btn-danger:hover {
+        background: #b91c1c;
+        border-color: #b91c1c;
+    }
+
+.btn-secondary {
+    background: #334155;
+    border-color: #334155;
+}
+
+    .btn-secondary:hover {
+        background: #475569;
+        border-color: #475569;
+    }
+
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent-600);
+}
+
+    .btn-primary:hover {
+        background: var(--accent-600);
+        border-color: var(--accent-600);
+    }
+
+/* -------------------------------------------------
+   FORMS
+------------------------------------------------- */
+
+.form-control:focus,
+.form-check-input:focus,
+.btn:focus,
+.btn-link.nav-link:focus {
+    box-shadow: 0 0 0 .15rem rgba(255,255,255,.15), 0 0 0 .30rem rgba(6,182,212,.35);
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid #e50000;
+}
+
+.validation-message {
+    color: #e50000;
+}
+
+/* -------------------------------------------------
+   SPINNER
+------------------------------------------------- */
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* -------------------------------------------------
+   BLAZOR ERROR
+------------------------------------------------- */
+
+.blazor-error-boundary {
+    background: #b32121;
+    color: white;
+    padding: 1rem 1rem 1rem 3.7rem;
+}
+
+    .blazor-error-boundary::after {
+        content: "An error has occurred.";
+    }
+
+/* -------------------------------------------------
+   CHECKBOX
+------------------------------------------------- */
+
+.darker-border-checkbox.form-check-input {
+    border-color: #929292;
+}
+
+/* -------------------------------------------------
+   FLOATING LABELS
+------------------------------------------------- */
+
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}
+
+/* -------------------------------------------------
+   RESPONSIVE
+------------------------------------------------- */
+
+@media (max-width: 992px) {
+
+    .sidebar {
+        display: none;
+    }
+
+    main {
+        padding: 1rem;
+    }
+
+    .card {
+        margin: 1rem;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+}
