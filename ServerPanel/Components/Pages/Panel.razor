@@ -178,6 +178,9 @@
                             <div class="col-md-6">
                                 <button class="btn btn-secondary w-100" @onclick="RefreshStatus" disabled="@ActionRunning">📡 Actualizar</button>
                             </div>
+                            <div class="col-md-12">
+                                <button class="btn btn-info w-100" @onclick="UpdateServer" disabled="@ActionRunning">⬆️ Actualizar Servidor</button>
+                            </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(StatusMessage))
                         {
@@ -311,5 +314,48 @@
             ActionRunning = false;
         }
     }
+
+private async Task UpdateServer()
+{
+    try
+    {
+        ActionRunning = true;
+
+        StatusMessage =
+            "Actualizando servidor...";
+
+        var result =
+            await Cs2.UpdateAsync();
+
+        await RefreshStatus();
+
+        if (result.AlreadyUpdated)
+        {
+            StatusMessage =
+                $"✅ El servidor ya estaba actualizado (Build {result.LocalBuild})";
+        }
+        else if (result.Updated)
+        {
+            StatusMessage =
+                $"⬆️ Actualizado de {result.LocalBuild} a {result.RemoteBuild}";
+        }
+        else
+        {
+            StatusMessage =
+                string.IsNullOrWhiteSpace(result.Output)
+                    ? "❌ No se pudo completar la actualización."
+                    : result.Output;
+        }
+    }
+    catch (Exception ex)
+    {
+        StatusMessage = ex.Message;
+    }
+    finally
+    {
+        ActionRunning = false;
+    }
+}
+
 
 }
