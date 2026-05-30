@@ -13,6 +13,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
+builder.Services.AddScoped<IPlayerService, PlayerService>();
+
 builder.Services
     .AddAuthentication("ServerPanel")
     .AddCookie("ServerPanel", options =>
@@ -22,6 +24,7 @@ builder.Services
         options.AccessDeniedPath = "/";
     });
 builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
