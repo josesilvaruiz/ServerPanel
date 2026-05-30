@@ -1,44 +1,34 @@
-﻿@page "/panel"
+﻿
+@page "/panel"
 @rendermode InteractiveServer
+
 @using ServerPanel.Contracts
+@using ServerPanel.Models
 @using Microsoft.AspNetCore.Authorization
+
 @attribute [Authorize]
 
 @inject ICs2ServerService Cs2
+@inject IServerQueryService QueryService
 
 <PageTitle>ServerPanel</PageTitle>
 
 <div class="container py-5">
-
     <div class="row justify-content-center">
-
-        <div class="col-xl-6 col-lg-8">
-
+        <div class="col-xl-8 col-lg-10">
             <div class="card border-0 shadow-lg">
-
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-
-                    <h3 class="mb-0">
-                        🎮 Servidor CS2
-                    </h3>
-
+                    <h3 class="mb-0">🎮 Servidor CS2</h3>
                     @if (IsRunning)
                     {
-                        <span class="badge bg-success fs-6">
-                            Online
-                        </span>
+                        <span class="badge bg-success fs-6">Online</span>
                     }
                     else
                     {
-                        <span class="badge bg-danger fs-6">
-                            Offline
-                        </span>
+                        <span class="badge bg-danger fs-6">Offline</span>
                     }
-
                 </div>
-
                 <div class="card-body p-4">
-
                     @if (Loading)
                     {
                         <div class="text-center py-5">
@@ -47,54 +37,121 @@
                     }
                     else
                     {
-                        <div class="alert @(IsRunning ? "alert-success" : "alert-danger")">
-                            <strong>Estado:</strong>
-                            @(IsRunning ? " Servidor operativo" : " Servidor detenido")
-                        </div>
+                        @if (ServerInfo is not null)
+{
+    <div class="mb-4">
 
-                        <div class="row g-3">
+        <h1 class="fw-bold text-white mb-1">
+            🎮 @ServerInfo.ServerName
+        </h1>
 
-                            <div class="col-md-6">
-                                <button class="btn btn-success w-100"
-                                        @onclick="StartServer"
-                                        disabled="@ActionRunning">
-                                    🚀 Iniciar
-                                </button>
-                            </div>
+        <p class="text-secondary mb-3">
+            @ServerInfo.Ip:@ServerInfo.Port
+        </p>
 
-                            <div class="col-md-6">
-                                <button class="btn btn-warning w-100"
-                                        @onclick="RestartServer"
-                                        disabled="@ActionRunning">
-                                    🔄 Reiniciar
-                                </button>
-                            </div>
+        <div class="d-flex flex-wrap gap-2">
 
-                            <div class="col-md-6">
-                                <button class="btn btn-danger w-100"
-                                        @onclick="StopServer"
-                                        disabled="@ActionRunning">
-                                    ⛔ Detener
-                                </button>
-                            </div>
+            <span class="badge bg-primary fs-6 px-3 py-2">
+                🗺️ @ServerInfo.Map
+            </span>
 
-                            <div class="col-md-6">
-                                <button class="btn btn-secondary w-100"
-                                        @onclick="RefreshStatus"
-                                        disabled="@ActionRunning">
-                                    📡 Actualizar
-                                </button>
-                            </div>
+            <span class="badge bg-success fs-6 px-3 py-2">
+                👥 @ServerInfo.Players/@ServerInfo.MaxPlayers
+            </span>
 
-                        </div>
+            <span class="badge bg-secondary fs-6 px-3 py-2">
+                🔖 v@(ServerInfo.Version)
+            </span>
 
-                        @if (!string.IsNullOrWhiteSpace(StatusMessage))
-                        {
-                            <div class="alert alert-info mt-4 mb-0">
-                                @StatusMessage
-                            </div>
-                        }
-                    }
+        </div>
+
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-header bg-dark text-white">
+
+            <h5 class="mb-0">
+                📊 Información del Servidor
+            </h5>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-6 mb-4">
+
+                    <div class="text-secondary small text-uppercase">
+                        Juego
+                    </div>
+
+                    <div class="fw-semibold fs-5">
+                        @ServerInfo.Game
+                    </div>
+
+                </div>
+
+                <div class="col-md-6 mb-4">
+
+                    <div class="text-secondary small text-uppercase">
+                        Mapa
+                    </div>
+
+                    <div class="fw-semibold fs-5">
+                        @ServerInfo.Map
+                    </div>
+
+                </div>
+
+                <div class="col-md-6 mb-4">
+
+                    <div class="text-secondary small text-uppercase">
+                        Jugadores
+                    </div>
+
+                    <div class="fw-semibold fs-5">
+                        @ServerInfo.Players / @ServerInfo.MaxPlayers
+                    </div>
+
+                </div>
+
+                <div class="col-md-6 mb-4">
+
+                    <div class="text-secondary small text-uppercase">
+                        Versión
+                    </div>
+
+                    <div class="fw-semibold fs-5">
+                        @ServerInfo.Version
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="text-secondary small text-uppercase">
+                        AppID
+                    </div>
+
+                    <div class="fw-semibold fs-5">
+                        @ServerInfo.AppId
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="text-secondary small text-uppercase">
+                        VAC
+                    </div>
+
+                    <div class="fw-semibold fs-5">
+                        @(ServerInfo.Vac == 1
+                            ? "🛡️ Activado"
+                            : "❌ Desactivado")
+                    </div>
 
                 </div>
 
@@ -103,7 +160,37 @@
         </div>
 
     </div>
-
+}
+                        <div class="alert @(IsRunning ? "alert-success" : "alert-danger")">
+                            <strong>Estado:</strong>
+                            @(IsRunning ? " Servidor operativo" : " Servidor detenido")
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <button class="btn btn-success w-100" @onclick="StartServer" disabled="@ActionRunning">🚀 Iniciar</button>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-warning w-100" @onclick="RestartServer" disabled="@ActionRunning">🔄 Reiniciar</button>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-danger w-100" @onclick="StopServer" disabled="@ActionRunning">⛔ Detener</button>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-secondary w-100" @onclick="RefreshStatus" disabled="@ActionRunning">📡 Actualizar</button>
+                            </div>
+                        </div>
+                        <div class="mt-4 d-grid">
+                            <a href="/server-info" class="btn btn-outline-dark">📊 Información avanzada</a>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                        {
+                            <div class="alert alert-info mt-4 mb-0">@StatusMessage</div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -112,6 +199,8 @@
     private bool ActionRunning = false;
 
     private bool IsRunning = false;
+
+    private ServerInfo? ServerInfo;
 
     private string StatusMessage = string.Empty;
 
@@ -128,11 +217,22 @@
 
             IsRunning = await Cs2.IsRunningAsync();
 
-            StatusMessage = $"Última actualización: {DateTime.Now:HH:mm:ss}";
+            if (IsRunning)
+            {
+                ServerInfo =
+                    await QueryService.GetServerInfoAsync();
+            }
+            else
+            {
+                ServerInfo = null;
+            }
+
+            StatusMessage =
+                $"Última actualización: {DateTime.Now:HH:mm:ss}";
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            StatusMessage = ex.ToString();
         }
         finally
         {
@@ -148,11 +248,12 @@
 
             await Cs2.StartAsync();
 
-            await Task.Delay(3000);
+            await Task.Delay(5000);
 
             await RefreshStatus();
 
-            StatusMessage = "Servidor iniciado correctamente.";
+            StatusMessage =
+                "Servidor iniciado correctamente.";
         }
         catch (Exception ex)
         {
@@ -176,7 +277,8 @@
 
             await RefreshStatus();
 
-            StatusMessage = "Servidor detenido correctamente.";
+            StatusMessage =
+                "Servidor detenido correctamente.";
         }
         catch (Exception ex)
         {
@@ -196,11 +298,12 @@
 
             await Cs2.RestartAsync();
 
-            await Task.Delay(5000);
+            await Task.Delay(8000);
 
             await RefreshStatus();
 
-            StatusMessage = "Servidor reiniciado correctamente.";
+            StatusMessage =
+                "Servidor reiniciado correctamente.";
         }
         catch (Exception ex)
         {
