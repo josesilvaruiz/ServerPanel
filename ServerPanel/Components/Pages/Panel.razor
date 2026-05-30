@@ -179,9 +179,6 @@
                                 <button class="btn btn-secondary w-100" @onclick="RefreshStatus" disabled="@ActionRunning">📡 Actualizar</button>
                             </div>
                         </div>
-                        <div class="mt-4 d-grid">
-                            <a href="/server-info" class="btn btn-outline-dark">📊 Información avanzada</a>
-                        </div>
                         @if (!string.IsNullOrWhiteSpace(StatusMessage))
                         {
                             <div class="alert alert-info mt-4 mb-0">@StatusMessage</div>
