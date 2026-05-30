@@ -1,0 +1,229 @@
+﻿@page "/players"
+@rendermode InteractiveServer
+
+@using ServerPanel.Models
+@using ServerPanel.Contracts
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+@inject IPlayerService PlayerService
+@inject ILogger<Players> Logger
+
+<PageTitle>Players</PageTitle>
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="mb-1">👥 Jugadores</h2>
+
+            <small class="text-muted">
+                Jugadores actualmente conectados
+            </small>
+        </div>
+
+        <button class="btn btn-primary"
+                @onclick="LoadPlayers">
+            🔄 Actualizar
+        </button>
+
+    </div>
+
+    <div class="alert alert-secondary mb-3">
+        Total Players: @players.Count
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+    {
+        <div class="alert alert-info">
+            @StatusMessage
+        </div>
+    }
+
+    @if (Loading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border"></div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+
+            <div class="card-body">
+
+                @if (!players.Any())
+                {
+                    <div class="alert alert-warning mb-0">
+                        No hay jugadores conectados.
+                    </div>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>SteamID</th>
+                                <th>Ping</th>
+                                <th>Tipo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            @foreach (var player in players)
+                            {
+                                <tr>
+
+                                    <td>@player.Name</td>
+
+                                    <td>@player.SteamId</td>
+
+                                    <td>@player.Ping</td>
+
+                                    <td>
+                                        @if (player.IsBot)
+                                        {
+                                            <span class="badge bg-secondary">
+                                                Bot
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">
+                                                Humano
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+
+                                        @if (!player.IsBot)
+                                        {
+                                            <button class="btn btn-sm btn-danger me-1"
+                                                    @onclick="() => KickPlayer(player)">
+                                                Kick
+                                            </button>
+
+                                            <button class="btn btn-sm btn-warning me-1"
+                                                    disabled>
+                                                Mute
+                                            </button>
+
+                                            <button class="btn btn-sm btn-secondary me-1"
+                                                    disabled>
+                                                Gag
+                                            </button>
+
+                                            <button class="btn btn-sm btn-dark"
+                                                    disabled>
+                                                Ban
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+                }
+
+            </div>
+
+        </div>
+    }
+
+</div>
+
+@code {
+
+    private bool Loading = true;
+
+    private string StatusMessage = string.Empty;
+
+    private List<PlayerInfo> players = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation(
+            "Players page initialized");
+
+        await LoadPlayers();
+    }
+
+    private async Task LoadPlayers()
+    {
+        try
+        {
+            Logger.LogInformation(
+                "Loading players...");
+
+            Loading = true;
+
+            players =
+                await PlayerService.GetPlayersAsync();
+
+            Logger.LogInformation(
+                "Players loaded: {Count}",
+                players.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Error loading players");
+
+            StatusMessage = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task KickPlayer(
+        PlayerInfo player)
+    {
+        try
+        {
+            StatusMessage =
+                $"Expulsando a {player.Name}...";
+
+            await PlayerService.KickPlayerAsync(
+                player.Name);
+
+            await Task.Delay(1000);
+
+            await LoadPlayers();
+
+            StatusMessage =
+                $"{player.Name} expulsado correctamente.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Error expulsando jugador");
+
+            StatusMessage =
+                ex.Message;
+        }
+    }
+
+}

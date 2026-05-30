@@ -188,7 +188,7 @@ public class ServerQueryService : IServerQueryService
         }
     }
 
-    private static void ParseInfoResponse(
+    private void ParseInfoResponse(
         BinaryReader reader,
         ServerInfo info)
     {
@@ -210,10 +210,10 @@ public class ServerQueryService : IServerQueryService
         info.AppId =
             reader.ReadUInt16();
 
-        info.Players =
+        var players =
             reader.ReadByte();
 
-        info.MaxPlayers =
+        var maxPlayers =
             reader.ReadByte();
 
         info.Bots =
@@ -234,7 +234,30 @@ public class ServerQueryService : IServerQueryService
         info.Version =
             ReadNullTerminated(reader);
 
+        info.Players = players;
+        info.MaxPlayers = maxPlayers;
+
         info.IsOnline = true;
+
+        _logger.LogInformation(
+            "A2S ServerName={ServerName}",
+            info.ServerName);
+
+        _logger.LogInformation(
+            "A2S Map={Map}",
+            info.Map);
+
+        _logger.LogInformation(
+            "A2S Players={Players}",
+            info.Players);
+
+        _logger.LogInformation(
+            "A2S MaxPlayers={MaxPlayers}",
+            info.MaxPlayers);
+
+        _logger.LogInformation(
+            "A2S Version={Version}",
+            info.Version);
     }
 
     private static string ReadNullTerminated(
