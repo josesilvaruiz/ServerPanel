@@ -79,7 +79,7 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            const string command = "pkill -f cs2";
+            const string command = "sudo -u steam tmux kill-session -t cs2";
 
             _logger.LogInformation(
                 "Deteniendo servidor CS2");
