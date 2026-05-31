@@ -244,8 +244,34 @@ public class PlayerService : IPlayerService
         await _ssh.ExecuteAsync(command);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    /// <summary>Escapes double-quotes inside shell arguments.</summary>
-    private static string EscapeArg(string value) =>
-        value.Replace("\"", "\\\"");
+    // ── Unban ───────────────────────────────────────────────────────────────
+    public async Task UnbanPlayerAsync(string player)
+    {
+        var safePlayer = player.Replace("'", "''");
+
+        string whereClause;
+
+        // SteamID64 = 17 dígitos
+        if (System.Text.RegularExpressions.Regex.IsMatch(player, @"^\d{17}$"))
+        {
+            whereClause = $"player_steamid = '{player}'";
+        }
+        else
+        {
+            whereClause = $"player_name = '{safePlayer}'";
+        }
+
+        var deleteCommand =
+            "sqlite3 /home/steam/cs2/game/csgo/addons/counterstrikesharp/plugins/CS2-SimpleAdmin/cs2-simpleadmin.sqlite " +
+            $"\"DELETE FROM sa_bans WHERE {whereClause};\"";
+
+        await _ssh.ExecuteAsync(deleteCommand);
+
+        await Task.Delay(1000);
+
+        var reloadCommand =
+            "su - steam -c \"tmux send-keys -t cs2 'css_plugins reload 1' Enter\"";
+
+        await _ssh.ExecuteAsync(reloadCommand);
+    }
 }

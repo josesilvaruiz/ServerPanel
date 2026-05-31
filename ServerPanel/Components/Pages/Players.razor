@@ -188,6 +188,15 @@
                                         </svg>
                                         Ban
                                     </button>
+                                    <button class="pl-action-btn pl-action-unban"
+                                            @onclick='() => OpenReasonModal(player, "unban")'
+                                            title="Unban">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                            <circle cx="12" cy="12" r="10" stroke="#22c55e" stroke-width="2" fill="none" />
+                                            <line x1="8" y1="16" x2="16" y2="8" stroke="#22c55e" stroke-width="2" />
+                                        </svg>
+                                        Unban
+                                    </button>
                                 }
                                 else
                                 {
@@ -782,6 +791,10 @@
                 case "ban":
                     await PlayerService.BanPlayerAsync(SelectedActionPlayer.Name, ReasonDuration, ReasonText);
                     Model.StatusMessage = $"{SelectedActionPlayer.Name} baneado correctamente.";
+                    break;
+                case "unban":
+                    await PlayerService.UnbanPlayerAsync(SelectedActionPlayer.Name);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} desbaneado correctamente.";
                     break;
             }
             await LoadPlayers();

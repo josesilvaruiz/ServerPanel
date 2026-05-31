@@ -1,0 +1,74 @@
+@page "/admin"
+@rendermode InteractiveServer
+
+@using ServerPanel.Contracts
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+@inject IPlayerService PlayerService
+@inject ILogger<Players> Logger
+@inject IJSRuntime JS
+
+<h3>Quitar Ban a Jugador</h3>
+
+<div class="unban-form">
+
+    <label for="playerName">Nombre del jugador:</label>
+    <input id="playerName" class="form-control" @bind="PlayerName" placeholder="Nombre exacto o SteamID" />
+
+    <button class="btn btn-success mt-2" @onclick="UnbanPlayer" disabled="@string.IsNullOrWhiteSpace(PlayerName)">Quitar Ban</button>
+
+    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+    {
+        <div class="alert alert-info mt-2">@StatusMessage</div>
+    }
+</div>
+
+@code {
+    private string PlayerName = string.Empty;
+    private string StatusMessage = string.Empty;
+
+    private async Task UnbanPlayer()
+    {
+        try
+        {
+            await PlayerService.UnbanPlayerAsync(PlayerName);
+            StatusMessage = $"Ban quitado a {PlayerName}.";
+            PlayerName = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al quitar ban");
+            StatusMessage = ex.Message;
+        }
+    }
+}
+
+<style>
+.unban-form {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #181c26;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #0002;
+    color: white;
+}
+.form-control {
+    margin-bottom: 1rem;
+    background: #232b36;
+    color: white;
+    border: 1px solid #3b82f6;
+    border-radius: 7px;
+    padding: .5rem;
+}
+.btn-success {
+    background: #22c55e;
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 7px;
+    padding: .5rem 1.2rem;
+}
+</style>
