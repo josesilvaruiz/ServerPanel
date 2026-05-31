@@ -11,4 +11,6 @@ public interface ICs2ServerService
     Task RestartAsync();
 
     Task<UpdateResult> UpdateAsync();
+
+    Task<string> ExecuteConsoleCommandAsync(string command);
 }

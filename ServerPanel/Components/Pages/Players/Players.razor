@@ -760,6 +760,16 @@
             action.Equals("gag", StringComparison.OrdinalIgnoreCase) ||
             action.Equals("ban", StringComparison.OrdinalIgnoreCase);
 
+        // Solo mostrar motivo para kick y ban
+        ReasonText = string.Empty;
+        if (action.Equals("kick", StringComparison.OrdinalIgnoreCase) || action.Equals("ban", StringComparison.OrdinalIgnoreCase))
+        {
+            ReasonText = string.Empty;
+        }
+        else
+        {
+            ReasonText = "";
+        }
         ReasonDuration = 30;
         ShowReasonModal = true;
     }
@@ -781,11 +791,11 @@
                     Model.StatusMessage = $"{SelectedActionPlayer.Name} expulsado correctamente.";
                     break;
                 case "mute":
-                    await PlayerService.MutePlayerAsync(SelectedActionPlayer.Name, ReasonText);
+                    await PlayerService.MutePlayerAsync(SelectedActionPlayer.Name, ReasonDuration);
                     Model.StatusMessage = $"{SelectedActionPlayer.Name} muteado correctamente.";
                     break;
                 case "gag":
-                    await PlayerService.GagPlayerAsync(SelectedActionPlayer.Name, ReasonText);
+                    await PlayerService.GagPlayerAsync(SelectedActionPlayer.Name, ReasonDuration);
                     Model.StatusMessage = $"{SelectedActionPlayer.Name} gaggeado correctamente.";
                     break;
                 case "ban":

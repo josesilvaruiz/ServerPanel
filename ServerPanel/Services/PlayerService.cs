@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
 
@@ -205,32 +207,30 @@ public class PlayerService : IPlayerService
 
 
     // ── Mute ──────────────────────────────────────────────────────────────────
-    public async Task MutePlayerAsync(string playerName, string reason)
+    public async Task MutePlayerAsync(string playerName, int minutes)
     {
-        reason = string.IsNullOrWhiteSpace(reason) ? "Muted by admin" : reason;
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_mute \"{playerName}\" \"{reason}\"' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_mute \"{playerName}\" {minutes}' Enter\"";
 
         _logger.LogInformation(
-            "Mute jugador: {Player}, Motivo: {Reason}",
+            "Mute jugador: {Player}, Minutos: {Minutes}",
             playerName,
-            reason);
+            minutes);
 
         await _ssh.ExecuteAsync(command);
     }
 
 
     // ── Gag ───────────────────────────────────────────────────────────────────
-    public async Task GagPlayerAsync(string playerName, string reason)
+    public async Task GagPlayerAsync(string playerName, int minutes)
     {
-        reason = string.IsNullOrWhiteSpace(reason) ? "Gagged by admin" : reason;
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_gag \"{playerName}\" \"{reason}\"' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_gag \"{playerName}\" {minutes}' Enter\"";
 
         _logger.LogInformation(
-            "Gag jugador: {Player}, Motivo: {Reason}",
+            "Gag jugador: {Player}, Minutos: {Minutes}",
             playerName,
-            reason);
+            minutes);
 
         await _ssh.ExecuteAsync(command);
     }
@@ -273,5 +273,112 @@ public class PlayerService : IPlayerService
             "su - steam -c \"tmux send-keys -t cs2 'css_plugins reload 1' Enter\"";
 
         await _ssh.ExecuteAsync(reloadCommand);
+    }
+
+    // ── Permisos ─────────────────────────────────────────────────────────────
+
+    private const string AdminsJsonPath =
+        "/home/steam/cs2/game/csgo/addons/counterstrikesharp/configs/admins.json";
+
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        WriteIndented = true,
+    };
+
+    private async Task<Dictionary<string, PermissionEntry>> ReadAdminsAsync()
+    {
+        var raw = await _ssh.ExecuteAsync($"cat {AdminsJsonPath} 2>/dev/null || echo {{}}");
+        var trimmed = raw.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || trimmed == "{}")
+            return new Dictionary<string, PermissionEntry>();
+
+        return JsonSerializer.Deserialize<Dictionary<string, PermissionEntry>>(trimmed)
+               ?? new Dictionary<string, PermissionEntry>();
+    }
+
+    private async Task WriteAdminsAsync(Dictionary<string, PermissionEntry> admins)
+    {
+        var json = JsonSerializer.Serialize(admins, JsonOpts);
+        var b64  = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+
+        await _ssh.ExecuteAsync(
+            $"printf '%s' '{b64}' | base64 -d > {AdminsJsonPath}");
+
+        await _ssh.ExecuteAsync(
+            "su - steam -c \"tmux send-keys -t cs2 'css_reladmins' Enter\"");
+
+        _logger.LogInformation("admins.json actualizado y recargado");
+    }
+
+    public async Task SetPermissionsAsync(string playerName, string steamId, string permission)
+    {
+        var admins = await ReadAdminsAsync();
+
+        // Busca entrada existente por identity (SteamID)
+        var existing = admins.FirstOrDefault(kv =>
+            kv.Value.Identity.Equals(steamId, StringComparison.OrdinalIgnoreCase));
+
+        PermissionEntry entry;
+        string key;
+
+        if (existing.Key is not null)
+        {
+            key   = existing.Key;
+            entry = existing.Value;
+        }
+        else
+        {
+            key   = playerName;
+            entry = new PermissionEntry { Identity = steamId, Immunity = 0 };
+            admins[key] = entry;
+        }
+
+        var newFlags = permission
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var flag in newFlags)
+            if (!entry.Flags.Contains(flag))
+                entry.Flags.Add(flag);
+
+        _logger.LogInformation(
+            "SetPermissions: {Player} ({SteamId}) flags={Flags}",
+            playerName, steamId, string.Join(", ", entry.Flags));
+
+        await WriteAdminsAsync(admins);
+    }
+
+    public async Task<PermissionEntry?> GetPermissionsAsync(string player)
+    {
+        var admins = await ReadAdminsAsync();
+        var existing = admins.FirstOrDefault(kv =>
+            kv.Key.Equals(player, StringComparison.OrdinalIgnoreCase) ||
+            kv.Value.Identity.Equals(player, StringComparison.OrdinalIgnoreCase));
+        return existing.Key is not null ? existing.Value : null;
+    }
+
+    public async Task RemovePermissionAsync(string player, string flag)
+    {
+        var admins = await ReadAdminsAsync();
+
+        var existing = admins.FirstOrDefault(kv =>
+            kv.Key.Equals(player, StringComparison.OrdinalIgnoreCase) ||
+            kv.Value.Identity.Equals(player, StringComparison.OrdinalIgnoreCase));
+
+        if (existing.Key is null)
+        {
+            _logger.LogWarning("RemovePermission: jugador '{Player}' no encontrado en admins.json", player);
+            return;
+        }
+
+        existing.Value.Flags.Remove(flag);
+
+        // Si no quedan flags, eliminar la entrada por completo
+        if (existing.Value.Flags.Count == 0)
+            admins.Remove(existing.Key);
+
+        _logger.LogInformation(
+            "RemovePermission: {Player} flag={Flag} eliminado", player, flag);
+
+        await WriteAdminsAsync(admins);
     }
 }
