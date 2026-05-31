@@ -23,9 +23,10 @@ public class PlayerService : IPlayerService
 
         try
         {
-            var output = await _ssh.ExecuteAsync("su - steam -c \"tmux send-keys -t cs2 'status' Enter; sleep 1; tmux capture-pane -t cs2 -p\"");
+            var output = await _ssh.ExecuteAsync(
+                "su - steam -c \"tmux send-keys -t cs2 'status' Enter; sleep 1; tmux capture-pane -t cs2 -p\"");
 
-            _logger.LogWarning(
+            _logger.LogInformation(
                 "STATUS RAW:\n{Output}",
                 output);
 
@@ -37,39 +38,144 @@ public class PlayerService : IPlayerService
             {
                 var trimmed = line.Trim();
 
-                var match = Regex.Match(
-                    trimmed,
-                    @"'([^']+)'");
+                var nameMatch =
+                    Regex.Match(
+                        trimmed,
+                        @"'([^']+)'");
 
-                if (!match.Success)
+                if (!nameMatch.Success)
                     continue;
 
                 var name =
-                    match.Groups[1].Value;
+                    nameMatch.Groups[1].Value;
 
                 var isBot =
                     trimmed.Contains(
                         "BOT",
                         StringComparison.OrdinalIgnoreCase);
 
+                int userId = 0;
+                int ping = 0;
+
+                if (!isBot)
+                {
+                    var statusMatch =
+                        Regex.Match(
+                            trimmed,
+                            @"^\s*(\d+)\s+\S+\s+(\d+)");
+
+                    if (statusMatch.Success)
+                    {
+                        int.TryParse(
+                            statusMatch.Groups[1].Value,
+                            out userId);
+
+                        int.TryParse(
+                            statusMatch.Groups[2].Value,
+                            out ping);
+                    }
+                }
+
                 players.Add(new PlayerInfo
                 {
+                    UserId = userId,
                     Name = name,
-                    SteamId = isBot
-                        ? "BOT"
-                        : "UNKNOWN",
-                    Ping = 0,
-                    IsBot = isBot
+                    Ping = ping,
+                    IsBot = isBot,
+                    SteamId = isBot ? "BOT" : "",
+                    Clan = "",
+                    Groups = "",
+                    CommunityUrl = ""
                 });
-
-                _logger.LogInformation(
-                    "Player encontrado => {Name}",
-                    name);
             }
 
             _logger.LogInformation(
                 "Players encontrados: {Count}",
                 players.Count);
+
+            var humanPlayers =
+                players.Where(x => !x.IsBot)
+                       .ToList();
+
+            if (humanPlayers.Count == 0)
+            {
+                _logger.LogInformation(
+                    "No hay jugadores humanos. Saltando css_who.");
+
+                return players;
+            }
+
+            foreach (var player in humanPlayers)
+            {
+                try
+                {
+                    var whoOutput =
+                        await _ssh.ExecuteAsync(
+                            $"su - steam -c \"tmux send-keys -t cs2 'css_who #{player.UserId}' Enter; sleep 1; tmux capture-pane -t cs2 -p\"");
+
+                    var steam64Match =
+                        Regex.Match(
+                            whoOutput,
+                            @"SteamID64:\s*""([^""]+)""");
+
+                    var steam2Match =
+                        Regex.Match(
+                            whoOutput,
+                            @"SteamID2:\s*""([^""]+)""");
+
+                    var clanMatch =
+                        Regex.Match(
+                            whoOutput,
+                            @"Clan:\s*""([^""]*)""");
+
+                    var groupsMatch =
+                        Regex.Match(
+                            whoOutput,
+                            @"Groups\/Flags:\s*""([^""]*)""");
+
+                    var communityMatch =
+                        Regex.Match(
+                            whoOutput,
+                            @"Community link:\s*""([^""]*)""");
+
+                    if (steam64Match.Success)
+                    {
+                        player.SteamId =
+                            steam64Match.Groups[1].Value;
+                    }
+
+                    if (clanMatch.Success)
+                    {
+                        player.Clan =
+                            clanMatch.Groups[1].Value;
+                    }
+
+                    if (groupsMatch.Success)
+                    {
+                        player.Groups =
+                            groupsMatch.Groups[1].Value;
+                    }
+
+                    if (communityMatch.Success)
+                    {
+                        player.CommunityUrl =
+                            communityMatch.Groups[1].Value;
+                    }
+
+                    _logger.LogInformation(
+                        "WHO => UserId:{UserId} Name:{Name} Steam64:{Steam64}",
+                        player.UserId,
+                        player.Name,
+                        player.SteamId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Error obteniendo WHO de {Player}",
+                        player.Name);
+                }
+            }
 
             return players;
         }
@@ -83,7 +189,8 @@ public class PlayerService : IPlayerService
         }
     }
 
-    public async Task KickPlayerAsync(string playerName)
+    public async Task KickPlayerAsync(
+        string playerName)
     {
         var command =
             $"su - steam -c \"tmux send-keys -t cs2 'css_kick \\\"{playerName}\\\"' Enter\"";
@@ -94,5 +201,4 @@ public class PlayerService : IPlayerService
 
         await _ssh.ExecuteAsync(command);
     }
-
 }
