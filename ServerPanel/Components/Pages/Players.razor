@@ -151,13 +151,43 @@
                                             Steam
                                         </a>
                                     }
-                                    <button class="pl-action-btn pl-action-kick" @onclick="() => KickPlayer(player)" title="Kick">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21a9 9 0 0 0 0-18z" /></svg>
+                                    <button class="pl-action-btn pl-action-kick"
+                                            @onclick='() => OpenReasonModal(player, "kick")'
+                                            title="Kick">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                            <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21a9 9 0 0 0 0-18z" />
+                                        </svg>
                                         Kick
                                     </button>
-                                    <button class="pl-action-btn pl-action-disabled" disabled title="Mute">Mute</button>
-                                    <button class="pl-action-btn pl-action-disabled" disabled title="Gag">Gag</button>
-                                    <button class="pl-action-btn pl-action-disabled" disabled title="Ban">Ban</button>
+
+                                    <button class="pl-action-btn pl-action-mute"
+                                            @onclick='() => OpenReasonModal(player, "mute")'
+                                            title="Mute">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                            <path d="M16.5 12c0-2.485-2.015-4.5-4.5-4.5S7.5 9.515 7.5 12s2.015 4.5 4.5 4.5 4.5-2.015 4.5-4.5zm-4.5 3a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />
+                                        </svg>
+                                        Mute
+                                    </button>
+
+                                    <button class="pl-action-btn pl-action-gag"
+                                            @onclick='() => OpenReasonModal(player, "gag")'
+                                            title="Gag">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                            <circle cx="12" cy="12" r="10" stroke="#fbbf24" stroke-width="2" fill="none" />
+                                            <rect x="7" y="11" width="10" height="2" fill="#fbbf24" />
+                                        </svg>
+                                        Gag
+                                    </button>
+
+                                    <button class="pl-action-btn pl-action-ban"
+                                            @onclick='() => OpenReasonModal(player, "ban")'
+                                            title="Ban">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                            <circle cx="12" cy="12" r="10" stroke="red" stroke-width="2" fill="none" />
+                                            <line x1="8" y1="8" x2="16" y2="16" stroke="red" stroke-width="2" />
+                                        </svg>
+                                        Ban
+                                    </button>
                                 }
                                 else
                                 {
@@ -192,6 +222,8 @@
 </div>
 
 <PlayerProfileModal SelectedPlayer="SelectedPlayer" CloseProfile="EventCallback.Factory.Create(this, CloseProfile)" />
+
+<ReasonModal Show="@ShowReasonModal" Title="@ReasonTitle" Reason="@ReasonText" ShowDuration="@ShowReasonDuration" DurationMinutes="@ReasonDuration" OnConfirm="OnReasonConfirm" OnCancel="OnReasonCancel" />
 
 <style>
 
@@ -598,6 +630,36 @@
         color: #60a5fa !important;
     }
 
+    .pl-action-mute {
+        background: rgba(59,130,246,.1);
+        border-color: rgba(59,130,246,.25);
+        color: #60a5fa;
+    }
+
+        .pl-action-mute:hover {
+            background: rgba(59,130,246,.2);
+        }
+
+    .pl-action-gag {
+        background: rgba(245,158,11,.1);
+        border-color: rgba(245,158,11,.25);
+        color: #fbbf24;
+    }
+
+        .pl-action-gag:hover {
+            background: rgba(245,158,11,.2);
+        }
+
+    .pl-action-ban {
+        background: rgba(220,38,38,.12);
+        border-color: rgba(220,38,38,.3);
+        color: #ef4444;
+    }
+
+        .pl-action-ban:hover {
+            background: rgba(220,38,38,.22);
+        }
+
 </style>
 
 @code {
@@ -659,25 +721,93 @@
     private void PreviousPage() { if (Model.CurrentPage > 1) Model.CurrentPage--; }
     private void GoToPage(int page) { if (page >= 1 && page <= TotalPages) Model.CurrentPage = page; }
 
-    private async Task KickPlayer(PlayerInfo player)
-    {
-        try
-        {
-            Model.StatusMessage = $"Expulsando a {player.Name}...";
-            await PlayerService.KickPlayerAsync(player.Name);
-            await Task.Delay(1000);
-            await LoadPlayers();
-            Model.StatusMessage = $"{player.Name} expulsado correctamente.";
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error expulsando jugador");
-            Model.StatusMessage = ex.Message;
-        }
-    }
+
 
     private async Task CopyToClipboard(string text)
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    // Modal de razones
+    private bool ShowReasonModal;
+    private string ReasonTitle = string.Empty;
+    private string ReasonText = string.Empty;
+    private bool ShowReasonDuration;
+    private int ReasonDuration = 30;
+
+    private PlayerInfo? SelectedActionPlayer;
+    private string SelectedAction = string.Empty;
+
+    private void OpenReasonModal(PlayerInfo player, string action)
+    {
+        SelectedActionPlayer = player;
+        SelectedAction = action;
+
+        ReasonTitle = action.ToUpperInvariant();
+        ReasonText = string.Empty;
+
+        ShowReasonDuration =
+            action.Equals("mute", StringComparison.OrdinalIgnoreCase) ||
+            action.Equals("gag", StringComparison.OrdinalIgnoreCase) ||
+            action.Equals("ban", StringComparison.OrdinalIgnoreCase);
+
+        ReasonDuration = 30;
+        ShowReasonModal = true;
+    }
+
+    private async Task OnReasonConfirm()
+    {
+        if (SelectedActionPlayer == null)
+        {
+            ShowReasonModal = false;
+            return;
+        }
+
+        try
+        {
+            switch (SelectedAction.ToLowerInvariant())
+            {
+                case "kick":
+                    await PlayerService.KickPlayerAsync(SelectedActionPlayer.Name, ReasonText);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} expulsado correctamente.";
+                    break;
+                case "mute":
+                    await PlayerService.MutePlayerAsync(SelectedActionPlayer.Name, ReasonText);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} muteado correctamente.";
+                    break;
+                case "gag":
+                    await PlayerService.GagPlayerAsync(SelectedActionPlayer.Name, ReasonText);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} gaggeado correctamente.";
+                    break;
+                case "ban":
+                    await PlayerService.BanPlayerAsync(SelectedActionPlayer.Name, ReasonDuration, ReasonText);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} baneado correctamente.";
+                    break;
+            }
+            await LoadPlayers();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error ejecutando acción {SelectedAction}");
+            Model.StatusMessage = ex.Message;
+        }
+        finally
+        {
+            ShowReasonModal = false;
+            SelectedActionPlayer = null;
+            SelectedAction = string.Empty;
+            ReasonText = string.Empty;
+        }
+    }
+
+    private Task OnReasonCancel()
+    {
+        ShowReasonModal = false;
+
+        SelectedActionPlayer = null;
+        SelectedAction = string.Empty;
+        ReasonText = string.Empty;
+
+        return Task.CompletedTask;
     }
 }

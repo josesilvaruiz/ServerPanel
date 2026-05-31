@@ -189,16 +189,63 @@ public class PlayerService : IPlayerService
         }
     }
 
-    public async Task KickPlayerAsync(
-        string playerName)
+    // ── Kick ──────────────────────────────────────────────────────────────────
+    public async Task KickPlayerAsync(string playerName, string reason = "Kicked by admin")
     {
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_kick \\\"{playerName}\\\"' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_kick \\\"{playerName}\\\" \\\"{reason}\\\"' Enter\"";
 
         _logger.LogInformation(
-            "Kick jugador: {Player}",
-            playerName);
+            "Kick jugador: {Player}, Motivo: {Reason}",
+            playerName,
+            reason);
 
         await _ssh.ExecuteAsync(command);
     }
+
+
+    // ── Mute ──────────────────────────────────────────────────────────────────
+    public async Task MutePlayerAsync(string playerName, string reason)
+    {
+        reason = string.IsNullOrWhiteSpace(reason) ? "Muted by admin" : reason;
+        var command =
+            $"su - steam -c \"tmux send-keys -t cs2 'css_mute \"{playerName}\" \"{reason}\"' Enter\"";
+
+        _logger.LogInformation(
+            "Mute jugador: {Player}, Motivo: {Reason}",
+            playerName,
+            reason);
+
+        await _ssh.ExecuteAsync(command);
+    }
+
+
+    // ── Gag ───────────────────────────────────────────────────────────────────
+    public async Task GagPlayerAsync(string playerName, string reason)
+    {
+        reason = string.IsNullOrWhiteSpace(reason) ? "Gagged by admin" : reason;
+        var command =
+            $"su - steam -c \"tmux send-keys -t cs2 'css_gag \"{playerName}\" \"{reason}\"' Enter\"";
+
+        _logger.LogInformation(
+            "Gag jugador: {Player}, Motivo: {Reason}",
+            playerName,
+            reason);
+
+        await _ssh.ExecuteAsync(command);
+    }
+
+    // ── Ban ───────────────────────────────────────────────────────────────────
+    public async Task BanPlayerAsync(string playerName, int minutes, string reason = "Banned by admin")
+    {
+        var command =
+            $"su - steam -c \"tmux send-keys -t cs2 'css_ban \\\"{playerName}\\\" {minutes} \\\"{reason}\\\"' Enter\"";
+
+        await _ssh.ExecuteAsync(command);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    /// <summary>Escapes double-quotes inside shell arguments.</summary>
+    private static string EscapeArg(string value) =>
+        value.Replace("\"", "\\\"");
 }
