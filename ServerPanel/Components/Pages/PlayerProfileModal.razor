@@ -1,0 +1,564 @@
+@* PlayerProfileModal.razor *@
+@using ServerPanel.Models
+@inject IJSRuntime JS
+
+@if (SelectedPlayer != null)
+{
+    <div class="modal-backdrop show" @onclick="CloseProfile"></div>
+
+    <div class="modal d-block"
+         tabindex="-1"
+         @onclick="CloseProfile">
+
+        <div class="modal-dialog modal-dialog-centered profile-dialog"
+             @onclick:stopPropagation="true">
+
+            <div class="modal-content profile-modal-modern">
+
+                <button class="btn-close-modal" @onclick="CloseProfile">✕</button>
+
+           @*      {{!-- Header --}} *@
+                <div class="profile-header">
+
+                    <div class="profile-avatar-wrapper">
+                        <div class="profile-avatar profile-avatar-placeholder">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                            </svg>
+                        </div>
+                        @if (!SelectedPlayer.IsBot)
+                        {
+                            <span class="profile-online-dot"></span>
+                        }
+                    </div>
+
+                    <div class="profile-header-info">
+
+                        <div class="profile-player-name">@SelectedPlayer.Name</div>
+
+                        <div class="profile-player-steamid">
+                            <svg class="steam-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" />
+                            </svg>
+                            @SelectedPlayer.SteamId
+                            <button class="btn-copy" @onclick="() => CopyToClipboard(SelectedPlayer.SteamId)" title="Copiar SteamID">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="profile-badges">
+                            @if (SelectedPlayer.IsBot)
+                            {
+                                <span class="badge badge-bot">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7 14v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2H7M9 9a1 1 0 0 0 0 2 1 1 0 0 0 0-2m6 0a1 1 0 0 0 0 2 1 1 0 0 0 0-2z" /></svg>
+                                    BOT
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-human">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                                    HUMANO
+                                </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedPlayer.Groups))
+                            {
+                                <span class="badge badge-group">@SelectedPlayer.Groups</span>
+                            }
+                        </div>
+
+                    </div>
+
+                </div>
+
+                @* Stats *@
+                <div class="profile-body">
+
+                    <div class="profile-stats-grid">
+
+                        <div class="profile-stat-card">
+                            <div class="profile-stat-icon stat-icon-id">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 2.75c1.24 0 2.25 1.01 2.25 2.25s-1.01 2.25-2.25 2.25S9.75 10.24 9.75 9 10.76 6.75 12 6.75zM17 17H7v-.75c0-1.67 3.33-2.5 5-2.5s5 .83 5 2.5V17z" /></svg>
+                            </div>
+                            <div class="profile-stat-info">
+                                <div class="profile-stat-title">ID</div>
+                                <div class="profile-stat-value">@SelectedPlayer.UserId</div>
+                            </div>
+                        </div>
+
+                        <div class="profile-stat-card">
+                            <div class="profile-stat-icon stat-icon-ping">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            </div>
+                            <div class="profile-stat-info">
+                                <div class="profile-stat-title">PING</div>
+                                <div class="profile-stat-value">@SelectedPlayer.Ping <span class="profile-stat-unit">ms</span></div>
+                            </div>
+                        </div>
+
+                        <div class="profile-stat-card">
+                            <div class="profile-stat-icon stat-icon-type">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                            </div>
+                            <div class="profile-stat-info">
+                                <div class="profile-stat-title">TIPO</div>
+                                <div class="profile-stat-value">@(SelectedPlayer.IsBot ? "Bot" : "Humano")</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="profile-info-table">
+
+                        <div class="profile-info-row">
+                            <div class="profile-info-label">
+                                <span class="info-icon info-icon-group">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" /></svg>
+                                </span>
+                                GRUPO
+                            </div>
+                            <div class="profile-info-data">
+                                @if (!string.IsNullOrWhiteSpace(SelectedPlayer.Groups))
+                                {
+                                    <span>@SelectedPlayer.Groups</span>
+                                    <span class="badge badge-admin">Admin</span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="profile-info-row">
+                            <div class="profile-info-label">
+                                <span class="info-icon info-icon-clan">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" /></svg>
+                                </span>
+                                CLAN
+                            </div>
+                            <div class="profile-info-data">
+                                @(string.IsNullOrWhiteSpace(SelectedPlayer.Clan) ? "-" : SelectedPlayer.Clan)
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="profile-footer">
+
+                    @if (!string.IsNullOrWhiteSpace(SelectedPlayer.CommunityUrl))
+                    {
+                        <a href="@SelectedPlayer.CommunityUrl" target="_blank" class="btn btn-steam">
+                            <span class="btn-steam-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                    <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z" />
+                                </svg>
+                            </span>
+                            Ver perfil de Steam
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="margin-left:6px;opacity:.7"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        </a>
+                    }
+
+                    <button class="btn btn-secondary" @onclick="CloseProfile">Cerrar</button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+
+<style>
+
+    /* ── Modal shell ── */
+    .profile-modal-modern {
+        background: #0d1117;
+        border: 1px solid #1e2a3a;
+        border-radius: 16px;
+        color: white;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-dialog {
+        max-width: 900px;
+    }
+
+    /* ── Close button ── */
+    .btn-close-modal {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: #1e2a3a;
+        border: 1px solid #2d3f52;
+        color: #94a3b8;
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s, color .15s;
+        z-index: 10;
+    }
+
+        .btn-close-modal:hover {
+            background: #2d3f52;
+            color: white;
+        }
+
+    /* ── Header ── */
+    .profile-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.75rem;
+    }
+
+    /* Avatar */
+    .profile-avatar-wrapper {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .profile-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #2d3f52;
+    }
+
+    .profile-avatar-placeholder {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f3b8b 0%, #2563eb 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255,255,255,.7);
+        border: 3px solid #2d3f52;
+    }
+
+    .profile-online-dot {
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        width: 14px;
+        height: 14px;
+        background: #22c55e;
+        border-radius: 50%;
+        border: 2px solid #0d1117;
+    }
+
+    /* Header text */
+    .profile-header-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .profile-player-name {
+        font-size: 2.2rem;
+        font-weight: 700;
+        line-height: 1.1;
+        margin-bottom: .5rem;
+    }
+
+    .profile-player-steamid {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        color: #94a3b8;
+        font-size: .9rem;
+        margin-bottom: .75rem;
+    }
+
+    .steam-icon {
+        opacity: .7;
+        flex-shrink: 0;
+    }
+
+    .btn-copy {
+        background: #1e2a3a;
+        border: 1px solid #2d3f52;
+        color: #94a3b8;
+        border-radius: 6px;
+        padding: 3px 7px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        transition: background .15s, color .15s;
+        line-height: 1;
+    }
+
+        .btn-copy:hover {
+            background: #2d3f52;
+            color: white;
+        }
+
+    /* Badges */
+    .profile-badges {
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        font-size: .78rem;
+        font-weight: 600;
+        padding: .3rem .75rem;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        letter-spacing: .03em;
+    }
+
+    .badge-human {
+        background: rgba(34,197,94,.15);
+        color: #22c55e;
+        border: 1px solid rgba(34,197,94,.3);
+    }
+
+    .badge-bot {
+        background: rgba(100,116,139,.15);
+        color: #94a3b8;
+        border: 1px solid rgba(100,116,139,.3);
+    }
+
+    .badge-group {
+        background: rgba(59,130,246,.15);
+        color: #60a5fa;
+        border: 1px solid rgba(59,130,246,.3);
+    }
+
+    .badge-admin {
+        background: rgba(59,130,246,.2);
+        color: #60a5fa;
+        border: 1px solid rgba(59,130,246,.3);
+        font-size: .72rem;
+        padding: .2rem .6rem;
+        border-radius: 5px;
+    }
+
+    /* ── Body ── */
+    .profile-body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* Stat cards */
+    .profile-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .profile-stat-card {
+        background: #111827;
+        border: 1px solid #1e2a3a;
+        border-radius: 14px;
+        padding: 1.1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .profile-stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .stat-icon-id {
+        background: rgba(139,92,246,.15);
+        color: #a78bfa;
+    }
+
+    .stat-icon-ping {
+        background: rgba(34,197,94,.12);
+        color: #22c55e;
+    }
+
+    .stat-icon-type {
+        background: rgba(59,130,246,.12);
+        color: #60a5fa;
+    }
+
+    .profile-stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .profile-stat-title {
+        color: #64748b;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        margin-bottom: .2rem;
+    }
+
+    .profile-stat-value {
+        color: white;
+        font-size: 1.65rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .profile-stat-unit {
+        font-size: 1rem;
+        font-weight: 400;
+        color: #94a3b8;
+    }
+
+    /* Info table */
+    .profile-info-table {
+        border: 1px solid #1e2a3a;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .profile-info-row {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        background: #111827;
+    }
+
+        .profile-info-row:not(:last-child) {
+            border-bottom: 1px solid #1e2a3a;
+        }
+
+    .profile-info-label {
+        padding: 1rem 1.25rem;
+        color: #64748b;
+        font-size: .78rem;
+        font-weight: 600;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        border-right: 1px solid #1e2a3a;
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+    }
+
+    .info-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .info-icon-group {
+        background: rgba(234,179,8,.12);
+        color: #eab308;
+    }
+
+    .info-icon-clan {
+        background: rgba(234,179,8,.12);
+        color: #eab308;
+    }
+
+    .profile-info-data {
+        padding: 1rem 1.25rem;
+        color: white;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        flex-wrap: wrap;
+    }
+
+    /* ── Footer ── */
+    .profile-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+        gap: 1rem;
+    }
+
+    /* Steam button */
+    .btn-steam {
+        background: #1b2838;
+        border: 1px solid #2a475e;
+        color: white;
+        border-radius: 10px;
+        padding: .7rem 1.25rem;
+        font-weight: 600;
+        font-size: .9rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .6rem;
+        transition: background .15s, border-color .15s;
+    }
+
+        .btn-steam:hover {
+            background: #2a475e;
+            border-color: #4a8fbd;
+            color: white;
+            text-decoration: none;
+        }
+
+    .btn-steam-icon {
+        width: 36px;
+        height: 36px;
+        background: #1e90ff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Close button in footer */
+    .btn.btn-secondary {
+        background: #1e2a3a;
+        border: 1px solid #2d3f52;
+        color: #94a3b8;
+        border-radius: 10px;
+        padding: .7rem 1.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s, color .15s;
+    }
+
+        .btn.btn-secondary:hover {
+            background: #2d3f52;
+            color: white;
+        }
+
+</style>
+
+@code {
+
+    [Parameter]
+    public PlayerInfo? SelectedPlayer { get; set; }
+
+    [Parameter]
+    public EventCallback CloseProfile { get; set; }
+
+    private async Task CopyToClipboard(string text)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+}

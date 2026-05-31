@@ -9,159 +9,610 @@
 
 @inject IPlayerService PlayerService
 @inject ILogger<Players> Logger
+@inject IJSRuntime JS
 
-<PageTitle>Players</PageTitle>
+<div class="pl-page">
 
-<div class="container-fluid">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h2 class="mb-1">👥 Jugadores</h2>
-
-            <small class="text-muted">
-                Jugadores actualmente conectados
-            </small>
+    <!-- ── Header ── -->
+    <div class="pl-header">
+        <div class="pl-header-left">
+            <div class="pl-header-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                </svg>
+            </div>
+            <div>
+                <div class="pl-title">Jugadores</div>
+                <div class="pl-subtitle">
+                    <span class="pl-count">@Model.Players.Count</span>
+                    conectados actualmente
+                </div>
+            </div>
         </div>
-
-        <button class="btn btn-primary"
-                @onclick="LoadPlayers">
-            🔄 Actualizar
+        <button class="pl-refresh-btn" @onclick="LoadPlayers" disabled="@Model.Loading">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+            </svg>
+            Actualizar
         </button>
-
     </div>
 
-    <div class="alert alert-secondary mb-3">
-        Total Players: @players.Count
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+    <!-- ── Status message ── -->
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
-        <div class="alert alert-info">
-            @StatusMessage
+        <div class="pl-status-msg">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
+            @Model.StatusMessage
         </div>
     }
 
-    @if (Loading)
+    <!-- ── Loading ── -->
+    @if (Model.Loading)
     {
-        <div class="text-center p-5">
-            <div class="spinner-border"></div>
+        <div class="pl-loading">
+            <div class="pl-spinner"></div>
+            <span>Cargando jugadores...</span>
+        </div>
+    }
+    else if (!Model.Players.Any())
+    {
+        <div class="pl-empty">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40" style="opacity:.3">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+            </svg>
+            <span>No hay jugadores conectados</span>
         </div>
     }
     else
     {
-        <div class="card shadow-sm border-0">
+        <!-- ── Table ── -->
+        <div class="pl-table-wrap">
+            <table class="pl-table">
+                <thead>
+                    <tr>
+                        <th>Jugador</th>
+                        <th class="pl-th-center">ID</th>
+                        <th class="pl-th-center">Ping</th>
+                        <th class="pl-th-center">Tipo</th>
+                        <th>Grupo / Clan</th>
+                        <th class="pl-th-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var player in PagedPlayers)
+                    {
+                        <tr class="pl-row" @onclick="() => ShowProfile(player)">
 
-            <div class="card-body">
+                            <!-- Name + SteamID -->
+                            <td class="pl-td-player">
+                                <div class="pl-player-avatar @(player.IsBot ? "pl-avatar-bot" : "pl-avatar-human")">
+                                    @if (player.IsBot)
+                                    {
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H3a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7 14v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2H7M9 9a1 1 0 0 0 0 2 1 1 0 0 0 0-2m6 0a1 1 0 0 0 0 2 1 1 0 0 0 0-2z" /></svg>
+                                    }
+                                    else
+                                    {
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                                    }
+                                </div>
+                                <div class="pl-player-info">
+                                    <div class="pl-player-name">@player.Name</div>
+                                    @if (!player.IsBot)
+                                    {
+                                        <div class="pl-player-steam">@player.SteamId</div>
+                                    }
+                                </div>
+                            </td>
 
-                @if (!players.Any())
-                {
-                    <div class="alert alert-warning mb-0">
-                        No hay jugadores conectados.
-                    </div>
-                }
-                else
-                {
-                    <table class="table table-hover align-middle">
+                            <!-- ID -->
+                            <td class="pl-td-center pl-td-mono">@player.UserId</td>
 
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>SteamID</th>
-                                <th>Ping</th>
-                                <th>Tipo</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
+                            <!-- Ping -->
+                            <td class="pl-td-center">
+                                <span class="pl-ping @PingClass(player.Ping)">@player.Ping ms</span>
+                            </td>
 
-                        <tbody>
+                            <!-- Tipo -->
+                            <td class="pl-td-center">
+                                @if (player.IsBot)
+                                {
+                                    <span class="pl-badge pl-badge-bot">BOT</span>
+                                }
+                                else
+                                {
+                                    <span class="pl-badge pl-badge-human">HUMANO</span>
+                                }
+                            </td>
 
-                            @foreach (var player in players)
-                            {
-                                <tr>
+                            <!-- Grupo / Clan -->
+                            <td class="pl-td-group">
+                                @if (!string.IsNullOrWhiteSpace(player.Groups))
+                                {
+                                    <span class="pl-badge pl-badge-group">@player.Groups</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(player.Clan))
+                                {
+                                    <span class="pl-clan">@player.Clan</span>
+                                }
+                                @if (string.IsNullOrWhiteSpace(player.Groups) && string.IsNullOrWhiteSpace(player.Clan))
+                                {
+                                    <span class="pl-empty-cell">—</span>
+                                }
+                            </td>
 
-                                    <td>@player.Name</td>
+                            <!-- Actions -->
+                            <td class="pl-td-actions" @onclick:stopPropagation="true">
+                                @if (!player.IsBot)
+                                {
+                                    @if (!string.IsNullOrWhiteSpace(player.CommunityUrl))
+                                    {
+                                        <a href="@player.CommunityUrl" target="_blank" class="pl-action-btn pl-action-steam" title="Steam">
+                                            <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0z" /></svg>
+                                            Steam
+                                        </a>
+                                    }
+                                    <button class="pl-action-btn pl-action-kick" @onclick="() => KickPlayer(player)" title="Kick">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21a9 9 0 0 0 0-18z" /></svg>
+                                        Kick
+                                    </button>
+                                    <button class="pl-action-btn pl-action-disabled" disabled title="Mute">Mute</button>
+                                    <button class="pl-action-btn pl-action-disabled" disabled title="Gag">Gag</button>
+                                    <button class="pl-action-btn pl-action-disabled" disabled title="Ban">Ban</button>
+                                }
+                                else
+                                {
+                                    <span class="pl-empty-cell">Bot del servidor</span>
+                                }
+                            </td>
 
-                                    <td>@player.SteamId</td>
-
-                                    <td>@player.Ping</td>
-
-                                    <td>
-                                        @if (player.IsBot)
-                                        {
-                                            <span class="badge bg-secondary">
-                                                Bot
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-success">
-                                                Humano
-                                            </span>
-                                        }
-                                    </td>
-
-                                    <td>
-
-                                        @if (!player.IsBot)
-                                        {
-                                            <button class="btn btn-sm btn-danger me-1"
-                                                    @onclick="() => KickPlayer(player)">
-                                                Kick
-                                            </button>
-
-                                            <button class="btn btn-sm btn-warning me-1"
-                                                    disabled>
-                                                Mute
-                                            </button>
-
-                                            <button class="btn btn-sm btn-secondary me-1"
-                                                    disabled>
-                                                Gag
-                                            </button>
-
-                                            <button class="btn btn-sm btn-dark"
-                                                    disabled>
-                                                Ban
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">
-                                                —
-                                            </span>
-                                        }
-
-                                    </td>
-
-                                </tr>
-                            }
-
-                        </tbody>
-
-                    </table>
-                }
-
-            </div>
-
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
+
+        <!-- ── Pagination ── -->
+        @if (TotalPages > 1)
+        {
+            <div class="pl-pagination">
+                <button class="pl-page-btn" @onclick="PreviousPage" disabled="@(Model.CurrentPage == 1)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
+                </button>
+                @foreach (var i in VisiblePages())
+                {
+                    <button class="pl-page-btn @(Model.CurrentPage == i ? "pl-page-active" : "")" @onclick="() => GoToPage(i)">@i</button>
+                }
+                <button class="pl-page-btn" @onclick="NextPage" disabled="@(Model.CurrentPage == TotalPages)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
+                </button>
+            </div>
+        }
     }
 
 </div>
 
+<PlayerProfileModal SelectedPlayer="SelectedPlayer" CloseProfile="EventCallback.Factory.Create(this, CloseProfile)" />
+
+<style>
+
+    .pl-page {
+        background: #080d14;
+        min-height: 100vh;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        color: white;
+    }
+
+    /* ── Header ── */
+    .pl-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #0d1117;
+        border: 1px solid #1e2a3a;
+        border-radius: 16px;
+        padding: 1.1rem 1.5rem;
+        gap: 1rem;
+    }
+
+    .pl-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .pl-header-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 13px;
+        background: rgba(34,197,94,.1);
+        color: #4ade80;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .pl-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    .pl-subtitle {
+        font-size: .85rem;
+        color: #475569;
+        margin-top: .15rem;
+    }
+
+    .pl-count {
+        color: white;
+        font-weight: 700;
+    }
+
+    .pl-refresh-btn {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        background: #1e2a3a;
+        border: 1px solid #2d3f52;
+        color: #94a3b8;
+        border-radius: 10px;
+        padding: .6rem 1.1rem;
+        font-size: .85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s, color .15s;
+        flex-shrink: 0;
+    }
+
+        .pl-refresh-btn:hover:not(:disabled) {
+            background: #2d3f52;
+            color: white;
+        }
+
+        .pl-refresh-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+    /* ── Status msg ── */
+    .pl-status-msg {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        background: rgba(59,130,246,.08);
+        border: 1px solid rgba(59,130,246,.2);
+        color: #60a5fa;
+        border-radius: 10px;
+        padding: .65rem 1rem;
+        font-size: .82rem;
+        font-weight: 500;
+    }
+
+    /* ── Loading / Empty ── */
+    .pl-loading, .pl-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 4rem 0;
+        color: #475569;
+    }
+
+    .pl-spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #1e2a3a;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: pl-spin .8s linear infinite;
+    }
+    keyframes pl-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* ── Table wrapper ── */
+    .pl-table-wrap {
+        background: #0d1117;
+        border: 1px solid #1e2a3a;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .pl-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        /* Head */
+        .pl-table thead tr {
+            background: #111827;
+            border-bottom: 1px solid #1e2a3a;
+        }
+
+        .pl-table th {
+            padding: .75rem 1rem;
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+    .pl-th-center {
+        text-align: center;
+    }
+
+    .pl-th-right {
+        text-align: right;
+    }
+
+    /* Rows */
+    .pl-row {
+        border-bottom: 1px solid #111827;
+        cursor: pointer;
+        transition: background .12s;
+    }
+
+        .pl-row:last-child {
+            border-bottom: none;
+        }
+
+        .pl-row:hover {
+            background: #111827;
+        }
+
+    .pl-table td {
+        padding: .7rem 1rem;
+        vertical-align: middle;
+    }
+
+    /* Player cell */
+    .pl-td-player {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        min-width: 200px;
+    }
+
+    .pl-player-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .pl-avatar-human {
+        background: rgba(59,130,246,.12);
+        color: #60a5fa;
+    }
+
+    .pl-avatar-bot {
+        background: rgba(100,116,139,.12);
+        color: #94a3b8;
+    }
+
+    .pl-player-name {
+        font-weight: 600;
+        font-size: .9rem;
+        color: white;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .pl-player-steam {
+        font-family: 'Consolas', monospace;
+        font-size: .7rem;
+        color: #475569;
+        margin-top: .1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .pl-player-info {
+        min-width: 0;
+    }
+
+    /* Centered cells */
+    .pl-td-center {
+        text-align: center;
+    }
+
+    .pl-td-mono {
+        font-family: 'Consolas', monospace;
+        color: #94a3b8;
+        font-size: .85rem;
+    }
+
+    /* Ping */
+    .pl-ping {
+        font-weight: 700;
+        font-size: .85rem;
+        font-family: 'Consolas', monospace;
+    }
+
+    .pl-ping-good {
+        color: #4ade80;
+    }
+
+    .pl-ping-ok {
+        color: #fbbf24;
+    }
+
+    .pl-ping-bad {
+        color: #f87171;
+    }
+
+    /* Badges */
+    .pl-badge {
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        padding: .25rem .6rem;
+        border-radius: 5px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .pl-badge-human {
+        background: rgba(34,197,94,.12);
+        color: #4ade80;
+        border: 1px solid rgba(34,197,94,.2);
+    }
+
+    .pl-badge-bot {
+        background: rgba(100,116,139,.12);
+        color: #94a3b8;
+        border: 1px solid rgba(100,116,139,.2);
+    }
+
+    .pl-badge-group {
+        background: rgba(59,130,246,.12);
+        color: #60a5fa;
+        border: 1px solid rgba(59,130,246,.2);
+    }
+
+    /* Group / clan cell */
+    .pl-td-group {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+        flex-wrap: wrap;
+    }
+
+    .pl-clan {
+        font-size: .8rem;
+        color: #64748b;
+    }
+
+    .pl-empty-cell {
+        color: #334155;
+        font-size: .85rem;
+    }
+
+    /* Actions */
+    .pl-td-actions {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .pl-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .28rem .6rem;
+        border-radius: 6px;
+        font-size: .72rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background .12s, border-color .12s;
+        text-decoration: none;
+        margin-left: .25rem;
+    }
+
+    .pl-action-steam {
+        background: rgba(30,42,58,.8);
+        border-color: #2d3f52;
+        color: #60a5fa;
+    }
+
+        .pl-action-steam:hover {
+            background: #1e2a3a;
+            border-color: #3b82f6;
+            color: #93c5fd;
+        }
+
+    .pl-action-kick {
+        background: rgba(239,68,68,.1);
+        border-color: rgba(239,68,68,.25);
+        color: #f87171;
+    }
+
+        .pl-action-kick:hover {
+            background: rgba(239,68,68,.2);
+            border-color: rgba(239,68,68,.4);
+        }
+
+    .pl-action-disabled {
+        background: rgba(30,42,58,.5);
+        border-color: #1e2a3a;
+        color: #334155;
+        cursor: not-allowed;
+        opacity: .6;
+    }
+
+    /* ── Pagination ── */
+    .pl-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: .35rem;
+        padding: .25rem 0;
+    }
+
+    .pl-page-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: #0d1117;
+        border: 1px solid #1e2a3a;
+        color: #64748b;
+        font-size: .82rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .12s, color .12s, border-color .12s;
+    }
+
+        .pl-page-btn:hover:not(:disabled) {
+            background: #1e2a3a;
+            color: white;
+            border-color: #2d3f52;
+        }
+
+        .pl-page-btn:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+    .pl-page-active {
+        background: #1e3a5f !important;
+        border-color: #3b82f6 !important;
+        color: #60a5fa !important;
+    }
+
+</style>
+
 @code {
+    private PlayersViewModel Model = new();
+    private PlayerInfo? SelectedPlayer;
 
-    private bool Loading = true;
+    private IEnumerable<PlayerInfo> PagedPlayers =>
+        Model.Players.Skip((Model.CurrentPage - 1) * Model.PageSize).Take(Model.PageSize);
 
-    private string StatusMessage = string.Empty;
-
-    private List<PlayerInfo> players = new();
+    private int TotalPages =>
+        Math.Max(1, (int)Math.Ceiling(Model.Players.Count / (double)Model.PageSize));
 
     protected override async Task OnInitializedAsync()
     {
-        Logger.LogInformation(
-            "Players page initialized");
-
+        Logger.LogInformation("Players page initialized");
         await LoadPlayers();
     }
 
@@ -169,61 +620,64 @@
     {
         try
         {
-            Logger.LogInformation(
-                "Loading players...");
-
-            Loading = true;
-
-            players =
-                await PlayerService.GetPlayersAsync();
-
-            Logger.LogInformation(
-                "Players loaded: {Count}",
-                players.Count);
+            Logger.LogInformation("Loading players...");
+            Model.Loading = true;
+            Model.Players = await PlayerService.GetPlayersAsync();
+            Logger.LogInformation("Players loaded: {Count}", Model.Players.Count);
+            Model.CurrentPage = 1;
         }
         catch (Exception ex)
         {
-            Logger.LogError(
-                ex,
-                "Error loading players");
-
-            StatusMessage = ex.Message;
+            Logger.LogError(ex, "Error loading players");
+            Model.StatusMessage = ex.Message;
         }
         finally
         {
-            Loading = false;
-
+            Model.Loading = false;
             StateHasChanged();
         }
     }
 
-    private async Task KickPlayer(
-        PlayerInfo player)
+    private void ShowProfile(PlayerInfo player) => SelectedPlayer = player;
+    private void CloseProfile() => SelectedPlayer = null;
+
+    private string PingClass(int ping) => ping switch
+    {
+        <= 60 => "pl-ping-good",
+        <= 120 => "pl-ping-ok",
+        _ => "pl-ping-bad"
+    };
+
+    private IEnumerable<int> VisiblePages()
+    {
+        var start = Math.Max(1, Model.CurrentPage - 2);
+        var end = Math.Min(TotalPages, Model.CurrentPage + 2);
+        return Enumerable.Range(start, end - start + 1);
+    }
+
+    private void NextPage() { if (Model.CurrentPage < TotalPages) Model.CurrentPage++; }
+    private void PreviousPage() { if (Model.CurrentPage > 1) Model.CurrentPage--; }
+    private void GoToPage(int page) { if (page >= 1 && page <= TotalPages) Model.CurrentPage = page; }
+
+    private async Task KickPlayer(PlayerInfo player)
     {
         try
         {
-            StatusMessage =
-                $"Expulsando a {player.Name}...";
-
-            await PlayerService.KickPlayerAsync(
-                player.Name);
-
+            Model.StatusMessage = $"Expulsando a {player.Name}...";
+            await PlayerService.KickPlayerAsync(player.Name);
             await Task.Delay(1000);
-
             await LoadPlayers();
-
-            StatusMessage =
-                $"{player.Name} expulsado correctamente.";
+            Model.StatusMessage = $"{player.Name} expulsado correctamente.";
         }
         catch (Exception ex)
         {
-            Logger.LogError(
-                ex,
-                "Error expulsando jugador");
-
-            StatusMessage =
-                ex.Message;
+            Logger.LogError(ex, "Error expulsando jugador");
+            Model.StatusMessage = ex.Message;
         }
     }
 
+    private async Task CopyToClipboard(string text)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
 }
