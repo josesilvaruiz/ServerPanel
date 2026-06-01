@@ -4,6 +4,7 @@
 @using ServerPanel.Models
 @using ServerPanel.Contracts
 @using Microsoft.AspNetCore.Authorization
+@using ServerPanel.Components.Pages.Players.Modals
 
 @attribute [Authorize]
 
@@ -232,7 +233,15 @@
 
 <PlayerProfileModal SelectedPlayer="SelectedPlayer" CloseProfile="EventCallback.Factory.Create(this, CloseProfile)" />
 
-<ReasonModal Show="@ShowReasonModal" Title="@ReasonTitle" Reason="@ReasonText" ShowDuration="@ShowReasonDuration" DurationMinutes="@ReasonDuration" OnConfirm="OnReasonConfirm" OnCancel="OnReasonCancel" />
+<ReasonModal Show="@ShowReasonModal"
+             Title="@ReasonTitle"
+             ShowReason="@ShowReason"
+             ShowDuration="@ShowReasonDuration"
+             DurationMinutes="@ReasonDuration"
+              SelectedAction="@SelectedModalAction"
+              TargetPlayerName="@SelectedActionPlayer?.Name"
+              OnConfirmResult="@(EventCallback.Factory.Create<ModalResult>(this, OnReasonConfirm))"
+             OnCancel="OnReasonCancel" />
 
 <style>
 
@@ -740,78 +749,85 @@
     // Modal de razones
     private bool ShowReasonModal;
     private string ReasonTitle = string.Empty;
-    private string ReasonText = string.Empty;
+    private bool ShowReason;
     private bool ShowReasonDuration;
     private int ReasonDuration = 30;
 
     private PlayerInfo? SelectedActionPlayer;
     private string SelectedAction = string.Empty;
+    private ServerPanel.Components.Pages.Players.Modals.ModalAction SelectedModalAction = ServerPanel.Components.Pages.Players.Modals.ModalAction.Kick;
 
     private void OpenReasonModal(PlayerInfo player, string action)
     {
         SelectedActionPlayer = player;
         SelectedAction = action;
+        // Placeholder for future pre-open modal adjustments (no-op).
 
         ReasonTitle = action.ToUpperInvariant();
-        ReasonText = string.Empty;
+        ReasonDuration = 30;
+
+        // Show reason for kick and ban
+        ShowReason = action.Equals("kick", StringComparison.OrdinalIgnoreCase) || action.Equals("ban", StringComparison.OrdinalIgnoreCase);
 
         ShowReasonDuration =
             action.Equals("mute", StringComparison.OrdinalIgnoreCase) ||
             action.Equals("gag", StringComparison.OrdinalIgnoreCase) ||
             action.Equals("ban", StringComparison.OrdinalIgnoreCase);
 
-        // Solo mostrar motivo para kick y ban
-        ReasonText = string.Empty;
-        if (action.Equals("kick", StringComparison.OrdinalIgnoreCase) || action.Equals("ban", StringComparison.OrdinalIgnoreCase))
-        {
-            ReasonText = string.Empty;
-        }
-        else
-        {
-            ReasonText = "";
-        }
-        ReasonDuration = 30;
         ShowReasonModal = true;
+        // map string action to enum used by the modal result
+        if (!Enum.TryParse<ServerPanel.Components.Pages.Players.Modals.ModalAction>(action, true, out var parsed))
+        {
+            parsed = ServerPanel.Components.Pages.Players.Modals.ModalAction.Kick;
+        }
+        SelectedModalAction = parsed;
     }
 
-    private async Task OnReasonConfirm()
+    private async Task OnReasonConfirm(ModalResult args)
     {
-        if (SelectedActionPlayer == null)
-        {
-            ShowReasonModal = false;
-            return;
-        }
+        Logger.LogInformation("[Confirm] acción={Action} jugador={Player} reason='{Reason}' duration={Duration}",
+            SelectedAction, SelectedActionPlayer?.Name, args.Reason, args.Duration);
+
+        if (SelectedActionPlayer == null) { ShowReasonModal = false; return; }
 
         try
         {
-            switch (SelectedAction.ToLowerInvariant())
+            // use the enum in the ModalResult to determine action
+            switch (args.Action)
             {
-                case "kick":
-                    await PlayerService.KickPlayerAsync(SelectedActionPlayer.Name, ReasonText);
-                    Model.StatusMessage = $"{SelectedActionPlayer.Name} expulsado correctamente.";
+                case ModalAction.Kick:
+                    Logger.LogInformation("[Service] KickPlayerAsync({Name})", SelectedActionPlayer.Name);
+                    await PlayerService.KickPlayerAsync(SelectedActionPlayer.Name, args.Reason);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} expulsado.";
                     break;
-                case "mute":
-                    await PlayerService.MutePlayerAsync(SelectedActionPlayer.Name, ReasonDuration);
-                    Model.StatusMessage = $"{SelectedActionPlayer.Name} muteado correctamente.";
+                case ModalAction.Mute:
+                    Logger.LogInformation("[Service] MutePlayerAsync({Name}, {Min}min)", SelectedActionPlayer.Name, args.Duration);
+                    await PlayerService.MutePlayerAsync(SelectedActionPlayer.Name, args.Duration);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} muteado {args.Duration} min.";
                     break;
-                case "gag":
-                    await PlayerService.GagPlayerAsync(SelectedActionPlayer.Name, ReasonDuration);
-                    Model.StatusMessage = $"{SelectedActionPlayer.Name} gaggeado correctamente.";
+                case ModalAction.Gag:
+                    Logger.LogInformation("[Service] GagPlayerAsync({Name}, {Min}min)", SelectedActionPlayer.Name, args.Duration);
+                    await PlayerService.GagPlayerAsync(SelectedActionPlayer.Name, args.Duration);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} gaggeado {args.Duration} min.";
                     break;
-                case "ban":
-                    await PlayerService.BanPlayerAsync(SelectedActionPlayer.Name, ReasonDuration, ReasonText);
-                    Model.StatusMessage = $"{SelectedActionPlayer.Name} baneado correctamente.";
+                case ModalAction.Ban:
+                    Logger.LogInformation("[Service] BanPlayerAsync({Name}, {Min}min, '{Reason}')", SelectedActionPlayer.Name, args.Duration, args.Reason);
+                    await PlayerService.BanPlayerAsync(SelectedActionPlayer.Name, args.Duration, args.Reason);
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} baneado {args.Duration} min.";
                     break;
-                case "unban":
+                case ModalAction.Unban:
                     await PlayerService.UnbanPlayerAsync(SelectedActionPlayer.Name);
-                    Model.StatusMessage = $"{SelectedActionPlayer.Name} desbaneado correctamente.";
+                    Model.StatusMessage = $"{SelectedActionPlayer.Name} desbaneado.";
+                    break;
+                default:
+                    Logger.LogWarning("[Confirm] Acción desconocida en ModalResult: {Action}", args.Action);
                     break;
             }
             await LoadPlayers();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, $"Error ejecutando acción {SelectedAction}");
+            Logger.LogError(ex, "[Confirm] Error ejecutando {Action}", SelectedAction);
             Model.StatusMessage = ex.Message;
         }
         finally
@@ -819,18 +835,14 @@
             ShowReasonModal = false;
             SelectedActionPlayer = null;
             SelectedAction = string.Empty;
-            ReasonText = string.Empty;
         }
     }
 
     private Task OnReasonCancel()
     {
         ShowReasonModal = false;
-
         SelectedActionPlayer = null;
         SelectedAction = string.Empty;
-        ReasonText = string.Empty;
-
         return Task.CompletedTask;
     }
 }
