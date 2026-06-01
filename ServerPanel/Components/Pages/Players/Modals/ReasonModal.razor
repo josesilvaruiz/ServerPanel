@@ -1,4 +1,5 @@
-@* ReasonModal.razor: Modal reutilizable para pedir motivo de Kick/Ban *@
+@* ReasonModal.razor: Modal reutilizable para pedir motivo de Kick/Mute/Gag/Ban *@
+@inject ILogger<ReasonModal> Log
 @if (Show)
 {
     <div class="modal-backdrop show" @onclick="OnCancel"></div>
@@ -13,18 +14,15 @@
                     @if (ShowReason)
                     {
                         <label for="reasonInput" class="form-label">Motivo:</label>
-                        <input id="reasonInput" type="text" class="form-control mb-3"
-                               value="@Reason"
-                               @oninput="e => Reason = e.Value?.ToString() ?? string.Empty"
-                               placeholder="Escribe el motivo..."
-                               autofocus />
+                        <input id="reasonInput" class="form-control mb-3"
+                               @bind="Reason" @bind:event="oninput"
+                               maxlength="120" autofocus />
                     }
                     @if (ShowDuration)
                     {
                         <label for="durationInput" class="form-label">Duración (minutos):</label>
-                        <input id="durationInput" type="number" class="form-control"
-                               @bind="DurationMinutes" min="1" max="10080"
-                               autofocus="@(!ShowReason)" />
+                        <input id="durationInput" type="number" min="1" class="form-control"
+                               @bind="DurationMinutes" autofocus="@(!ShowReason)" />
                     }
                 </div>
                 <div class="modal-footer">
@@ -40,30 +38,45 @@
 }
 
 @code {
-
     [Parameter] public bool Show { get; set; }
-
-    [Parameter] public string Title { get; set; } = string.Empty;
-
+    [Parameter] public string Title { get; set; } = "Acción requerida";
+    // Backwards-compatible: non-generic OnConfirm used by parent to refresh UI
     [Parameter] public EventCallback OnConfirm { get; set; }
-
+    // Legacy generic result (kept for compatibility but not used for service calls)
+    [Parameter] public EventCallback<ModalResult> OnConfirmResult { get; set; }
+    [Parameter] public string TargetPlayerName { get; set; } = string.Empty;
+    [Parameter] public ModalAction SelectedAction { get; set; } = ModalAction.Kick;
     [Parameter] public EventCallback OnCancel { get; set; }
-
     [Parameter] public string Reason { get; set; } = string.Empty;
-
-    [Parameter] public EventCallback<string> ReasonChanged { get; set; }
-
     [Parameter] public bool ShowReason { get; set; } = true;
-
     [Parameter] public bool ShowDuration { get; set; }
-
     [Parameter] public int DurationMinutes { get; set; } = 30;
 
     private async Task Confirm()
     {
-        await OnConfirm.InvokeAsync();
-    }
+        Log.LogInformation("[ReasonModal] Confirm() fired — Reason='{Reason}' Duration={Duration} HasGeneric={HasGeneric} HasLegacy={HasLegacy}",
+            Reason, DurationMinutes, OnConfirmResult.HasDelegate, OnConfirm.HasDelegate);
 
+        if (!OnConfirmResult.HasDelegate && !OnConfirm.HasDelegate)
+        {
+            Log.LogWarning("[ReasonModal] ningún callback OnConfirm asignado");
+            return;
+        }
+
+        var result = new ModalResult(Reason, DurationMinutes, SelectedAction);
+
+        // notify parent that action finished
+        if (OnConfirm.HasDelegate)
+        {
+            await OnConfirm.InvokeAsync();
+        }
+
+        // keep legacy callback as informational
+        if (OnConfirmResult.HasDelegate)
+        {
+            await OnConfirmResult.InvokeAsync(result);
+        }
+    }
 }
 
 <style>

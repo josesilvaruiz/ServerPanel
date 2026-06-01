@@ -195,7 +195,7 @@ public class PlayerService : IPlayerService
     public async Task KickPlayerAsync(string playerName, string reason = "Kicked by admin")
     {
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_kick \\\"{playerName}\\\" \\\"{reason}\\\"' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_kick \\\"{EscapeArg(playerName)}\\\" \\\"{EscapeArg(reason)}\\\"' Enter\"";
 
         _logger.LogInformation(
             "Kick jugador: {Player}, Motivo: {Reason}",
@@ -210,7 +210,7 @@ public class PlayerService : IPlayerService
     public async Task MutePlayerAsync(string playerName, int minutes)
     {
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_mute \"{playerName}\" {minutes}' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_mute \\\"{EscapeArg(playerName)}\\\" {minutes}' Enter\"";
 
         _logger.LogInformation(
             "Mute jugador: {Player}, Minutos: {Minutes}",
@@ -225,7 +225,7 @@ public class PlayerService : IPlayerService
     public async Task GagPlayerAsync(string playerName, int minutes)
     {
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_gag \"{playerName}\" {minutes}' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_gag \\\"{EscapeArg(playerName)}\\\" {minutes}' Enter\"";
 
         _logger.LogInformation(
             "Gag jugador: {Player}, Minutos: {Minutes}",
@@ -239,7 +239,7 @@ public class PlayerService : IPlayerService
     public async Task BanPlayerAsync(string playerName, int minutes, string reason = "Banned by admin")
     {
         var command =
-            $"su - steam -c \"tmux send-keys -t cs2 'css_ban \\\"{playerName}\\\" {minutes} \\\"{reason}\\\"' Enter\"";
+            $"su - steam -c \"tmux send-keys -t cs2 'css_ban \\\"{EscapeArg(playerName)}\\\" {minutes} \\\"{EscapeArg(reason)}\\\"' Enter\"";
 
         await _ssh.ExecuteAsync(command);
     }
@@ -273,6 +273,14 @@ public class PlayerService : IPlayerService
             "su - steam -c \"tmux send-keys -t cs2 'css_plugins reload 1' Enter\"";
 
         await _ssh.ExecuteAsync(reloadCommand);
+    }
+
+    private static string EscapeArg(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     // ── Permisos ─────────────────────────────────────────────────────────────

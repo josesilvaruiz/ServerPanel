@@ -1,0 +1,369 @@
+/* ── Modal shell ── */
+.profile-modal-modern {
+    background: #0d1117;
+    border: 1px solid #1e2a3a;
+    border-radius: 16px;
+    color: white;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-dialog {
+    max-width: 900px;
+}
+
+/* ── Close button ── */
+.btn-close-modal {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #1e2a3a;
+    border: 1px solid #2d3f52;
+    color: #94a3b8;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+    z-index: 10;
+}
+
+.btn-close-modal:hover {
+    background: #2d3f52;
+    color: white;
+}
+
+/* ── Header ── */
+.profile-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+/* Avatar */
+.profile-avatar-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.profile-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #2d3f52;
+}
+
+.profile-avatar-placeholder {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f3b8b 0%, #2563eb 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,.7);
+    border: 3px solid #2d3f52;
+}
+
+.profile-online-dot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 14px;
+    height: 14px;
+    background: #22c55e;
+    border-radius: 50%;
+    border: 2px solid #0d1117;
+}
+
+/* Header text */
+.profile-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-player-name {
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: .5rem;
+}
+
+.profile-player-steamid {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: #94a3b8;
+    font-size: .9rem;
+    margin-bottom: .75rem;
+}
+
+.steam-icon {
+    opacity: .7;
+    flex-shrink: 0;
+}
+
+.btn-copy {
+    background: #1e2a3a;
+    border: 1px solid #2d3f52;
+    color: #94a3b8;
+    border-radius: 6px;
+    padding: 3px 7px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: background .15s, color .15s;
+    line-height: 1;
+}
+
+.btn-copy:hover {
+    background: #2d3f52;
+    color: white;
+}
+
+/* Badges */
+.profile-badges {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    font-size: .78rem;
+    font-weight: 600;
+    padding: .3rem .75rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    letter-spacing: .03em;
+}
+
+.badge-human {
+    background: rgba(34,197,94,.15);
+    color: #22c55e;
+    border: 1px solid rgba(34,197,94,.3);
+}
+
+.badge-bot {
+    background: rgba(100,116,139,.15);
+    color: #94a3b8;
+    border: 1px solid rgba(100,116,139,.3);
+}
+
+.badge-group {
+    background: rgba(59,130,246,.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,.3);
+}
+
+.badge-admin {
+    background: rgba(59,130,246,.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,.3);
+    font-size: .72rem;
+    padding: .2rem .6rem;
+    border-radius: 5px;
+}
+
+/* ── Body ── */
+.profile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Stat cards */
+.profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.profile-stat-card {
+    background: #111827;
+    border: 1px solid #1e2a3a;
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.profile-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-icon-id {
+    background: rgba(139,92,246,.15);
+    color: #a78bfa;
+}
+
+.stat-icon-ping {
+    background: rgba(34,197,94,.12);
+    color: #22c55e;
+}
+
+.stat-icon-type {
+    background: rgba(59,130,246,.12);
+    color: #60a5fa;
+}
+
+.profile-stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-stat-title {
+    color: #64748b;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .2rem;
+}
+
+.profile-stat-value {
+    color: white;
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.profile-stat-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #94a3b8;
+}
+
+/* Info table */
+.profile-info-table {
+    border: 1px solid #1e2a3a;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.profile-info-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    background: #111827;
+}
+
+.profile-info-row:not(:last-child) {
+    border-bottom: 1px solid #1e2a3a;
+}
+
+.profile-info-label {
+    padding: 1rem 1.25rem;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    border-right: 1px solid #1e2a3a;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+
+.info-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.info-icon-group {
+    background: rgba(234,179,8,.12);
+    color: #eab308;
+}
+
+.info-icon-clan {
+    background: rgba(234,179,8,.12);
+    color: #eab308;
+}
+
+.profile-info-data {
+    padding: 1rem 1.25rem;
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+}
+
+/* ── Footer ── */
+.profile-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    gap: 1rem;
+}
+
+/* Steam button */
+.btn-steam {
+    background: #1b2838;
+    border: 1px solid #2a475e;
+    color: white;
+    border-radius: 10px;
+    padding: .7rem 1.25rem;
+    font-weight: 600;
+    font-size: .9rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    transition: background .15s, border-color .15s;
+}
+
+.btn-steam:hover {
+    background: #2a475e;
+    border-color: #4a8fbd;
+    color: white;
+    text-decoration: none;
+}
+
+.btn-steam-icon {
+    width: 36px;
+    height: 36px;
+    background: #1e90ff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Close button in footer */
+.btn.btn-secondary {
+    background: #1e2a3a;
+    border: 1px solid #2d3f52;
+    color: #94a3b8;
+    border-radius: 10px;
+    padding: .7rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.btn.btn-secondary:hover {
+    background: #2d3f52;
+    color: white;
+}
