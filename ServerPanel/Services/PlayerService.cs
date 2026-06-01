@@ -313,7 +313,7 @@ public class PlayerService : IPlayerService
             $"printf '%s' '{b64}' | base64 -d > {AdminsJsonPath}");
 
         await _ssh.ExecuteAsync(
-            "su - steam -c \"tmux send-keys -t cs2 'css_reladmins' Enter\"");
+            "su - steam -c \"tmux send-keys -t cs2 'css_admins_reload' Enter\"");
 
         _logger.LogInformation("admins.json actualizado y recargado");
     }
@@ -337,9 +337,17 @@ public class PlayerService : IPlayerService
         else
         {
             key   = playerName;
-            entry = new PermissionEntry { Identity = steamId, Immunity = 0 };
+            entry = new PermissionEntry
+            {
+                Identity = steamId,
+                Immunity = 0,
+                Groups = []
+            };
             admins[key] = entry;
         }
+
+        entry.Flags ??= [];
+        entry.Groups ??= [];
 
         var newFlags = permission
             .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

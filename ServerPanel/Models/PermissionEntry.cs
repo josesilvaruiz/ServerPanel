@@ -16,7 +16,7 @@ public class PermissionEntry
     public int Immunity { get; set; } = 0;
 
     [JsonPropertyName("groups")]
-    public List<string>? Groups { get; set; }
+    public List<string> Groups { get; set; } = new();
 }
 
 file sealed class IntOrStringConverter : JsonConverter<int>
