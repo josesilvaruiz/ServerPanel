@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $out = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $out | Where-Object { $_ -match \"error CS|Compilación correcta|0 Errores\" })",
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; dotnet build ServerPanel/ServerPanel.csproj 2>&1 | Out-String | Select-String \"error CS\" -AllMatches | ForEach-Object { $_.Matches } | ForEach-Object { $_.Value })",
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $result = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $result | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 20)",
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $result = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $result | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 8)",
+      "Bash(Test-Path \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\\\\ServerPanel\\\\Components\\\\Layout\\\\NavMenu.razor.css\")",
+      "Bash(ls /mnt/c/Users/josea/source/repos/ServerPanel/ServerPanel/Components/Layout/)",
+      "Read(//mnt/c/Users/josea/source/repos/ServerPanel/ServerPanel/Components/**)",
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $r = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $r | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 8)",
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $r = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $r | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 5)"
+    ]
+  }
+}
