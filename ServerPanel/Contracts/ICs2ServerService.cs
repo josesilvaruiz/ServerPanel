@@ -13,4 +13,6 @@ public interface ICs2ServerService
     Task<UpdateResult> UpdateAsync();
 
     Task<string> ExecuteConsoleCommandAsync(string command);
+
+    Task<List<WorkshopMap>> GetWorkshopMapsAsync(string collectionId);
 }

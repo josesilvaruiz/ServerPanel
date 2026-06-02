@@ -13,7 +13,8 @@
 html,
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
 }
 
@@ -23,16 +24,26 @@ body {
 
 .page {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
 
 main {
     flex: 1 1 auto;
     padding: 2rem;
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
 }
 
 /* -------------------------------------------------
@@ -41,29 +52,119 @@ main {
 
 .sidebar {
     width: 220px;
-    background: linear-gradient( 180deg, var(--bg-start) 0%, var(--bg-end) 100% );
-    padding: 1.5rem .75rem;
+    background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%);
     box-shadow: 2px 0 20px rgba(2,6,23,.60);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
 }
 
-    .sidebar .nav-link {
-        color: rgba(255,255,255,.92);
-        padding: .75rem 1rem;
-        border-radius: 10px;
-        display: block;
-        margin: .25rem 0;
-        transition: .2s ease;
-    }
+/* ── NavMenu ── */
+.nm-nav {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem 0.75rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
 
-        .sidebar .nav-link:hover {
-            background: rgba(255,255,255,.05);
-        }
+.nm-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.25rem 0.5rem 1rem;
+}
 
-        .sidebar .nav-link.active {
-            color: #d9fbff;
-            background: linear-gradient( 90deg, rgba(6,182,212,.12), rgba(6,182,212,.05) );
-            box-shadow: inset 0 0 12px rgba(6,182,212,.06);
-        }
+.nm-logo-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(34,211,238,.12);
+    color: #22d3ee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nm-logo-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+}
+
+.nm-logo-sub {
+    display: block;
+    font-size: .72rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.nm-divider {
+    height: 1px;
+    background: #1e2a3a;
+    margin: 0 0 0.5rem;
+}
+
+.nm-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+}
+
+.nm-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 9px;
+    text-decoration: none;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background .15s, color .15s, border-color .15s;
+    border: 1px solid transparent;
+}
+
+.nm-link:hover {
+    background: #0d1117;
+    color: #e2e8f0;
+    border-color: #1e2a3a;
+}
+
+.nm-link.active {
+    background: rgba(34,211,238,.08);
+    color: #22d3ee;
+    border-color: rgba(34,211,238,.2);
+}
+
+.nm-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+}
+
+.nm-link-label {
+    white-space: nowrap;
+}
+
+.nm-bottom {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid #1e2a3a;
+}
+
+.nm-logout:hover {
+    background: rgba(239,68,68,.08) !important;
+    color: #f87171 !important;
+    border-color: rgba(239,68,68,.2) !important;
+}
 
 /* -------------------------------------------------
    PANEL CS2

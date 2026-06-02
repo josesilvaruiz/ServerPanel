@@ -10,6 +10,7 @@ builder.Services.AddRazorComponents()
 // Enable Razor Pages so the /Login Razor Page can be served
 builder.Services.AddRazorPages();
 
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();

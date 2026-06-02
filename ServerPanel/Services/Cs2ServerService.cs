@@ -1,4 +1,7 @@
-﻿using ServerPanel.Contracts;
+﻿using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using ServerPanel.Contracts;
 using ServerPanel.Models;
 
 namespace ServerPanel.Services;
@@ -7,13 +10,16 @@ public class Cs2ServerService : ICs2ServerService
 {
     private readonly ISshService _ssh;
     private readonly ILogger<Cs2ServerService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public Cs2ServerService(
         ISshService ssh,
-        ILogger<Cs2ServerService> logger)
+        ILogger<Cs2ServerService> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _ssh = ssh;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<bool> IsRunningAsync()
@@ -220,5 +226,107 @@ public class Cs2ServerService : ICs2ServerService
                 Output = ex.Message
             };
         }
+    }
+
+    public async Task<List<WorkshopMap>> GetWorkshopMapsAsync(string collectionId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("ServerPanel/1.0");
+
+        // Step 1: get collection children
+        var collectionBody = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["collectioncount"] = "1",
+            ["publishedfileids[0]"] = collectionId
+        });
+
+        var collectionResp = await client.PostAsync(
+            "https://api.steampowered.com/ISteamRemoteStorage/GetCollectionDetails/v1/",
+            collectionBody);
+
+        collectionResp.EnsureSuccessStatusCode();
+        var collectionJson = await collectionResp.Content.ReadAsStringAsync();
+
+        var collectionRoot = JsonSerializer.Deserialize<CollectionDetailsRoot>(collectionJson);
+        var children = collectionRoot?.Response?.CollectionDetails?.FirstOrDefault()?.Children;
+
+        if (children is null || children.Count == 0)
+            return [];
+
+        // Step 2: get details (name + preview image) for each item
+        var fileParams = new Dictionary<string, string>
+        {
+            ["itemcount"] = children.Count.ToString()
+        };
+        for (var i = 0; i < children.Count; i++)
+            fileParams[$"publishedfileids[{i}]"] = children[i].PublishedFileId;
+
+        var detailsResp = await client.PostAsync(
+            "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/",
+            new FormUrlEncodedContent(fileParams));
+
+        detailsResp.EnsureSuccessStatusCode();
+        var detailsJson = await detailsResp.Content.ReadAsStringAsync();
+
+        var detailsRoot = JsonSerializer.Deserialize<PublishedFileDetailsRoot>(detailsJson);
+
+        return detailsRoot?.Response?.PublishedFileDetails
+            ?.Select(d => new WorkshopMap
+            {
+                Id = d.PublishedFileId,
+                Name = d.Title,
+                PreviewUrl = d.PreviewUrl
+            })
+            .ToList() ?? [];
+    }
+
+    // ── Steam API DTOs ────────────────────────────────────────────────────────
+
+    private sealed class CollectionDetailsRoot
+    {
+        [JsonPropertyName("response")]
+        public CollectionResponse? Response { get; set; }
+    }
+
+    private sealed class CollectionResponse
+    {
+        [JsonPropertyName("collectiondetails")]
+        public List<CollectionDetail>? CollectionDetails { get; set; }
+    }
+
+    private sealed class CollectionDetail
+    {
+        [JsonPropertyName("children")]
+        public List<CollectionChild>? Children { get; set; }
+    }
+
+    private sealed class CollectionChild
+    {
+        [JsonPropertyName("publishedfileid")]
+        public string PublishedFileId { get; set; } = "";
+    }
+
+    private sealed class PublishedFileDetailsRoot
+    {
+        [JsonPropertyName("response")]
+        public PublishedFileResponse? Response { get; set; }
+    }
+
+    private sealed class PublishedFileResponse
+    {
+        [JsonPropertyName("publishedfiledetails")]
+        public List<PublishedFileDetail>? PublishedFileDetails { get; set; }
+    }
+
+    private sealed class PublishedFileDetail
+    {
+        [JsonPropertyName("publishedfileid")]
+        public string PublishedFileId { get; set; } = "";
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = "";
+
+        [JsonPropertyName("preview_url")]
+        public string PreviewUrl { get; set; } = "";
     }
 }
