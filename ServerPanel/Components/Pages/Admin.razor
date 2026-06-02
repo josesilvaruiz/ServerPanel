@@ -244,17 +244,8 @@
                         <i class="ti ti-search map-search-icon"></i>
                         <input class="inp map-search-inp" @bind="MapSearch" @bind:event="oninput" placeholder="Buscar mapa..." />
                     </div>
-                    <button type="button" class="btn btn-ghost btn-sm" @onclick="LoadMaps" disabled="@MapLoading">
-                        @if (MapLoading)
-                        {
-                            <i class="ti ti-loader-2 spin"></i>
-                            <span>Cargando...</span>
-                        }
-                        else
-                        {
-                            <i class="ti ti-refresh"></i>
-                            <span>Recargar mapas</span>
-                        }
+                    <button type="button" class="map-reload-btn" @onclick="LoadMaps" disabled="@MapLoading" title="Recargar mapas">
+                        <i class="ti @(MapLoading ? "ti-loader-2 spin" : "ti-refresh")"></i>
                     </button>
                 </div>
             </div>
@@ -263,7 +254,11 @@
 
             @if (MapError is not null)
             {
-                <p class="map-error"><i class="ti ti-alert-circle"></i> @MapError</p>
+                <div class="map-error">
+                    <i class="ti ti-alert-circle"></i>
+                    <span>@MapError</span>
+                    <button type="button" class="map-retry-btn" @onclick="LoadMaps">Reintentar</button>
+                </div>
             }
 
             @* Grid *@
