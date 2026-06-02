@@ -1,4 +1,5 @@
 @* AdminPanel.razor *@
+@namespace ServerPanel.Components.Pages
 @page "/admin"
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
@@ -288,6 +289,7 @@
                                 }
                             </div>
                             <p class="map-name">@map.Name</p>
+                            <p class="map-id">@map.Id</p>
                         </div>
                     }
                 </div>
@@ -317,6 +319,17 @@
                     <span>Arrastra un mapa aquí</span>
                 }
             </div>
+
+            @* Export *@
+            @if (WorkshopMaps.Count > 0)
+            {
+                <div style="display:flex;justify-content:flex-end;margin-top:3px;margin-right:4px">
+                    <button type="button" class="map-export-btn" @onclick="DownloadConfig">
+                        <i class="ti ti-download"></i>
+                        Montar config
+                    </button>
+                </div>
+            }
 
         </div>
     }
