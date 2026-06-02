@@ -244,14 +244,16 @@
                         <i class="ti ti-search map-search-icon"></i>
                         <input class="inp map-search-inp" @bind="MapSearch" @bind:event="oninput" placeholder="Buscar mapa..." />
                     </div>
-                    <button type="button" class="btn btn-ghost btn-sm" @onclick="LoadMaps" disabled="@MapLoading" title="Recargar">
+                    <button type="button" class="btn btn-ghost btn-sm" @onclick="LoadMaps" disabled="@MapLoading">
                         @if (MapLoading)
                         {
                             <i class="ti ti-loader-2 spin"></i>
+                            <span>Cargando...</span>
                         }
                         else
                         {
                             <i class="ti ti-refresh"></i>
+                            <span>Recargar mapas</span>
                         }
                     </button>
                 </div>
