@@ -365,3 +365,6 @@ FodyWeavers.xsd
 # Deploy scripts (contienen credenciales)
 deploy.sh
 deploy.ps1
+# Secrets
+appsettings.Development.json
+appsettings.*.json
