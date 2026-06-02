@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
+using System.Linq;
 
 namespace ServerPanel.Components.Pages;
 
 public partial class Admin
 {
-    // Cs2ServerService and PlayerService are injected via @inject in Admin.razor
+    [Inject] IJSRuntime JS { get; set; } = default!;
 
     string ActiveSection = "map";
 
@@ -79,6 +81,17 @@ public partial class Admin
     string? MapError;
     string MapSearch = "";
     string? CurrentMap;
+    async Task DownloadConfig()
+    {
+        var json = "{\n  \"WorkshopMaps\": {\n" +
+            string.Join(",\n", WorkshopMaps.Select(m => $"    \"{m.Name}\": {m.Id}")) +
+            "\n  }\n}";
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("eval",
+            $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='workshop_maps.json';a.click()");
+    }
 
     void SetTab(string tab)
     {
