@@ -7,6 +7,7 @@
 @using ServerPanel.Models
 @inject ICs2ServerService Cs2ServerService
 @inject IPlayerService PlayerService
+@inject IServerQueryService ServerQueryService
 
 <div class="wrap">
 
@@ -20,47 +21,22 @@
 
     @* ── Tabs ── *@
     <div class="tabs">
-        <button type="button" class="tab @(ActiveSection == "unban" ? "active-green" : "")" @onclick="@(() => SetTab("unban"))">
-            <i class="ti ti-lock-open"></i>
-            <span class="tab-label">Desbanear</span>
-            <span class="tab-desc">Levantar ban activo</span>
-        </button>
-        <button type="button" class="tab @(ActiveSection == "perms" ? "active-purple" : "")" @onclick="@(() => SetTab("perms"))">
-            <i class="ti ti-shield-check"></i>
-            <span class="tab-label">Permisos</span>
-            <span class="tab-desc">Asignar clase a jugador</span>
+        <button type="button" class="tab @(ActiveSection == "map" ? "active-cyan" : "")" @onclick="@(() => SetTab("map"))">
+            <i class="ti ti-map"></i>
+            <span class="tab-label">Mapa</span>
+            <span class="tab-desc">Cambiar mapa</span>
         </button>
         <button type="button" class="tab @(ActiveSection == "console" ? "active-amber" : "")" @onclick="@(() => SetTab("console"))">
             <i class="ti ti-terminal-2"></i>
             <span class="tab-label">Consola</span>
             <span class="tab-desc">Ejecutar comando</span>
         </button>
+        <button type="button" class="tab @(ActiveSection == "perms" ? "active-purple" : "")" @onclick="@(() => SetTab("perms"))">
+            <i class="ti ti-shield-check"></i>
+            <span class="tab-label">Permisos</span>
+            <span class="tab-desc">Asignar clase a jugador</span>
+        </button>
     </div>
-
-    @* ── Unban ── *@
-    @if (ActiveSection == "unban")
-    {
-        <div class="card card-anim">
-            <div class="card-top">
-                <div class="cicon cicon-green"><i class="ti ti-lock-open"></i></div>
-                <div>
-                    <p class="card-title">Desbanear jugador</p>
-                    <p class="card-sub">Levanta el ban activo por SteamID o nombre</p>
-                </div>
-            </div>
-            <div class="divider"></div>
-            <div class="field">
-                <p class="lbl"><i class="ti ti-id"></i> SteamID o nombre</p>
-                <input class="inp" @bind="UnbanTarget" placeholder="STEAM_0:0:00000000 o nombre exacto..." />
-                <p class="hint">Acepta SteamID64, SteamID2 o nombre ingame</p>
-            </div>
-            <div class="footer">
-                <button type="button" class="btn btn-green" @onclick="HandleUnban">
-                    <i class="ti ti-lock-open"></i> Desbanear
-                </button>
-            </div>
-        </div>
-    }
 
     @* ── Permisos ── *@
     @if (ActiveSection == "perms")
@@ -241,6 +217,113 @@
         </div>
     }
 
+    @* ── Mapa ── *@
+    @if (ActiveSection == "map")
+    {
+        <div class="card card-anim">
+
+            @* Header compacto *@
+            <div class="map-hdr">
+                <div class="map-hdr-left">
+                    <div class="cicon cicon-cyan"><i class="ti ti-map"></i></div>
+                    <div>
+                        <p class="card-title">Cambiar mapa</p>
+                        <p class="card-sub">Arrastra un mapa al área de abajo para cargarlo</p>
+                    </div>
+                </div>
+                <div class="map-hdr-right">
+                    @if (CurrentMap is not null)
+                    {
+                        <div class="map-current">
+                            <i class="ti ti-map-pin" style="color:#22d3ee;font-size:13px"></i>
+                            <span class="map-current-lbl">En curso</span>
+                            <span class="map-current-name">@CurrentMap</span>
+                        </div>
+                    }
+                    <div class="map-search-wrap">
+                        <i class="ti ti-search map-search-icon"></i>
+                        <input class="inp map-search-inp" @bind="MapSearch" @bind:event="oninput" placeholder="Buscar mapa..." />
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" @onclick="LoadMaps" disabled="@MapLoading" title="Recargar">
+                        @if (MapLoading)
+                        {
+                            <i class="ti ti-loader-2 spin"></i>
+                        }
+                        else
+                        {
+                            <i class="ti ti-refresh"></i>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <div class="divider" style="margin: 0.75rem 0"></div>
+
+            @if (MapError is not null)
+            {
+                <p class="map-error"><i class="ti ti-alert-circle"></i> @MapError</p>
+            }
+
+            @* Grid *@
+            @if (MapLoading)
+            {
+                <div class="map-loading">
+                    <div class="map-spinner"></div>
+                    <p>Cargando mapas de la colección...</p>
+                </div>
+            }
+            else if (WorkshopMaps.Count > 0)
+            {
+                <div class="map-grid">
+                    @foreach (var map in WorkshopMaps.Where(m => string.IsNullOrEmpty(MapSearch) || m.Name.Contains(MapSearch, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        <div class="map-card @(DraggedMap?.Id == map.Id ? "map-dragging" : "")"
+                             draggable="true"
+                             @ondragstart="@(() => DraggedMap = map)">
+                            <div class="map-img-wrap">
+                                @if (!string.IsNullOrEmpty(map.PreviewUrl))
+                                {
+                                    <img class="map-img" src="@map.PreviewUrl" alt="@map.Name" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <div class="map-img map-img-placeholder"><i class="ti ti-map-2"></i></div>
+                                }
+                            </div>
+                            <p class="map-name">@map.Name</p>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="map-empty">
+                    <i class="ti ti-map-off"></i>
+                    <p>Pulsa el botón de recarga para cargar los mapas</p>
+                </div>
+            }
+
+            @* Drop zone *@
+            <div class="map-drop @(DropActive ? "drop-active" : "") @(DraggedMap != null ? "drop-ready" : "")"
+                 @ondragover:preventDefault="true"
+                 @ondragenter="@(() => DropActive = true)"
+                 @ondragleave="@(() => DropActive = false)"
+                 @ondrop="HandleMapDrop">
+                @if (DropActive && DraggedMap != null)
+                {
+                    <i class="ti ti-player-play"></i>
+                    <span>Soltar para cargar <strong>@DraggedMap.Name</strong></span>
+                }
+                else
+                {
+                    <i class="ti ti-map-pin"></i>
+                    <span>Arrastra un mapa aquí</span>
+                }
+            </div>
+
+        </div>
+    }
+
     @* ── Toast ── *@
     @if (ToastVisible)
     {
@@ -251,777 +334,3 @@
     }
 
 </div>
-
-<style>
-    *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    .wrap {
-        padding: 1.5rem 0;
-        max-width: 720px;
-        margin: 0 auto;
-    }
-
-    .top {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 2rem;
-        padding-bottom: 1.25rem;
-        border-bottom: 0.5px solid #1e2a3a;
-    }
-
-    .top-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 10px;
-        background: #1e1a3a;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        color: #a78bfa;
-        flex-shrink: 0;
-    }
-
-    .top-title {
-        font-size: 16px;
-        font-weight: 500;
-        color: white;
-    }
-
-    .top-sub {
-        font-size: 12px;
-        color: #b6c2d6;
-        margin-top: 2px;
-    }
-
-    /* ── Tabs ── */
-    .tabs {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        margin-bottom: 1.5rem;
-    }
-
-    .tab {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 5px;
-        padding: 14px 12px;
-        border-radius: 12px;
-        border: 0.5px solid #1e2a3a;
-        background: #111827;
-        cursor: pointer;
-        transition: all .15s;
-    }
-
-        .tab i {
-            font-size: 20px;
-            color: #4b5563;
-            transition: color .15s;
-        }
-
-    .tab-label {
-        font-size: 12px;
-        font-weight: 500;
-        color: #6b7280;
-        transition: color .15s;
-    }
-
-    .tab-desc {
-        font-size: 11px;
-        color: #374151;
-        text-align: center;
-        transition: color .15s;
-    }
-
-    .tab:hover {
-        border-color: #2d3748;
-        background: #161f2e;
-    }
-
-        .tab:hover i, .tab:hover .tab-label {
-            color: #b6c2d6;
-        }
-
-    .active-green {
-        border-color: #166534 !important;
-        background: #1a2e1a !important;
-    }
-
-        .active-green i, .active-green .tab-label {
-            color: #4ade80 !important;
-        }
-
-        .active-green .tab-desc {
-            color: #166534;
-        }
-
-    .active-purple {
-        border-color: #4c1d95 !important;
-        background: #1e1a3a !important;
-    }
-
-        .active-purple i, .active-purple .tab-label {
-            color: #a78bfa !important;
-        }
-
-        .active-purple .tab-desc {
-            color: #4c1d95;
-        }
-
-    .active-amber {
-        border-color: #92400e !important;
-        background: #2e2010 !important;
-    }
-
-        .active-amber i, .active-amber .tab-label {
-            color: #fbbf24 !important;
-        }
-
-        .active-amber .tab-desc {
-            color: #92400e;
-        }
-
-    /* ── Card ── */
-    .card {
-        background: #111827;
-        border: 0.5px solid #1e2a3a;
-        border-radius: 14px;
-        padding: 1.5rem;
-    }
-
-    .card-anim {
-        animation: fadeUp .2s ease;
-    }
-
-    @@keyframes fadeUp {
-        from {
-            opacity: 0;
-            transform: translateY(8px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .card-top {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 1.25rem;
-    }
-
-    .cicon {
-        width: 38px;
-        height: 38px;
-        border-radius: 9px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 19px;
-        flex-shrink: 0;
-    }
-
-    .cicon-green {
-        background: #1a2e1a;
-        color: #4ade80;
-    }
-
-    .cicon-purple {
-        background: #1e1a3a;
-        color: #a78bfa;
-    }
-
-    .cicon-amber {
-        background: #2e2010;
-        color: #fbbf24;
-    }
-
-    .card-title {
-        font-size: 15px;
-        font-weight: 500;
-        color: white;
-    }
-
-    .card-sub {
-        font-size: 12px;
-        color: #b6c2d6;
-        margin-top: 2px;
-    }
-
-    .divider {
-        height: 0.5px;
-        background: #1e2a3a;
-        margin: 0 0 1.25rem;
-    }
-
-    /* ── Fields ── */
-    .field {
-        margin-bottom: 1rem;
-    }
-
-        .field:last-child {
-            margin-bottom: 0;
-        }
-
-    .row2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 1rem;
-    }
-
-    .lbl {
-        font-size: 11px;
-        font-weight: 500;
-        color: #b6c2d6;
-        margin-bottom: 5px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        letter-spacing: .04em;
-        text-transform: uppercase;
-    }
-
-        .lbl i {
-            font-size: 13px;
-        }
-
-    .inp {
-        width: 100%;
-        padding: 9px 12px;
-        font-size: 14px;
-        background: #181c26;
-        color: white;
-        border: 0.5px solid #232b36;
-        border-radius: 8px;
-        outline: none;
-        font-family: inherit;
-        transition: border-color .15s, box-shadow .15s;
-    }
-
-        .inp:focus {
-            border-color: #534AB7;
-            box-shadow: 0 0 0 2.5px rgba(83,74,183,.18);
-        }
-
-    .hint {
-        font-size: 11px;
-        color: #4b5563;
-        margin-top: 4px;
-    }
-
-    /* ── Permisos grid ── */
-    .perm-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-        margin-top: 4px;
-    }
-
-    .popt {
-        padding: 8px 10px;
-        border-radius: 8px;
-        border: 0.5px solid #232b36;
-        background: #181c26;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all .15s;
-        text-align: left;
-    }
-
-        .popt i {
-            font-size: 16px;
-            color: #4b5563;
-            transition: color .15s;
-            flex-shrink: 0;
-        }
-
-    .popt-name {
-        font-size: 12px;
-        font-weight: 500;
-        color: #b6c2d6;
-        transition: color .15s;
-    }
-
-    .popt-desc {
-        font-size: 10px;
-        color: #374151;
-        margin-top: 1px;
-        transition: color .15s;
-        font-family: monospace;
-    }
-
-    .popt:hover {
-        border-color: #a78bfa;
-        background: #1e1a3a;
-    }
-
-        .popt:hover i, .popt:hover .popt-name {
-            color: #a78bfa;
-        }
-
-    .sel {
-        border-color: #534AB7 !important;
-        background: #1e1a3a !important;
-    }
-
-        .sel i, .sel .popt-name {
-            color: #a78bfa !important;
-        }
-
-        .sel .popt-desc {
-            color: #6d5aab !important;
-        }
-
-    /* ── Perm preview ── */
-    .perm-preview {
-        margin-top: 10px;
-        padding: 10px 12px;
-        border-radius: 8px;
-        background: #0d1117;
-        border: 0.5px solid #1e2a3a;
-    }
-
-    .perm-preview-lbl {
-        font-size: 10px;
-        font-weight: 500;
-        color: #4b5563;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        margin-bottom: 8px;
-    }
-
-    .perm-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 5px;
-    }
-
-    .perm-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 3px 8px 3px 9px;
-        border-radius: 20px;
-        background: #1e1a3a;
-        border: 0.5px solid #534AB7;
-        font-size: 11px;
-        font-family: monospace;
-        color: #a78bfa;
-    }
-
-        .perm-tag button {
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-            color: #6d5aab;
-            display: flex;
-            align-items: center;
-            line-height: 1;
-            transition: color .15s;
-        }
-
-            .perm-tag button:hover {
-                color: #f87171;
-            }
-
-            .perm-tag button i {
-                font-size: 11px;
-            }
-
-    /* ── Consola ── */
-    .cmd-wrap {
-        display: flex;
-    }
-
-    .cmd-pfx {
-        padding: 9px 11px;
-        background: #181c26;
-        border: 0.5px solid #232b36;
-        border-right: none;
-        border-radius: 8px 0 0 8px;
-        font-family: monospace;
-        font-size: 13px;
-        color: #4b5563;
-    }
-
-    .cmd-inp {
-        border-radius: 0 8px 8px 0 !important;
-        font-family: monospace !important;
-        font-size: 13px !important;
-    }
-
-    .console-out {
-        margin-top: 12px;
-        border-radius: 8px;
-        background: #0d1117;
-        border: 0.5px solid #1e2a3a;
-        overflow: hidden;
-    }
-
-    .console-bar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 7px 12px;
-        border-bottom: 0.5px solid #1e2a3a;
-    }
-
-    .console-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-    }
-
-    .console-pre {
-        padding: 12px;
-        font-family: monospace;
-        font-size: 12px;
-        color: #4ade80;
-        white-space: pre-wrap;
-        word-break: break-all;
-        max-height: 160px;
-        overflow-y: auto;
-        line-height: 1.6;
-    }
-
-    /* ── Footer / Botones ── */
-    .footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 1.25rem;
-        padding-top: 1rem;
-        border-top: 0.5px solid #1e2a3a;
-    }
-
-    .btn {
-        padding: 9px 20px;
-        font-size: 13px;
-        font-weight: 500;
-        border-radius: 8px;
-        border: 0.5px solid;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        font-family: inherit;
-        transition: all .15s;
-    }
-
-        .btn:active {
-            transform: scale(.97);
-        }
-
-    .btn-green {
-        background: #1a2e1a;
-        color: #4ade80;
-        border-color: #166534;
-    }
-
-        .btn-green:hover {
-            background: #166534;
-        }
-
-    .btn-purple {
-        background: #1e1a3a;
-        color: #a78bfa;
-        border-color: #4c1d95;
-    }
-
-        .btn-purple:hover {
-            background: #2d1f5e;
-        }
-
-    .btn-amber {
-        background: #2e2010;
-        color: #fbbf24;
-        border-color: #92400e;
-    }
-
-        .btn-amber:hover {
-            background: #3d2a10;
-        }
-
-    .btn-ghost {
-        background: transparent;
-        color: #6b7280;
-        border-color: #232b36;
-    }
-
-        .btn-ghost:hover {
-            background: #181c26;
-            color: #b6c2d6;
-        }
-
-    .btn-red {
-        background: #2e1a1a;
-        color: #f87171;
-        border-color: #7f1d1d;
-    }
-
-        .btn-red:hover {
-            background: #7f1d1d;
-        }
-
-        .btn-red:disabled {
-            opacity: .4;
-            cursor: not-allowed;
-        }
-
-    .cicon-red {
-        background: #2e1a1a;
-        color: #f87171;
-    }
-
-    .sel-red {
-        border-color: #7f1d1d !important;
-        background: #2e1a1a !important;
-    }
-
-        .sel-red i, .sel-red .popt-name {
-            color: #f87171 !important;
-        }
-
-        .sel-red .popt-desc {
-            color: #9b2323 !important;
-        }
-
-    /* ── Sub-tabs ── */
-    .sub-tabs {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 1.25rem;
-    }
-
-    .sub-tab {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 7px 10px;
-        border-radius: 8px;
-        border: 0.5px solid #1e2a3a;
-        background: #0d1117;
-        font-size: 12px;
-        font-weight: 500;
-        color: #6b7280;
-        cursor: pointer;
-        font-family: inherit;
-        transition: all .15s;
-    }
-
-        .sub-tab i {
-            font-size: 14px;
-        }
-
-        .sub-tab:hover {
-            border-color: #2d3748;
-            color: #b6c2d6;
-        }
-
-    .sub-active-purple {
-        border-color: #4c1d95 !important;
-        background: #1e1a3a !important;
-        color: #a78bfa !important;
-    }
-
-    .sub-active-red {
-        border-color: #7f1d1d !important;
-        background: #2e1a1a !important;
-        color: #f87171 !important;
-    }
-
-    .popt-ro {
-        cursor: default;
-        pointer-events: none;
-    }
-
-    .popt-dim {
-        opacity: 0.25;
-        cursor: not-allowed;
-    }
-
-    /* ── Toast fijo ── */
-    .toast-fixed {
-        position: fixed;
-        bottom: 1.5rem;
-        right: 1.5rem;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border: 0.5px solid;
-        z-index: 9999;
-        animation: fadeUp .25s ease;
-    }
-
-    .tok {
-        background: #1a2e1a;
-        color: #4ade80;
-        border-color: #166534;
-    }
-
-    .tow {
-        background: #2e1a1a;
-        color: #f87171;
-        border-color: #7f1d1d;
-    }
-</style>
-
-@code {
-    string ActiveSection = "unban";
-
-    string UnbanTarget = "";
-
-    string PermSub = "get";
-    string SharedSteamId = "";
-    string PermPlayerName = "";
-    HashSet<string> SelectedPerms = new();
-    string RemoveFlag = "";
-    PermissionEntry? LoadedEntry;
-
-    private record PermOption(string Value, string Label, string Icon, string Desc);
-
-    private List<PermOption> PermOptions { get; } = new()
-    {
-        new("@css/root",        "Root",       "ti-crown",            "Acceso total"),
-        new("@css/reservation", "Reserva",    "ti-ticket",           "Slot reservado"),
-        new("@css/generic",     "Genérico",   "ti-shield",           "Admin básico"),
-        new("@css/kick",        "Kick",       "ti-user-off",         "Expulsar jugadores"),
-        new("@css/ban",         "Ban",        "ti-ban",              "Banear jugadores"),
-        new("@css/unban",       "Unban",      "ti-lock-open",        "Quitar baneos"),
-        new("@css/vip",         "VIP",        "ti-diamond",          "Estado VIP"),
-        new("@css/slay",        "Slay",       "ti-skull",            "Matar/dañar jugadores"),
-        new("@css/changemap",   "Changemap",  "ti-map",              "Cambiar mapa"),
-        new("@css/cvar",        "Cvar",       "ti-adjustments",      "Modificar cvars"),
-        new("@css/config",      "Config",     "ti-file-settings",    "Ejecutar configs"),
-        new("@css/chat",        "Chat",       "ti-message",          "Chat de administrador"),
-        new("@css/vote",        "Vote",       "ti-checkbox",         "Crear votaciones"),
-        new("@css/password",    "Password",   "ti-lock",             "Cambiar contraseña"),
-        new("@css/rcon",        "RCON",       "ti-terminal",         "Comandos RCON"),
-        new("@css/cheats",      "Cheats",     "ti-mood-crazy-happy", "Usar sv_cheats"),
-    };
-
-    void TogglePerm(string value)
-    {
-        if (!SelectedPerms.Add(value))
-            SelectedPerms.Remove(value);
-    }
-
-    string ConsoleCommand = "";
-    string ConsoleOutput = "";
-
-    bool ToastVisible;
-    bool ToastOk;
-    string ToastMessage = "";
-
-    void SetTab(string tab) => ActiveSection = tab;
-
-    async Task HandleUnban()
-    {
-        if (string.IsNullOrWhiteSpace(UnbanTarget)) return;
-        try
-        {
-            await PlayerService.UnbanPlayerAsync(UnbanTarget);
-            ShowToast(true, $"Ban levantado: {UnbanTarget}");
-            UnbanTarget = "";
-        }
-        catch (Exception ex)
-        {
-            ShowToast(false, ex.Message);
-        }
-    }
-
-    async Task HandleGetPerms()
-    {
-        if (string.IsNullOrWhiteSpace(SharedSteamId)) return;
-        try
-        {
-            LoadedEntry = await PlayerService.GetPermissionsAsync(SharedSteamId);
-            ShowToast(LoadedEntry != null,
-                LoadedEntry != null
-                    ? $"{LoadedEntry.Flags.Count} flag(s) cargados"
-                    : "Usuario no encontrado en admins.json");
-        }
-        catch (Exception ex)
-        {
-            ShowToast(false, ex.Message);
-        }
-    }
-
-    async Task HandleSetPerms()
-    {
-        if (string.IsNullOrWhiteSpace(PermPlayerName)) return;
-        try
-        {
-            await PlayerService.SetPermissionsAsync(PermPlayerName, SharedSteamId, string.Join(";", SelectedPerms));
-            LoadedEntry = await PlayerService.GetPermissionsAsync(SharedSteamId);
-            ShowToast(true, $"Permisos asignados a {PermPlayerName}");
-        }
-        catch (Exception ex)
-        {
-            ShowToast(false, ex.Message);
-        }
-    }
-
-    async Task HandleRemovePerm()
-    {
-        if (string.IsNullOrWhiteSpace(SharedSteamId) || string.IsNullOrWhiteSpace(RemoveFlag)) return;
-        try
-        {
-            await PlayerService.RemovePermissionAsync(SharedSteamId, RemoveFlag);
-            LoadedEntry = await PlayerService.GetPermissionsAsync(SharedSteamId);
-            ShowToast(true, $"Flag {RemoveFlag} eliminado");
-            RemoveFlag = "";
-        }
-        catch (Exception ex)
-        {
-            ShowToast(false, ex.Message);
-        }
-    }
-
-    async Task HandleConsole()
-    {
-        if (string.IsNullOrWhiteSpace(ConsoleCommand)) return;
-        try
-        {
-            ConsoleOutput = await Cs2ServerService.ExecuteConsoleCommandAsync(ConsoleCommand);
-            ConsoleCommand = "";
-        }
-        catch (Exception ex)
-        {
-            ShowToast(false, ex.Message);
-        }
-    }
-
-    async void ShowToast(bool ok, string msg)
-    {
-        ToastVisible = true;
-        ToastOk = ok;
-        ToastMessage = msg;
-        StateHasChanged();
-        await Task.Delay(3000);
-        ToastVisible = false;
-        StateHasChanged();
-    }
-}

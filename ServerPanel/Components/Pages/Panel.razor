@@ -1,4 +1,3 @@
-﻿
 @page "/panel"
 @rendermode InteractiveServer
 
@@ -8,354 +7,180 @@
 
 @attribute [Authorize]
 
-@inject ICs2ServerService Cs2
-@inject IServerQueryService QueryService
+<PageTitle>Dashboard — ServerPanel</PageTitle>
 
-<PageTitle>ServerPanel</PageTitle>
+<div class="pn-page">
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-xl-8 col-lg-10">
-            <div class="card border-0 shadow-lg">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">🎮 Servidor CS2</h3>
-                    @if (IsRunning)
-                    {
-                        <span class="badge bg-success fs-6">Online</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-danger fs-6">Offline</span>
-                    }
-                </div>
-                <div class="card-body p-4">
-                    @if (Loading)
-                    {
-                        <div class="text-center py-5">
-                            <div class="spinner-border text-primary"></div>
-                        </div>
-                    }
-                    else
-                    {
-                        @if (ServerInfo is not null)
-{
-    <div class="mb-4">
-
-        <h1 class="fw-bold text-white mb-1">
-            🎮 @ServerInfo.ServerName
-        </h1>
-
-        <p class="text-secondary mb-3">
-            @ServerInfo.Ip:@ServerInfo.Port
-        </p>
-
-        <div class="d-flex flex-wrap gap-2">
-
-            <span class="badge bg-primary fs-6 px-3 py-2">
-                🗺️ @ServerInfo.Map
-            </span>
-
-            <span class="badge bg-success fs-6 px-3 py-2">
-                👥 @ServerInfo.Players/@ServerInfo.MaxPlayers
-            </span>
-
-            <span class="badge bg-secondary fs-6 px-3 py-2">
-                🔖 v@(ServerInfo.Version)
-            </span>
-
-        </div>
-
-    </div>
-
-    <div class="card border-0 shadow-sm mb-4">
-
-        <div class="card-header bg-dark text-white">
-
-            <h5 class="mb-0">
-                📊 Información del Servidor
-            </h5>
-
-        </div>
-
-        <div class="card-body">
-
-            <div class="row">
-
-                <div class="col-md-6 mb-4">
-
-                    <div class="text-secondary small text-uppercase">
-                        Juego
-                    </div>
-
-                    <div class="fw-semibold fs-5">
-                        @ServerInfo.Game
-                    </div>
-
-                </div>
-
-                <div class="col-md-6 mb-4">
-
-                    <div class="text-secondary small text-uppercase">
-                        Mapa
-                    </div>
-
-                    <div class="fw-semibold fs-5">
-                        @ServerInfo.Map
-                    </div>
-
-                </div>
-
-                <div class="col-md-6 mb-4">
-
-                    <div class="text-secondary small text-uppercase">
-                        Jugadores
-                    </div>
-
-                    <div class="fw-semibold fs-5">
-                        @ServerInfo.Players / @ServerInfo.MaxPlayers
-                    </div>
-
-                </div>
-
-                <div class="col-md-6 mb-4">
-
-                    <div class="text-secondary small text-uppercase">
-                        Versión
-                    </div>
-
-                    <div class="fw-semibold fs-5">
-                        @ServerInfo.Version
-                    </div>
-
-                </div>
-
-                <div class="col-md-6">
-
-                    <div class="text-secondary small text-uppercase">
-                        AppID
-                    </div>
-
-                    <div class="fw-semibold fs-5">
-                        @ServerInfo.AppId
-                    </div>
-
-                </div>
-
-                <div class="col-md-6">
-
-                    <div class="text-secondary small text-uppercase">
-                        VAC
-                    </div>
-
-                    <div class="fw-semibold fs-5">
-                        @(ServerInfo.Vac == 1
-                            ? "🛡️ Activado"
-                            : "❌ Desactivado")
-                    </div>
-
-                </div>
-
+    <!-- ── Header ── -->
+    <div class="pn-header">
+        <div class="pn-header-left">
+            <div class="pn-header-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                    <path d="M21 6.5C21 8.43 19.43 10 17.5 10S14 8.43 14 6.5 15.57 3 17.5 3 21 4.57 21 6.5zM4 6h10v2H4V6zm0 5h6v2H4v-2zm0 5h6v2H4v-2zm8 2v-2h1.68c.16-.73.49-1.4.96-1.96L13 14h-1v-2h3.45C16.16 11.38 17.27 11 18.5 11c1.8 0 3.33.99 4.1 2.44L21 14v2h-.08C20.95 16.64 21 16.82 21 17c0 2.21-1.79 4-4 4s-4-1.79-4-4c0-.18.05-.36.07-.54L12.03 16H12v1H10v-5h2v1z" />
+                </svg>
             </div>
-
-        </div>
-
-    </div>
-}
-                        <div class="alert @(IsRunning ? "alert-success" : "alert-danger")">
-                            <strong>Estado:</strong>
-                            @(IsRunning ? " Servidor operativo" : " Servidor detenido")
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <button class="btn btn-success w-100" @onclick="StartServer" disabled="@ActionRunning">🚀 Iniciar</button>
-                            </div>
-                            <div class="col-md-6">
-                                <button class="btn btn-warning w-100" @onclick="RestartServer" disabled="@ActionRunning">🔄 Reiniciar</button>
-                            </div>
-                            <div class="col-md-6">
-                                <button class="btn btn-danger w-100" @onclick="StopServer" disabled="@ActionRunning">⛔ Detener</button>
-                            </div>
-                            <div class="col-md-6">
-                                <button class="btn btn-secondary w-100" @onclick="RefreshStatus" disabled="@ActionRunning">📡 Actualizar</button>
-                            </div>
-                            <div class="col-md-12">
-                                <button class="btn btn-info w-100" @onclick="UpdateServer" disabled="@ActionRunning">⬆️ Actualizar Servidor</button>
-                            </div>
-                        </div>
-                        @if (!string.IsNullOrWhiteSpace(StatusMessage))
-                        {
-                            <div class="alert alert-info mt-4 mb-0">@StatusMessage</div>
-                        }
+            <div>
+                <div class="pn-title">Dashboard</div>
+                <div class="pn-subtitle">
+                    @if (ServerInfo is not null)
+                    {
+                        <span class="pn-server-name">@ServerInfo.ServerName</span>
+                    }
+                    else
+                    {
+                        <span>Servidor CS2</span>
                     }
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-@code {
-
-    private bool Loading = true;
-    private bool ActionRunning = false;
-
-    private bool IsRunning = false;
-
-    private ServerInfo? ServerInfo;
-
-    private string StatusMessage = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await RefreshStatus();
-    }
-
-    private async Task RefreshStatus()
-    {
-        try
-        {
-            Loading = true;
-
-            IsRunning = await Cs2.IsRunningAsync();
-
-            if (IsRunning)
+        <div class="pn-header-right">
+            @if (Loading)
             {
-                ServerInfo =
-                    await QueryService.GetServerInfoAsync();
+                <span class="pn-badge pn-badge-loading">Cargando...</span>
+            }
+            else if (IsRunning)
+            {
+                <span class="pn-badge pn-badge-online">
+                    <span class="pn-badge-dot pn-badge-dot-green"></span>Online
+                </span>
             }
             else
             {
-                ServerInfo = null;
+                <span class="pn-badge pn-badge-offline">
+                    <span class="pn-badge-dot pn-badge-dot-red"></span>Offline
+                </span>
             }
+        </div>
+    </div>
 
-            StatusMessage =
-                $"Última actualización: {DateTime.Now:HH:mm:ss}";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = ex.ToString();
-        }
-        finally
-        {
-            Loading = false;
-        }
-    }
-
-    private async Task StartServer()
+    <!-- ── Stats ── -->
+    @if (Loading)
     {
-        try
-        {
-            ActionRunning = true;
-
-            await Cs2.StartAsync();
-
-            await Task.Delay(5000);
-
-            await RefreshStatus();
-
-            StatusMessage =
-                "Servidor iniciado correctamente.";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = ex.Message;
-        }
-        finally
-        {
-            ActionRunning = false;
-        }
+        <div class="pn-loading">
+            <div class="pn-spinner"></div>
+            <span>Consultando servidor...</span>
+        </div>
     }
-
-    private async Task StopServer()
+    else if (ServerInfo is not null)
     {
-        try
-        {
-            ActionRunning = true;
+        <div class="pn-stats-grid">
+            <div class="pn-stat-card">
+                <div class="pn-stat-icon pn-stat-icon-cyan">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z" />
+                    </svg>
+                </div>
+                <div class="pn-stat-body">
+                    <div class="pn-stat-label">Mapa</div>
+                    <div class="pn-stat-value">@ServerInfo.Map</div>
+                </div>
+            </div>
 
-            await Cs2.StopAsync();
+            <div class="pn-stat-card">
+                <div class="pn-stat-icon pn-stat-icon-green">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                    </svg>
+                </div>
+                <div class="pn-stat-body">
+                    <div class="pn-stat-label">Jugadores</div>
+                    <div class="pn-stat-value">@ServerInfo.Players<span class="pn-stat-max">/@ServerInfo.MaxPlayers</span></div>
+                </div>
+            </div>
 
-            await Task.Delay(3000);
+            <div class="pn-stat-card">
+                <div class="pn-stat-icon pn-stat-icon-amber">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z" />
+                    </svg>
+                </div>
+                <div class="pn-stat-body">
+                    <div class="pn-stat-label">VAC</div>
+                    <div class="pn-stat-value">@(ServerInfo.Vac == 1 ? "Activado" : "Desactivado")</div>
+                </div>
+            </div>
 
-            await RefreshStatus();
+            <div class="pn-stat-card">
+                <div class="pn-stat-icon pn-stat-icon-purple">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z" />
+                    </svg>
+                </div>
+                <div class="pn-stat-body">
+                    <div class="pn-stat-label">Versión</div>
+                    <div class="pn-stat-value pn-mono">@ServerInfo.Version</div>
+                </div>
+            </div>
 
-            StatusMessage =
-                "Servidor detenido correctamente.";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = ex.Message;
-        }
-        finally
-        {
-            ActionRunning = false;
-        }
+            <div class="pn-stat-card">
+                <div class="pn-stat-icon pn-stat-icon-blue">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+                    </svg>
+                </div>
+                <div class="pn-stat-body">
+                    <div class="pn-stat-label">Dirección</div>
+                    <div class="pn-stat-value pn-mono">@ServerInfo.Ip:@ServerInfo.Port</div>
+                </div>
+            </div>
+
+            <div class="pn-stat-card">
+                <div class="pn-stat-icon pn-stat-icon-gray">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z" />
+                    </svg>
+                </div>
+                <div class="pn-stat-body">
+                    <div class="pn-stat-label">Juego</div>
+                    <div class="pn-stat-value">@ServerInfo.Game</div>
+                </div>
+            </div>
+        </div>
     }
-
-    private async Task RestartServer()
+    else
     {
-        try
-        {
-            ActionRunning = true;
-
-            await Cs2.RestartAsync();
-
-            await Task.Delay(8000);
-
-            await RefreshStatus();
-
-            StatusMessage =
-                "Servidor reiniciado correctamente.";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = ex.Message;
-        }
-        finally
-        {
-            ActionRunning = false;
-        }
+        <div class="pn-offline-card">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="36" height="36" style="opacity:.3">
+                <path d="M20 18.54L5.46 4 4 5.46 7.03 8.5C5.76 9.07 4.78 10.16 4.34 11.5h1.69c.49-1.17 1.62-2 2.97-2 .23 0 .44.03.64.07L10 10.34c-.32-.08-.65-.13-1-.14V9c-2.05 0-3.8 1.29-4.5 3.12-.18.46-.5.88-.93 1.13-.26.15-.57.25-.57.75 0 .55.45 1 1 1 .4 0 .74-.24.91-.58.83-.77 1.81-1.18 2.59-1.18.33 0 .67.06.97.17L9 14.61c-.31-.08-.65-.11-1-.11-1.1 0-2.1.45-2.83 1.17L4 14.5v2h15l-2-2zM19 13c.55 0 1-.45 1-1 0-.55-.45-1-1-1-.38 0-.7.22-.88.54C17.29 11.22 16.17 10.5 15 10.5c-.64 0-1.23.2-1.74.52L14 11.76c.3-.17.64-.26 1-.26.87 0 1.62.5 2 1.24.26-.09.55-.14.84-.14C17.49 12.6 18.21 13 19 13z" />
+            </svg>
+            <span>Servidor offline — sin datos disponibles</span>
+        </div>
     }
 
-private async Task UpdateServer()
-{
-    try
+    <!-- ── Control buttons ── -->
+    <div class="pn-controls">
+        <div class="pn-controls-title">Control del servidor</div>
+        <div class="pn-controls-grid">
+            <button class="pn-btn pn-btn-green" @onclick="StartServer" disabled="@ActionRunning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M8 5v14l11-7z" /></svg>
+                Iniciar
+            </button>
+            <button class="pn-btn pn-btn-amber" @onclick="RestartServer" disabled="@ActionRunning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" /></svg>
+                Reiniciar
+            </button>
+            <button class="pn-btn pn-btn-red" @onclick="StopServer" disabled="@ActionRunning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M6 6h12v12H6z" /></svg>
+                Detener
+            </button>
+            <button class="pn-btn pn-btn-ghost" @onclick="RefreshStatus" disabled="@ActionRunning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" /></svg>
+                Actualizar estado
+            </button>
+            <button class="pn-btn pn-btn-cyan pn-btn-full" @onclick="UpdateServer" disabled="@ActionRunning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
+                Actualizar servidor (SteamCMD)
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Toast ── -->
+    @if (!string.IsNullOrWhiteSpace(StatusMessage))
     {
-        ActionRunning = true;
-
-        StatusMessage =
-            "Actualizando servidor...";
-
-        var result =
-            await Cs2.UpdateAsync();
-
-        await RefreshStatus();
-
-        if (result.AlreadyUpdated)
-        {
-            StatusMessage =
-                $"✅ El servidor ya estaba actualizado (Build {result.LocalBuild})";
-        }
-        else if (result.Updated)
-        {
-            StatusMessage =
-                $"⬆️ Actualizado de {result.LocalBuild} a {result.RemoteBuild}";
-        }
-        else
-        {
-            StatusMessage =
-                string.IsNullOrWhiteSpace(result.Output)
-                    ? "❌ No se pudo completar la actualización."
-                    : result.Output;
-        }
+        <div class="pn-toast">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" /></svg>
+            @StatusMessage
+        </div>
     }
-    catch (Exception ex)
-    {
-        StatusMessage = ex.Message;
-    }
-    finally
-    {
-        ActionRunning = false;
-    }
-}
 
-
-}
+</div>
