@@ -128,6 +128,7 @@
         }
 
         <form method="post" action="/Login?returnUrl=@Html.Raw(Uri.EscapeDataString(HttpContext.Request.Query["ReturnUrl"].ToString()))">
+            @Html.AntiForgeryToken()
             <div class="form-group">
                 <label asp-for="Username">Usuario</label>
                 <input asp-for="Username" placeholder="Introduce tu usuario" />
