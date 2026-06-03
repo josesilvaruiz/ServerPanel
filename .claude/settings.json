@@ -9,7 +9,8 @@
       "Bash(ls /mnt/c/Users/josea/source/repos/ServerPanel/ServerPanel/Components/Layout/)",
       "Read(//mnt/c/Users/josea/source/repos/ServerPanel/ServerPanel/Components/**)",
       "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $r = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $r | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 8)",
-      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $r = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $r | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 5)"
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; $r = dotnet build ServerPanel/ServerPanel.csproj 2>&1; $r | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 5)",
+      "PowerShell(cd \"c:\\\\Users\\\\josea\\\\source\\\\repos\\\\ServerPanel\"; dotnet build ServerPanel/ServerPanel.csproj 2>&1 | Where-Object { $_ -notmatch \"MSB302[167]|apphost|bloqueado|reinten\" } | Select-Object -Last 4)"
     ]
   }
 }
