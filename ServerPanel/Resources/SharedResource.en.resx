@@ -47,6 +47,18 @@
   <data name="Dashboard.Update" xml:space="preserve"><value>Update server (SteamCMD)</value></data>
   <data name="Dashboard.Online" xml:space="preserve"><value>Online</value></data>
   <data name="Dashboard.Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Dashboard.Loading" xml:space="preserve"><value>Querying server...</value></data>
+  <data name="Dashboard.Stat.Map" xml:space="preserve"><value>Map</value></data>
+  <data name="Dashboard.Stat.Players" xml:space="preserve"><value>Players</value></data>
+  <data name="Dashboard.Stat.Vac" xml:space="preserve"><value>VAC</value></data>
+  <data name="Dashboard.Stat.VacOn" xml:space="preserve"><value>Enabled</value></data>
+  <data name="Dashboard.Stat.VacOff" xml:space="preserve"><value>Disabled</value></data>
+  <data name="Dashboard.Stat.Version" xml:space="preserve"><value>Version</value></data>
+  <data name="Dashboard.Stat.Address" xml:space="preserve"><value>Address</value></data>
+  <data name="Dashboard.Stat.Game" xml:space="preserve"><value>Game</value></data>
+  <data name="Dashboard.Controls.Title" xml:space="preserve"><value>Server control</value></data>
+  <data name="Dashboard.Badge.Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Dashboard.Offline.Msg" xml:space="preserve"><value>Server offline — no data available</value></data>
   <data name="Login.Title" xml:space="preserve"><value>Sign in</value></data>
   <data name="Login.User" xml:space="preserve"><value>Username</value></data>
   <data name="Login.Password" xml:space="preserve"><value>Password</value></data>

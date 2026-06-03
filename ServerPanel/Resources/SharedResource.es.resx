@@ -47,6 +47,18 @@
   <data name="Dashboard.Update" xml:space="preserve"><value>Actualizar servidor (SteamCMD)</value></data>
   <data name="Dashboard.Online" xml:space="preserve"><value>Online</value></data>
   <data name="Dashboard.Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Dashboard.Loading" xml:space="preserve"><value>Consultando servidor...</value></data>
+  <data name="Dashboard.Stat.Map" xml:space="preserve"><value>Mapa</value></data>
+  <data name="Dashboard.Stat.Players" xml:space="preserve"><value>Jugadores</value></data>
+  <data name="Dashboard.Stat.Vac" xml:space="preserve"><value>VAC</value></data>
+  <data name="Dashboard.Stat.VacOn" xml:space="preserve"><value>Activado</value></data>
+  <data name="Dashboard.Stat.VacOff" xml:space="preserve"><value>Desactivado</value></data>
+  <data name="Dashboard.Stat.Version" xml:space="preserve"><value>Versión</value></data>
+  <data name="Dashboard.Stat.Address" xml:space="preserve"><value>Dirección</value></data>
+  <data name="Dashboard.Stat.Game" xml:space="preserve"><value>Juego</value></data>
+  <data name="Dashboard.Controls.Title" xml:space="preserve"><value>Control del servidor</value></data>
+  <data name="Dashboard.Badge.Loading" xml:space="preserve"><value>Cargando...</value></data>
+  <data name="Dashboard.Offline.Msg" xml:space="preserve"><value>Servidor offline — sin datos disponibles</value></data>
   <data name="Login.Title" xml:space="preserve"><value>Iniciar sesión</value></data>
   <data name="Login.User" xml:space="preserve"><value>Usuario</value></data>
   <data name="Login.Password" xml:space="preserve"><value>Contraseña</value></data>

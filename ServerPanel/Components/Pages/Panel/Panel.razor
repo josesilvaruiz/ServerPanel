@@ -38,7 +38,7 @@
         <div class="pn-header-right">
             @if (Loading)
             {
-                <span class="pn-badge pn-badge-loading">Cargando...</span>
+                <span class="pn-badge pn-badge-loading">@L["Dashboard.Badge.Loading"]</span>
             }
             else if (IsRunning)
             {
@@ -60,7 +60,7 @@
     {
         <div class="pn-loading">
             <div class="pn-spinner"></div>
-            <span>Consultando servidor...</span>
+            <span>@L["Dashboard.Loading"]</span>
         </div>
     }
     else if (ServerInfo is not null)
@@ -73,7 +73,7 @@
                     </svg>
                 </div>
                 <div class="pn-stat-body">
-                    <div class="pn-stat-label">Mapa</div>
+                    <div class="pn-stat-label">@L["Dashboard.Stat.Map"]</div>
                     <div class="pn-stat-value">@ServerInfo.Map</div>
                 </div>
             </div>
@@ -85,7 +85,7 @@
                     </svg>
                 </div>
                 <div class="pn-stat-body">
-                    <div class="pn-stat-label">Jugadores</div>
+                    <div class="pn-stat-label">@L["Dashboard.Stat.Players"]</div>
                     <div class="pn-stat-value">@ServerInfo.Players<span class="pn-stat-max">/@ServerInfo.MaxPlayers</span></div>
                 </div>
             </div>
@@ -97,8 +97,8 @@
                     </svg>
                 </div>
                 <div class="pn-stat-body">
-                    <div class="pn-stat-label">VAC</div>
-                    <div class="pn-stat-value">@(ServerInfo.Vac == 1 ? "Activado" : "Desactivado")</div>
+                    <div class="pn-stat-label">@L["Dashboard.Stat.Vac"]</div>
+                    <div class="pn-stat-value">@(ServerInfo.Vac == 1 ? L["Dashboard.Stat.VacOn"].Value : L["Dashboard.Stat.VacOff"].Value)</div>
                 </div>
             </div>
 
@@ -109,7 +109,7 @@
                     </svg>
                 </div>
                 <div class="pn-stat-body">
-                    <div class="pn-stat-label">Versión</div>
+                    <div class="pn-stat-label">@L["Dashboard.Stat.Version"]</div>
                     <div class="pn-stat-value pn-mono">@ServerInfo.Version</div>
                 </div>
             </div>
@@ -121,7 +121,7 @@
                     </svg>
                 </div>
                 <div class="pn-stat-body">
-                    <div class="pn-stat-label">Dirección</div>
+                    <div class="pn-stat-label">@L["Dashboard.Stat.Address"]</div>
                     <div class="pn-stat-value pn-mono">@ServerInfo.Ip:@ServerInfo.Port</div>
                 </div>
             </div>
@@ -133,7 +133,7 @@
                     </svg>
                 </div>
                 <div class="pn-stat-body">
-                    <div class="pn-stat-label">Juego</div>
+                    <div class="pn-stat-label">@L["Dashboard.Stat.Game"]</div>
                     <div class="pn-stat-value">@ServerInfo.Game</div>
                 </div>
             </div>
@@ -145,13 +145,13 @@
             <svg viewBox="0 0 24 24" fill="currentColor" width="36" height="36" style="opacity:.3">
                 <path d="M20 18.54L5.46 4 4 5.46 7.03 8.5C5.76 9.07 4.78 10.16 4.34 11.5h1.69c.49-1.17 1.62-2 2.97-2 .23 0 .44.03.64.07L10 10.34c-.32-.08-.65-.13-1-.14V9c-2.05 0-3.8 1.29-4.5 3.12-.18.46-.5.88-.93 1.13-.26.15-.57.25-.57.75 0 .55.45 1 1 1 .4 0 .74-.24.91-.58.83-.77 1.81-1.18 2.59-1.18.33 0 .67.06.97.17L9 14.61c-.31-.08-.65-.11-1-.11-1.1 0-2.1.45-2.83 1.17L4 14.5v2h15l-2-2zM19 13c.55 0 1-.45 1-1 0-.55-.45-1-1-1-.38 0-.7.22-.88.54C17.29 11.22 16.17 10.5 15 10.5c-.64 0-1.23.2-1.74.52L14 11.76c.3-.17.64-.26 1-.26.87 0 1.62.5 2 1.24.26-.09.55-.14.84-.14C17.49 12.6 18.21 13 19 13z" />
             </svg>
-            <span>Servidor offline — sin datos disponibles</span>
+            <span>@L["Dashboard.Offline.Msg"]</span>
         </div>
     }
 
     <!-- ── Control buttons ── -->
     <div class="pn-controls">
-        <div class="pn-controls-title">Control del servidor</div>
+        <div class="pn-controls-title">@L["Dashboard.Controls.Title"]</div>
         <div class="pn-controls-grid">
             <button class="pn-btn pn-btn-green" @onclick="StartServer" disabled="@ActionRunning">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M8 5v14l11-7z" /></svg>
