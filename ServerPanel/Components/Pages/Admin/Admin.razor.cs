@@ -83,14 +83,15 @@ public partial class Admin
     string? CurrentMap;
     async Task DownloadConfig()
     {
-        var json = "{\n  \"WorkshopMaps\": {\n" +
-            string.Join(",\n", WorkshopMaps.Select(m => $"    \"{m.Name}\": {m.Id}")) +
-            "\n  }\n}";
-
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        var base64 = Convert.ToBase64String(bytes);
-        await JS.InvokeVoidAsync("eval",
-            $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='workshop_maps.json';a.click()");
+        try
+        {
+            await Cs2ServerService.UpdateSimpleAdminWorkshopMapsAsync(WorkshopMaps);
+            ShowToast(true, "WorkshopMaps actualizado en el servidor");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, ex.Message);
+        }
     }
 
     void SetTab(string tab)

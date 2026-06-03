@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
 
@@ -278,6 +279,37 @@ public class Cs2ServerService : ICs2ServerService
                 PreviewUrl = d.PreviewUrl
             })
             .ToList() ?? [];
+    }
+
+    const string SimpleAdminConfigPath =
+        "/home/steam/cs2/game/csgo/addons/counterstrikesharp/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
+
+    public async Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps)
+    {
+        var mapList = maps.ToList();
+        if (mapList.Count == 0)
+            throw new InvalidOperationException("La lista de mapas está vacía");
+
+        // Serialize maps as JSON and pass as base64 argument to Python
+        var mapsJson = System.Text.Json.JsonSerializer.Serialize(
+            mapList.ToDictionary(m => m.Name, m => long.Parse(m.Id)));
+        var mapsB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(mapsJson));
+
+        var py = "import json,base64,sys;" +
+                 $"p='{SimpleAdminConfigPath}';" +
+                 $"m=json.loads(base64.b64decode('{mapsB64}').decode());" +
+                 "c=open(p).read();" +
+                 "s=c.index('{');comm=c[:s];data=json.loads(c[s:]);" +
+                 "data['WorkshopMaps']=m;" +
+                 "open(p,'w').write(comm+json.dumps(data,indent=2));" +
+                 "print('ok')";
+
+        var result = await _ssh.ExecuteAsync($"python3 -c \"{py}\"");
+
+        _logger.LogInformation("Workshop update result: {Result}", result);
+
+        if (!result.Contains("ok"))
+            throw new InvalidOperationException($"Error: {result.Trim()}");
     }
 
     // ── Steam API DTOs ────────────────────────────────────────────────────────
