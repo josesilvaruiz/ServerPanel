@@ -19,11 +19,14 @@ namespace ServerPanel.Pages
             _config = config;
         }
 
-        public void OnGet()
+        public IActionResult OnGet()
         {
+            if (User.Identity?.IsAuthenticated == true)
+                return Redirect("/panel");
+            return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
             var configuredUser = _config["Auth:Username"];
             var configuredPassword = _config["Auth:Password"];
@@ -34,6 +37,8 @@ namespace ServerPanel.Pages
                 var identity = new ClaimsIdentity(claims, "ServerPanel");
                 var principal = new ClaimsPrincipal(identity);
                 await HttpContext.SignInAsync("ServerPanel", principal);
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    return Redirect(returnUrl);
                 return Redirect("/panel");
             }
             Error = "Usuario o contraseña incorrectos";

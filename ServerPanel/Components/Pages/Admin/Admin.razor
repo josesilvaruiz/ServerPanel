@@ -9,14 +9,15 @@
 @inject ICs2ServerService Cs2ServerService
 @inject IPlayerService PlayerService
 @inject IServerQueryService ServerQueryService
+@inject IStringLocalizer<SharedResource> L
 
 <div class="wrap">
 
     <div class="top">
         <div class="top-icon"><i class="ti ti-shield-half"></i></div>
         <div>
-            <p class="top-title">Panel de administración</p>
-            <p class="top-sub">Gestión de jugadores y servidor CS2</p>
+            <p class="top-title">@L["Admin.Title"]</p>
+            <p class="top-sub">@L["Admin.Subtitle"]</p>
         </div>
     </div>
 
@@ -24,18 +25,18 @@
     <div class="tabs">
         <button type="button" class="tab @(ActiveSection == "map" ? "active-cyan" : "")" @onclick="@(() => SetTab("map"))">
             <i class="ti ti-map"></i>
-            <span class="tab-label">Mapa</span>
-            <span class="tab-desc">Cambiar mapa</span>
+            <span class="tab-label">@L["Admin.Tab.Map"]</span>
+            <span class="tab-desc">@L["Admin.Map.Title"]</span>
         </button>
         <button type="button" class="tab @(ActiveSection == "console" ? "active-amber" : "")" @onclick="@(() => SetTab("console"))">
             <i class="ti ti-terminal-2"></i>
-            <span class="tab-label">Consola</span>
-            <span class="tab-desc">Ejecutar comando</span>
+            <span class="tab-label">@L["Admin.Tab.Console"]</span>
+            <span class="tab-desc">@L["Admin.Console.Run"]</span>
         </button>
         <button type="button" class="tab @(ActiveSection == "perms" ? "active-purple" : "")" @onclick="@(() => SetTab("perms"))">
             <i class="ti ti-shield-check"></i>
-            <span class="tab-label">Permisos</span>
-            <span class="tab-desc">Asignar clase a jugador</span>
+            <span class="tab-label">@L["Admin.Tab.Perms"]</span>
+            <span class="tab-desc">@L["Admin.Perms.Subtitle"]</span>
         </button>
     </div>
 
@@ -46,21 +47,21 @@
             <div class="card-top">
                 <div class="cicon cicon-purple"><i class="ti ti-shield-check"></i></div>
                 <div>
-                    <p class="card-title">Permisos</p>
-                    <p class="card-sub">Ver, asignar y quitar flags de administrador</p>
+                    <p class="card-title">@L["Admin.Perms.Title"]</p>
+                    <p class="card-sub">@L["Admin.Perms.Subtitle"]</p>
                 </div>
             </div>
             <div class="divider"></div>
 
             <div class="sub-tabs">
                 <button type="button" class="sub-tab @(PermSub == "get" ? "sub-active-purple" : "")" @onclick="@(() => PermSub = "get")">
-                    <i class="ti ti-eye"></i> Ver permisos
+                    <i class="ti ti-eye"></i> @L["Admin.Perms.View"]
                 </button>
                 <button type="button" class="sub-tab @(PermSub == "set" ? "sub-active-purple" : "")" @onclick="@(() => PermSub = "set")">
-                    <i class="ti ti-shield-check"></i> Asignar
+                    <i class="ti ti-shield-check"></i> @L["Admin.Perms.Assign"]
                 </button>
                 <button type="button" class="sub-tab @(PermSub == "remove" ? "sub-active-red" : "")" @onclick="@(() => PermSub = "remove")">
-                    <i class="ti ti-shield-x"></i> Quitar
+                    <i class="ti ti-shield-x"></i> @L["Admin.Perms.Remove"]
                 </button>
             </div>
 
@@ -88,7 +89,7 @@
                 </div>
                 <div class="footer">
                     <button type="button" class="btn btn-purple" @onclick="HandleGetPerms">
-                        <i class="ti ti-search"></i> Cargar
+                        <i class="ti ti-search"></i> @L["Admin.Perms.Load"]
                     </button>
                 </div>
             }
@@ -138,7 +139,7 @@
                         <i class="ti ti-trash"></i> Limpiar
                     </button>
                     <button type="button" class="btn btn-purple" @onclick="HandleSetPerms">
-                        <i class="ti ti-shield-check"></i> Asignar
+                        <i class="ti ti-shield-check"></i> @L["Admin.Perms.Assign"]
                     </button>
                 </div>
             }
@@ -187,8 +188,8 @@
             <div class="card-top">
                 <div class="cicon cicon-amber"><i class="ti ti-terminal-2"></i></div>
                 <div>
-                    <p class="card-title">Consola del servidor</p>
-                    <p class="card-sub">Ejecuta comandos directamente en el servidor</p>
+                    <p class="card-title">@L["Admin.Console.Title"]</p>
+                    <p class="card-sub">@L["Admin.Console.Subtitle"]</p>
                 </div>
             </div>
             <div class="divider"></div>
@@ -212,7 +213,7 @@
             }
             <div class="footer">
                 <button type="button" class="btn btn-amber" @onclick="HandleConsole">
-                    <i class="ti ti-player-play"></i> Ejecutar
+                    <i class="ti ti-player-play"></i> @L["Admin.Console.Run"]
                 </button>
             </div>
         </div>
@@ -228,8 +229,8 @@
                 <div class="map-hdr-left">
                     <div class="cicon cicon-cyan"><i class="ti ti-map"></i></div>
                     <div>
-                        <p class="card-title">Cambiar mapa</p>
-                        <p class="card-sub">Arrastra un mapa al área de abajo para cargarlo</p>
+                        <p class="card-title">@L["Admin.Map.Title"]</p>
+                        <p class="card-sub">@L["Admin.Map.Subtitle"]</p>
                     </div>
                 </div>
                 <div class="map-hdr-right">
@@ -237,15 +238,15 @@
                     {
                         <div class="map-current">
                             <i class="ti ti-map-pin" style="color:#22d3ee;font-size:13px"></i>
-                            <span class="map-current-lbl">En curso</span>
+                            <span class="map-current-lbl">@L["Admin.Map.Current"]</span>
                             <span class="map-current-name">@CurrentMap</span>
                         </div>
                     }
                     <div class="map-search-wrap">
                         <i class="ti ti-search map-search-icon"></i>
-                        <input class="inp map-search-inp" @bind="MapSearch" @bind:event="oninput" placeholder="Buscar mapa..." />
+                        <input class="inp map-search-inp" @bind="MapSearch" @bind:event="oninput" placeholder="@L["Admin.Map.Search"]" />
                     </div>
-                    <button type="button" class="map-reload-btn" @onclick="LoadMaps" disabled="@MapLoading" title="Recargar mapas">
+                    <button type="button" class="map-reload-btn" @onclick="LoadMaps" disabled="@MapLoading" title="@L["Admin.Map.Reload"]">
                         <i class="ti @(MapLoading ? "ti-loader-2 spin" : "ti-refresh")"></i>
                     </button>
                 </div>
@@ -267,7 +268,7 @@
             {
                 <div class="map-loading">
                     <div class="map-spinner"></div>
-                    <p>Cargando mapas de la colección...</p>
+                    <p>@L["Admin.Map.Loading"]</p>
                 </div>
             }
             else if (WorkshopMaps.Count > 0)
@@ -316,7 +317,7 @@
                 else
                 {
                     <i class="ti ti-map-pin"></i>
-                    <span>Arrastra un mapa aquí</span>
+                    <span>@L["Admin.Map.Drop"]</span>
                 }
             </div>
 
@@ -326,7 +327,7 @@
                 <div style="display:flex;justify-content:flex-end;margin-top:3px;margin-right:4px">
                     <button type="button" class="map-export-btn" @onclick="DownloadConfig">
                         <i class="ti ti-download"></i>
-                        Montar config
+                        @L["Admin.Map.MountConfig"]
                     </button>
                 </div>
             }

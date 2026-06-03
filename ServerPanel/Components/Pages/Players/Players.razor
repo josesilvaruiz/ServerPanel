@@ -11,6 +11,7 @@
 @inject IPlayerService PlayerService
 @inject ILogger<Players> Logger
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> L
 
 <div class="pl-page">
 
@@ -23,10 +24,10 @@
                 </svg>
             </div>
             <div>
-                <div class="pl-title">Jugadores</div>
+                <div class="pl-title">@L["Players.Title"]</div>
                 <div class="pl-subtitle">
                     <span class="pl-count">@Model.Players.Count</span>
-                    conectados actualmente
+                    @L["Players.Connected"]
                 </div>
             </div>
         </div>
@@ -34,7 +35,7 @@
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                 <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
             </svg>
-            Actualizar
+            @L["Players.Refresh"]
         </button>
     </div>
 
@@ -42,10 +43,10 @@
     <div class="pl-unban-bar">
         <div class="pl-unban-icon"><i class="ti ti-lock-open"></i></div>
         <input class="pl-unban-inp" @bind="UnbanTarget" @bind:event="oninput"
-               placeholder="Desbanear por SteamID o nombre ingame..."
+               placeholder="@L["Players.UnbanPlaceholder"]"
                @onkeydown="@(async e => { if (e.Key == "Enter") await HandleUnban(); })" />
         <button class="pl-unban-btn" @onclick="HandleUnban" disabled="@string.IsNullOrWhiteSpace(UnbanTarget)">
-            Desbanear
+            @L["Players.Unban"]
         </button>
     </div>
 

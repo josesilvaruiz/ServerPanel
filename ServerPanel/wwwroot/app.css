@@ -385,3 +385,25 @@ main {
         padding: 1.25rem;
     }
 }
+
+/* -------------------------------------------------
+   LANGUAGE SWITCHER
+------------------------------------------------- */
+.nm-lang {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0.85rem;
+    margin-top: 4px;
+}
+.nm-lang-btn {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    text-decoration: none;
+    letter-spacing: .05em;
+    transition: color .15s;
+}
+.nm-lang-btn:hover { color: #94a3b8; }
+.nm-lang-active { color: #22d3ee !important; }
+.nm-lang-sep { color: #1e2a3a; font-size: 11px; }

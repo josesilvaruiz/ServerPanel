@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Nav.Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav.Players" xml:space="preserve"><value>Jugadores</value></data>
+  <data name="Nav.Admin" xml:space="preserve"><value>Admin</value></data>
+  <data name="Nav.Logout" xml:space="preserve"><value>Cerrar sesión</value></data>
+  <data name="Admin.Title" xml:space="preserve"><value>Panel de administración</value></data>
+  <data name="Admin.Subtitle" xml:space="preserve"><value>Gestión de jugadores y servidor CS2</value></data>
+  <data name="Admin.Tab.Map" xml:space="preserve"><value>Mapa</value></data>
+  <data name="Admin.Tab.Console" xml:space="preserve"><value>Consola</value></data>
+  <data name="Admin.Tab.Perms" xml:space="preserve"><value>Permisos</value></data>
+  <data name="Admin.Map.Title" xml:space="preserve"><value>Cambiar mapa</value></data>
+  <data name="Admin.Map.Subtitle" xml:space="preserve"><value>Arrastra un mapa al área de abajo para cargarlo</value></data>
+  <data name="Admin.Map.Search" xml:space="preserve"><value>Buscar mapa...</value></data>
+  <data name="Admin.Map.Current" xml:space="preserve"><value>En curso</value></data>
+  <data name="Admin.Map.Reload" xml:space="preserve"><value>Recargar mapas</value></data>
+  <data name="Admin.Map.MountConfig" xml:space="preserve"><value>Montar config</value></data>
+  <data name="Admin.Map.Drop" xml:space="preserve"><value>Arrastra un mapa aquí</value></data>
+  <data name="Admin.Map.Loading" xml:space="preserve"><value>Cargando mapas de la colección...</value></data>
+  <data name="Admin.Console.Title" xml:space="preserve"><value>Consola del servidor</value></data>
+  <data name="Admin.Console.Subtitle" xml:space="preserve"><value>Ejecuta comandos directamente en el servidor</value></data>
+  <data name="Admin.Console.Run" xml:space="preserve"><value>Ejecutar</value></data>
+  <data name="Admin.Perms.Title" xml:space="preserve"><value>Permisos</value></data>
+  <data name="Admin.Perms.Subtitle" xml:space="preserve"><value>Ver, asignar y quitar flags de administrador</value></data>
+  <data name="Admin.Perms.View" xml:space="preserve"><value>Ver permisos</value></data>
+  <data name="Admin.Perms.Assign" xml:space="preserve"><value>Asignar</value></data>
+  <data name="Admin.Perms.Remove" xml:space="preserve"><value>Quitar</value></data>
+  <data name="Admin.Perms.Load" xml:space="preserve"><value>Cargar</value></data>
+  <data name="Players.Title" xml:space="preserve"><value>Jugadores</value></data>
+  <data name="Players.Connected" xml:space="preserve"><value>conectados actualmente</value></data>
+  <data name="Players.Refresh" xml:space="preserve"><value>Actualizar</value></data>
+  <data name="Players.Unban" xml:space="preserve"><value>Desbanear</value></data>
+  <data name="Players.UnbanPlaceholder" xml:space="preserve"><value>Desbanear por SteamID o nombre ingame...</value></data>
+  <data name="Dashboard.Title" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Dashboard.Start" xml:space="preserve"><value>Iniciar</value></data>
+  <data name="Dashboard.Restart" xml:space="preserve"><value>Reiniciar</value></data>
+  <data name="Dashboard.Stop" xml:space="preserve"><value>Detener</value></data>
+  <data name="Dashboard.RefreshStatus" xml:space="preserve"><value>Actualizar estado</value></data>
+  <data name="Dashboard.Update" xml:space="preserve"><value>Actualizar servidor (SteamCMD)</value></data>
+  <data name="Dashboard.Online" xml:space="preserve"><value>Online</value></data>
+  <data name="Dashboard.Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Login.Title" xml:space="preserve"><value>Iniciar sesión</value></data>
+  <data name="Login.User" xml:space="preserve"><value>Usuario</value></data>
+  <data name="Login.Password" xml:space="preserve"><value>Contraseña</value></data>
+  <data name="Login.Button" xml:space="preserve"><value>Iniciar sesión</value></data>
+  <data name="Login.Google" xml:space="preserve"><value>Entrar con Google</value></data>
+  <data name="Login.Steam" xml:space="preserve"><value>Entrar con Steam</value></data>
+</root>

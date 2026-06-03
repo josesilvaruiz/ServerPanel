@@ -10,6 +10,7 @@ builder.Services.AddRazorComponents()
 // Enable Razor Pages so the /Login Razor Page can be served
 builder.Services.AddRazorPages();
 
+builder.Services.AddLocalization();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
@@ -39,6 +40,12 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+var supportedCultures = new[] { "es", "en" };
+app.UseRequestLocalization(new RequestLocalizationOptions()
+    .SetDefaultCulture("es")
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures));
 
 app.UseAuthentication();
 app.UseAuthorization();
