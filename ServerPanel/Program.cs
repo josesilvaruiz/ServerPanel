@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using ServerPanel.Components;
 using ServerPanel.Contracts;
 using ServerPanel.Services;
@@ -17,6 +19,17 @@ builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 
+// Support reverse proxies such as Nginx
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services
     .AddAuthentication("ServerPanel")
     .AddCookie("ServerPanel", options =>
@@ -27,7 +40,7 @@ builder.Services
     .AddCookie("External", options =>
     {
         options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     })
     .AddGoogle(options =>
     {
@@ -35,45 +48,57 @@ builder.Services
         options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
         options.SignInScheme = "External";
         options.CallbackPath = "/signin-google";
+
         options.CorrelationCookie.SameSite = SameSiteMode.None;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
     })
     .AddSteam(options =>
     {
         options.ApplicationKey = builder.Configuration["Steam:ApiKey"]!;
         options.SignInScheme = "External";
         options.CallbackPath = "/signin-steam";
+
         options.CorrelationCookie.SameSite = SameSiteMode.None;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
     });
+
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
+// VERY IMPORTANT: before authentication and HTTPS handling
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
 app.UseHttpsRedirection();
 
 var supportedCultures = new[] { "es", "en" };
-app.UseRequestLocalization(new RequestLocalizationOptions()
-    .SetDefaultCulture("es")
-    .AddSupportedCultures(supportedCultures)
-    .AddSupportedUICultures(supportedCultures));
+
+app.UseRequestLocalization(
+    new RequestLocalizationOptions()
+        .SetDefaultCulture("es")
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures));
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+
 app.MapRazorPages();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
