@@ -39,8 +39,8 @@ builder.Services
     })
     .AddCookie("External", options =>
     {
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     })
     .AddGoogle(options =>
     {
@@ -48,18 +48,16 @@ builder.Services
         options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
         options.SignInScheme = "External";
         options.CallbackPath = "/signin-google";
-
-        options.CorrelationCookie.SameSite = SameSiteMode.None;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     })
     .AddSteam(options =>
     {
         options.ApplicationKey = builder.Configuration["Steam:ApiKey"]!;
         options.SignInScheme = "External";
         options.CallbackPath = "/signin-steam";
-
-        options.CorrelationCookie.SameSite = SameSiteMode.None;
-        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
 builder.Services.AddAuthorization();
