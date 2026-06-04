@@ -24,19 +24,27 @@ builder.Services
         options.LoginPath = "/Login";
         options.AccessDeniedPath = "/Login";
     })
-    .AddCookie("External")
+    .AddCookie("External", options =>
+    {
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    })
     .AddGoogle(options =>
     {
         options.ClientId = builder.Configuration["Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
         options.SignInScheme = "External";
         options.CallbackPath = "/signin-google";
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     })
     .AddSteam(options =>
     {
         options.ApplicationKey = builder.Configuration["Steam:ApiKey"]!;
         options.SignInScheme = "External";
         options.CallbackPath = "/signin-steam";
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
