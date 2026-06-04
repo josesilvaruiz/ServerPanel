@@ -59,10 +59,21 @@ public partial class Players
 
     private IEnumerable<int> VisiblePages()
     {
-        var start = Math.Max(1, Model.CurrentPage - 2);
-        var end = Math.Min(TotalPages, Model.CurrentPage + 2);
-        return Enumerable.Range(start, end - start + 1);
+        if (TotalPages <= 7)
+            return Enumerable.Range(1, TotalPages);
+
+        var pages = new List<int> { 1 };
+        if (Model.CurrentPage > 3) pages.Add(0);
+        var start = Math.Max(2, Model.CurrentPage - 1);
+        var end   = Math.Min(TotalPages - 1, Model.CurrentPage + 1);
+        for (var i = start; i <= end; i++) pages.Add(i);
+        if (Model.CurrentPage < TotalPages - 2) pages.Add(0);
+        pages.Add(TotalPages);
+        return pages;
     }
+
+    private int PagerFrom => (Model.CurrentPage - 1) * Model.PageSize + 1;
+    private int PagerTo   => Math.Min(Model.CurrentPage * Model.PageSize, Model.Players.Count);
 
     private void NextPage() { if (Model.CurrentPage < TotalPages) Model.CurrentPage++; }
     private void PreviousPage() { if (Model.CurrentPage > 1) Model.CurrentPage--; }

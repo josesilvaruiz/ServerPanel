@@ -1,213 +1,214 @@
 @page
 @model ServerPanel.Pages.LoginModel
-@{
-    ViewData["Title"] = "Iniciar sesión";
-}
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Server Panel - Login</title>
-
+    <title>Server Panel — Acceso</title>
     <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                font-family: "Segoe UI", sans-serif;
-            }
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-            body {
-                min-height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background: linear-gradient(135deg, #0f172a, #1e293b);
-            }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
 
-            .login-card {
-                width: 100%;
-                max-width: 420px;
-                background: white;
-                padding: 40px;
-                border-radius: 20px;
-                box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-            }
+        .card {
+            width: 100%;
+            max-width: 400px;
+            padding: 48px 40px 40px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            box-shadow: 0 24px 60px rgba(0,0,0,.5);
+        }
 
-            .logo {
-                text-align: center;
-                margin-bottom: 30px;
-            }
+        .brand {
+            text-align: center;
+            margin-bottom: 40px;
+        }
 
-                .logo h1 {
-                    color: #0f172a;
-                    font-size: 2rem;
-                }
+        .brand-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            border-radius: 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(99,102,241,.35);
+        }
 
-                .logo p {
-                    color: #64748b;
-                    margin-top: 5px;
-                }
+        .brand-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: -.02em;
+        }
 
-            .form-group {
-                margin-bottom: 18px;
-            }
+        .brand-sub {
+            margin-top: 4px;
+            font-size: .875rem;
+            color: #64748b;
+        }
 
-            label {
-                display: block;
-                margin-bottom: 8px;
-                font-weight: 600;
-                color: #334155;
-            }
+        .error {
+            margin-bottom: 24px;
+            padding: 12px 16px;
+            background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.25);
+            border-radius: 10px;
+            color: #fca5a5;
+            font-size: .875rem;
+            text-align: center;
+        }
 
-            input {
-                width: 100%;
-                padding: 14px;
-                border: 1px solid #cbd5e1;
-                border-radius: 10px;
-                font-size: 15px;
-                transition: all .2s;
-            }
+        .providers {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-                input:focus {
-                    outline: none;
-                    border-color: #2563eb;
-                    box-shadow: 0 0 0 3px rgba(37,99,235,.15);
-                }
+        .btn-provider {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            font-size: .9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background .15s, border-color .15s, transform .1s, box-shadow .15s;
+        }
 
-            .btn-login {
-                width: 100%;
-                border: none;
-                background: #2563eb;
-                color: white;
-                padding: 14px;
-                border-radius: 10px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: .2s;
-            }
+        .btn-provider:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0,0,0,.3);
+        }
 
-                .btn-login:hover {
-                    background: #1d4ed8;
-                    transform: translateY(-1px);
-                }
+        .btn-provider:active {
+            transform: translateY(0);
+        }
 
-            .error {
-                margin-bottom: 15px;
-                padding: 12px;
-                background: #fee2e2;
-                color: #b91c1c;
-                border-radius: 10px;
-                border: 1px solid #fecaca;
-            }
+        .btn-provider-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+        }
 
-            .divider {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin: 20px 0;
-                color: #94a3b8;
-                font-size: 13px;
-            }
+        .btn-google {
+            background: #fff;
+            color: #1e293b;
+            border-color: transparent;
+        }
 
-            .divider::before, .divider::after {
-                content: '';
-                flex: 1;
-                height: 1px;
-                background: #e2e8f0;
-            }
+        .btn-google:hover {
+            background: #f1f5f9;
+        }
 
-            .btn-google {
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                padding: 13px;
-                border: 1.5px solid #e2e8f0;
-                border-radius: 10px;
-                background: white;
-                font-size: 15px;
-                font-weight: 600;
-                color: #334155;
-                cursor: pointer;
-                transition: .2s;
-                text-decoration: none;
-            }
+        .btn-steam {
+            background: #1b2838;
+            color: #c7d5e0;
+            border-color: #2a475e;
+        }
 
-                .btn-google:hover {
-                    background: #f8fafc;
-                    border-color: #cbd5e1;
-                    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-                }
+        .btn-steam:hover {
+            background: #1f3347;
+            border-color: #3d6a8a;
+        }
 
-            .footer {
-                text-align: center;
-                margin-top: 20px;
-                color: #94a3b8;
-                font-size: 13px;
-            }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+            color: #475569;
+            font-size: .75rem;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #1e3a5f20;
+            background: #334155;
+        }
+
+        .footer {
+            margin-top: 32px;
+            text-align: center;
+            color: #475569;
+            font-size: .8125rem;
+        }
     </style>
 </head>
 <body>
 
-    <div class="login-card">
-        <div class="logo">
-            <h1>Server Panel</h1>
-            <p>Administración del servidor</p>
+<div class="card">
+
+    <div class="brand">
+        <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="white" width="26" height="26">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/>
+            </svg>
         </div>
+        <div class="brand-title">Server Panel</div>
+        <div class="brand-sub">Acceso restringido — solo administradores</div>
+    </div>
 
-        @if (!string.IsNullOrEmpty(Model.Error))
-        {
-            <div class="error">@Model.Error</div>
-        }
-        @if (HttpContext.Request.Query["error"] == "unauthorized")
-        {
-            <div class="error">Tu cuenta de Google no tiene acceso a este panel.</div>
-        }
+    @if (HttpContext.Request.Query["error"] == "unauthorized")
+    {
+        <div class="error">Tu cuenta no tiene acceso a este panel.</div>
+    }
 
-        <form method="post">
-            <div class="form-group">
-                <label asp-for="Username">Usuario</label>
-                <input asp-for="Username" placeholder="Introduce tu usuario" />
-            </div>
+    <div class="providers">
 
-            <div class="form-group">
-                <label asp-for="Password">Contraseña</label>
-                <input asp-for="Password" type="password" placeholder="Introduce tu contraseña" />
-            </div>
-
-            <button type="submit" class="btn-login">
-                Iniciar sesión
-            </button>
-        </form>
+        <a href="/ExternalLogin" class="btn-provider btn-google">
+            <span class="btn-provider-icon">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+            </span>
+            Continuar con Google
+        </a>
 
         <div class="divider">o</div>
 
-        <a href="/ExternalLogin" class="btn-google">
-            <svg width="18" height="18" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Entrar con Google
+        <a href="/SteamLogin" class="btn-provider btn-steam">
+            <span class="btn-provider-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#c7d5e0">
+                    <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.297-.249-1.883-.031l1.523.63c.956.4 1.409 1.497 1.009 2.455-.397.957-1.494 1.41-2.45 1.013zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.252 0-2.265-1.014-2.265-2.265z"/>
+                </svg>
+            </span>
+            Continuar con Steam
         </a>
 
-        <a href="/SteamLogin" class="btn-google" style="margin-top:10px;background:#1b2838;border-color:#1b2838;color:white">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.43 3.61 10.01 8.57 11.47l3.07-6.35c-.22-.1-.43-.22-.62-.38A3.49 3.49 0 0 1 9.5 14a3.5 3.5 0 0 1 3.5-3.5c.97 0 1.84.4 2.48 1.03l6.06-2.95C20.17 3.78 16.4 0 12 0zm7.82 10.18l-6.06 2.95A3.48 3.48 0 0 1 13 14a3.5 3.5 0 0 1-3.5 3.5 3.49 3.49 0 0 1-1.22-.22L5.2 23.47C7.22 23.81 9.1 24 12 24c6.63 0 12-5.37 12-12 0-.65-.07-1.28-.18-1.82z"/>
-            </svg>
-            Entrar con Steam
-        </a>
-
-        <div class="footer">
-            © @DateTime.Now.Year Server Panel
-        </div>
     </div>
+
+    <div class="footer">© @DateTime.Now.Year Server Panel</div>
+
+</div>
 
 </body>
 </html>

@@ -225,17 +225,29 @@
         <!-- ── Pagination ── -->
         @if (TotalPages > 1)
         {
-            <div class="pl-pagination">
-                <button class="pl-page-btn" @onclick="PreviousPage" disabled="@(Model.CurrentPage == 1)">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
-                </button>
-                @foreach (var i in VisiblePages())
-                {
-                    <button class="pl-page-btn @(Model.CurrentPage == i ? "pl-page-active" : "")" @onclick="() => GoToPage(i)">@i</button>
-                }
-                <button class="pl-page-btn" @onclick="NextPage" disabled="@(Model.CurrentPage == TotalPages)">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
-                </button>
+            <div class="pl-pager">
+                <span class="pl-pager-info">
+                    Mostrando <strong>@PagerFrom–@PagerTo</strong> de <strong>@Model.Players.Count</strong> jugadores
+                </span>
+                <div class="pl-pager-btns">
+                    <button class="pl-page-btn" @onclick="PreviousPage" disabled="@(Model.CurrentPage == 1)" title="Anterior">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    @foreach (var i in VisiblePages())
+                    {
+                        @if (i == 0)
+                        {
+                            <span class="pl-page-ellipsis">…</span>
+                        }
+                        else
+                        {
+                            <button class="pl-page-btn @(Model.CurrentPage == i ? "pl-page-active" : "")" @onclick="() => GoToPage(i)">@i</button>
+                        }
+                    }
+                    <button class="pl-page-btn" @onclick="NextPage" disabled="@(Model.CurrentPage == TotalPages)" title="Siguiente">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                    </button>
+                </div>
             </div>
         }
     }
