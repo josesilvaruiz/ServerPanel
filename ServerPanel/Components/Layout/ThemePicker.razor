@@ -1,0 +1,43 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<div class="tp-row">
+    @foreach (var t in _themes)
+    {
+        <button type="button"
+                class="tp-swatch @(_active == t.Key ? "tp-swatch-active" : "")"
+                title="@t.Hint"
+                @onclick="() => Pick(t.Key)">
+            <span class="tp-swatch-dot" style="background:@t.Color"></span>
+            <span class="tp-swatch-name">@t.Label</span>
+        </button>
+    }
+</div>
+
+@code {
+    private string _active = "default";
+
+    private record ThemeOption(string Key, string Label, string Hint, string Color);
+
+    private readonly ThemeOption[] _themes =
+    [
+        new("default", "Void",       "La oscuridad original",   "#22d3ee"),
+        new("pokemon", "Scarlet",    "Algo se esconde aquí...", "#FF4444"),
+        new("forest",  "Electric",   "Velocidad y control",     "#00BFFF"),
+    ];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _active = await JS.InvokeAsync<string>("themeManager.load");
+            StateHasChanged();
+        }
+    }
+
+    private async Task Pick(string key)
+    {
+        _active = key;
+        await JS.InvokeVoidAsync("themeManager.apply", key);
+    }
+}

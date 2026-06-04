@@ -372,6 +372,8 @@ public class PlayerService : IPlayerService
         return existing.Key is not null ? existing.Value : null;
     }
 
+    public Task<Dictionary<string, PermissionEntry>> GetAllAdminsAsync() => ReadAdminsAsync();
+
     public async Task RemovePermissionAsync(string player, string flag)
     {
         var admins = await ReadAdminsAsync();
