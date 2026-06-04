@@ -1,6 +1,6 @@
 /* ── Page wrapper ── */
 .pn-page {
-    background: #080d14;
+    background: var(--bg-page);
     min-height: 100vh;
     padding: 2rem 1.5rem;
     display: flex;
@@ -15,8 +15,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #0d1117;
-    border: 1px solid #1e2a3a;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
     border-radius: 16px;
     padding: 1.1rem 1.5rem;
     gap: 1rem;
@@ -120,7 +120,7 @@
 .pn-spinner {
     width: 36px;
     height: 36px;
-    border: 3px solid #1e2a3a;
+    border: 3px solid var(--bd);
     border-top-color: #22d3ee;
     border-radius: 50%;
     animation: pn-spin .8s linear infinite;
@@ -141,15 +141,15 @@
     display: flex;
     align-items: center;
     gap: .85rem;
-    background: #0d1117;
-    border: 1px solid #1e2a3a;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
     border-radius: 14px;
     padding: 1rem 1.1rem;
     transition: border-color .15s;
 }
 
 .pn-stat-card:hover {
-    border-color: #2d3f52;
+    border-color: var(--bdh);
 }
 
 .pn-stat-icon {
@@ -207,15 +207,15 @@
     gap: 1rem;
     padding: 3rem 0;
     color: #475569;
-    background: #0d1117;
-    border: 1px solid #1e2a3a;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
     border-radius: 16px;
 }
 
 /* ── Controls ── */
 .pn-controls {
-    background: #0d1117;
-    border: 1px solid #1e2a3a;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
     border-radius: 16px;
     padding: 1.25rem 1.5rem;
 }
@@ -282,10 +282,10 @@
 .pn-btn-ghost {
     background: transparent;
     color: #6b7280;
-    border-color: #232b36;
+    border-color: var(--bd2);
 }
 .pn-btn-ghost:hover:not(:disabled) {
-    background: #181c26;
+    background: var(--bg-input);
     color: #b6c2d6;
 }
 
@@ -309,8 +309,8 @@
     display: flex;
     align-items: center;
     gap: .5rem;
-    background: #0d1117;
-    border: 1px solid #2d3f52;
+    background: var(--bg-card);
+    border: 1px solid var(--bdh);
     color: #94a3b8;
     border-radius: 10px;
     padding: .75rem 1.1rem;

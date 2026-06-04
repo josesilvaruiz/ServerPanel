@@ -1,5 +1,11 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var theme = HttpContextAccessor.HttpContext?.Request.Cookies["sp-theme"] ?? "default";
+}
+
+<!DOCTYPE html>
+<html lang="en" data-theme="@theme">
 
 <head>
     <meta charset="utf-8" />
@@ -19,6 +25,7 @@
     <Routes />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="theme.js"></script>
 </body>
 
 </html>

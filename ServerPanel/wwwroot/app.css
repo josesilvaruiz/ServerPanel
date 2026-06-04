@@ -1,21 +1,84 @@
-:root {
-    --bg-start: #081225;
-    --bg-end: #0f172a;
-    --accent: #06b6d4;
-    --accent-600: #0891b2;
-    --text: #e2e8f0;
-    --text-muted: #94a3b8;
-    --surface: rgba(15,23,42,.92);
-    --surface-light: rgba(255,255,255,.03);
-    --border: rgba(255,255,255,.08);
+* {
+    scrollbar-width: none;
 }
 
-html,
-body {
+*::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Theme tokens ── */
+:root {
+    --bg-page:      #080d14;
+    --bg-card:      #0d1117;
+    --bg-surface:   #111827;
+    --bg-input:     #181c26;
+    --bg-hover:     #131a25;
+    --bg-hover2:    #161f2e;
+    --bd:           #1e2a3a;
+    --bd2:          #232b36;
+    --bdh:          #2d3748;
+    --sb-from:      rgb(5,39,103);
+    --sb-to:        #3a0647;
+    --th-accent:    #22d3ee;
+    --th-accent-bg: rgba(34,211,238,.1);
+    --th-accent-bd: rgba(34,211,238,.25);
+
+    --bg-start: #081225;
+    --bg-end:   #0f172a;
+    --accent:        #06b6d4;
+    --accent-600:    #0891b2;
+    --text:          #e2e8f0;
+    --text-muted:    #94a3b8;
+    --surface:       rgba(15,23,42,.92);
+    --surface-light: rgba(255,255,255,.03);
+    --border:        rgba(255,255,255,.08);
+}
+
+/* ── Pokémon: rojo Pokéball arriba + azul marino abajo ── */
+[data-theme="pokemon"] {
+    --bg-page:      transparent;
+    --bg-card:      rgba(13,26,53,0.72);
+    --bg-surface:   rgba(15,30,61,0.72);
+    --bg-input:     rgba(17,31,58,0.70);
+    --bg-hover:     rgba(14,28,56,0.65);
+    --bg-hover2:    rgba(16,32,63,0.68);
+    --bd:           rgba(26,48,96,0.80);
+    --bd2:          rgba(30,53,104,0.80);
+    --bdh:          rgba(39,69,128,0.85);
+    --sb-from:      #e00000;
+    --sb-to:        #060d1e;
+    --th-accent:    #FFD700;
+    --th-accent-bg: rgba(255,215,0,.1);
+    --th-accent-bd: rgba(255,215,0,.3);
+    --bg-start:     transparent;
+    --bg-end:       rgba(13,26,53,0.72);
+}
+
+/* ── Electric: azul eléctrico gaming/infra ── */
+[data-theme="forest"] {
+    --bg-page:      #050B14;
+    --bg-card:      #080f1e;
+    --bg-surface:   #0c1530;
+    --bg-input:     #0a1228;
+    --bg-hover:     #091020;
+    --bg-hover2:    #0b1426;
+    --bd:           #123A7A;
+    --bd2:          #0f2f60;
+    --bdh:          #1a4ea0;
+    --sb-from:      #0A1F4D;
+    --sb-to:        #050B14;
+    --th-accent:    #00BFFF;
+    --th-accent-bg: rgba(0,191,255,.08);
+    --th-accent-bd: rgba(0,191,255,.25);
+    --bg-start:     #050B14;
+    --bg-end:       #0A1F4D;
+}
+
+html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100vh;
     overflow: hidden;
-    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+    background: var(--bg-page);
 }
 
 /* -------------------------------------------------
@@ -52,7 +115,7 @@ main {
 
 .sidebar {
     width: 220px;
-    background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%);
+    background: linear-gradient(180deg, var(--sb-from) 0%, var(--sb-to) 100%);
     box-shadow: 2px 0 20px rgba(2,6,23,.60);
     display: flex;
     flex-direction: column;
@@ -79,8 +142,8 @@ main {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: rgba(34,211,238,.12);
-    color: #22d3ee;
+    background: var(--th-accent-bg);
+    color: var(--th-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -137,9 +200,9 @@ main {
 }
 
 .nm-link.active {
-    background: rgba(34,211,238,.08);
-    color: #22d3ee;
-    border-color: rgba(34,211,238,.2);
+    background: var(--th-accent-bg);
+    color: var(--th-accent);
+    border-color: var(--th-accent-bd);
 }
 
 .nm-link-icon {
@@ -150,9 +213,7 @@ main {
     width: 20px;
 }
 
-.nm-link-label {
-    white-space: nowrap;
-}
+.nm-link-label { white-space: nowrap; }
 
 .nm-bottom {
     margin-top: auto;
@@ -165,6 +226,101 @@ main {
     color: #f87171 !important;
     border-color: rgba(239,68,68,.2) !important;
 }
+
+.nm-lang {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0.75rem 0 0.25rem;
+    font-size: .75rem;
+}
+
+.nm-lang-btn {
+    color: #475569;
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: .04em;
+    transition: color .15s;
+}
+
+    .nm-lang-btn:hover { color: #94a3b8; }
+
+.nm-lang-active { color: #94a3b8 !important; }
+
+.nm-lang-sep { color: #1e2a3a; }
+
+.nm-section-lbl {
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #374151;
+    padding: 0 0.85rem 0.2rem;
+}
+
+/* ── ThemePicker ── */
+.tp-row {
+    display: flex;
+    gap: 4px;
+    padding: 0.25rem 0.5rem;
+}
+
+.tp-swatch {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, border-color .15s, transform .1s;
+}
+
+    .tp-swatch:hover {
+        background: rgba(255,255,255,.05);
+        transform: translateY(-1px);
+    }
+
+    .tp-swatch:active { transform: translateY(0); }
+
+    .tp-swatch.tp-swatch-active {
+        background: rgba(255,255,255,.06);
+        border-color: rgba(255,255,255,.12);
+    }
+
+.tp-swatch-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: block;
+    transition: box-shadow .15s, transform .15s;
+}
+
+.tp-swatch:hover .tp-swatch-dot {
+    box-shadow: 0 0 8px currentColor;
+}
+
+.tp-swatch-active .tp-swatch-dot {
+    box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 10px currentColor;
+    transform: scale(1.15);
+}
+
+.tp-swatch-name {
+    font-size: .62rem;
+    font-weight: 600;
+    color: #374151;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    transition: color .15s;
+}
+
+.tp-swatch:hover .tp-swatch-name     { color: #64748b; }
+.tp-swatch-active .tp-swatch-name    { color: #94a3b8; }
 
 /* -------------------------------------------------
    PANEL CS2
@@ -367,23 +523,317 @@ main {
    RESPONSIVE
 ------------------------------------------------- */
 
-@media (max-width: 992px) {
+@media (max-width: 640px) {
+    .topbar-logo-title { display: none; }
+    .topbar-link span  { display: none; }
+    .layout-main { padding: 1rem; }
+}
 
-    .sidebar {
-        display: none;
-    }
+/* =================================================
+   TEMA POKÉMON — Pokédex moderna / Lab interface
+   80% azul oscuro · 15% azul Pokémon · 5% amarillo
+================================================= */
 
-    main {
-        padding: 1rem;
-    }
+/* ── Sidebar: Pokéball moderna — rojo vivo / negro / azul marino ── */
+[data-theme="pokemon"] .sidebar {
+    background: linear-gradient(180deg,
+        #8a1515 0%,
+        #a01c1c 35%,
+        #8a1515 44%,
+        #1a1a1a 45%,
+        #1a1a1a 55%,
+        #253040 56%,
+        #1e3050 100%
+    );
+    border-right: 1px solid rgba(255,203,5,.1);
+    position: relative;
+    overflow: hidden;
+}
 
-    .card {
-        margin: 1rem;
-    }
+/* Pokéball grande decorativa — zona roja, derecha */
+[data-theme="pokemon"] .sidebar::before {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: 8%;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.08);
+    background:
+        radial-gradient(circle at 50% 50%,
+            transparent 26%,
+            rgba(255,255,255,.07) 27%,
+            rgba(255,255,255,.07) 31%,
+            transparent 32%
+        ),
+        linear-gradient(180deg,
+            rgba(255,255,255,.06) 0%,
+            rgba(255,255,255,.06) 48%,
+            rgba(255,255,255,.1) 49%,
+            rgba(255,255,255,.1) 51%,
+            rgba(0,0,0,.1) 52%,
+            rgba(0,0,0,.1) 100%
+        );
+    pointer-events: none;
+    z-index: 0;
+}
 
-    .card-body {
-        padding: 1.25rem;
-    }
+/* Pokéball pequeña decorativa — zona azul, izquierda */
+[data-theme="pokemon"] .sidebar::after {
+    content: '';
+    position: absolute;
+    left: -30px;
+    bottom: 8%;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,.06);
+    background:
+        radial-gradient(circle at 50% 50%,
+            transparent 26%,
+            rgba(255,255,255,.05) 27%,
+            rgba(255,255,255,.05) 31%,
+            transparent 32%
+        ),
+        linear-gradient(180deg,
+            rgba(255,80,80,.08) 0%,
+            rgba(255,80,80,.08) 48%,
+            rgba(255,255,255,.07) 49%,
+            rgba(255,255,255,.07) 51%,
+            transparent 52%
+        );
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Todos los elementos del nav por encima del fondo */
+[data-theme="pokemon"] .nm-nav > * { position: relative; z-index: 1; }
+
+/* ── Logo ── */
+[data-theme="pokemon"] .nm-logo-icon {
+    background: rgba(255,203,5,.15);
+    color: #ffcb05;
+    box-shadow: 0 0 16px rgba(255,203,5,.2), inset 0 0 0 1px rgba(255,203,5,.15);
+}
+
+[data-theme="pokemon"] .nm-logo-title { color: #fff; font-weight: 700; }
+
+[data-theme="pokemon"] .nm-logo-sub {
+    color: #ffcb05;
+    opacity: .7;
+    font-weight: 600;
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+/* ── Divisor = banda negra de la Pokéball con punto central ── */
+[data-theme="pokemon"] .nm-divider {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.2) 40%, rgba(255,255,255,.2) 60%, transparent);
+    height: 2px;
+    position: relative;
+}
+
+[data-theme="pokemon"] .nm-divider::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #1a1a1a;
+    box-shadow: 0 0 6px rgba(255,255,255,.4);
+}
+
+/* ── Links ── */
+[data-theme="pokemon"] .nm-link { color: rgba(255,255,255,.7); }
+
+[data-theme="pokemon"] .nm-link:hover {
+    background: rgba(255,203,5,.08);
+    color: #fff;
+    border-color: rgba(255,203,5,.2);
+}
+
+[data-theme="pokemon"] .nm-link.active {
+    background: rgba(255,203,5,.12);
+    color: #ffcb05;
+    border-color: rgba(255,203,5,.4);
+    font-weight: 600;
+    box-shadow: inset 2px 0 0 #ffcb05, 0 0 12px rgba(255,203,5,.1);
+}
+
+[data-theme="pokemon"] .nm-logout:hover {
+    background: rgba(255,80,80,.1) !important;
+    color: #ff6b6b !important;
+    border-color: rgba(255,80,80,.25) !important;
+}
+
+/* ── Sección tema / lang ── */
+[data-theme="pokemon"] .nm-section-lbl    { color: rgba(255,255,255,.2); }
+[data-theme="pokemon"] .nm-lang-btn       { color: rgba(255,255,255,.4); }
+[data-theme="pokemon"] .nm-lang-btn:hover { color: rgba(255,255,255,.8); }
+[data-theme="pokemon"] .nm-lang-active    { color: #ffcb05 !important; }
+[data-theme="pokemon"] .nm-lang-sep       { color: rgba(255,255,255,.1); }
+[data-theme="pokemon"] .tp-swatch-active .tp-swatch-name { color: #ffcb05; }
+
+/* ── Iconos Pokémon: ocultos por defecto, visibles solo en tema pokemon ── */
+.nm-icon-pokemon       { display: none; }
+.nm-icon-default       { display: flex; align-items: center; justify-content: center; }
+.nm-link-icon-pokemon  { display: none; }
+.nm-link-icon-default  { display: flex; align-items: center; justify-content: center; }
+
+[data-theme="pokemon"] .nm-icon-pokemon      { display: flex; align-items: center; justify-content: center; }
+[data-theme="pokemon"] .nm-icon-default       { display: none; }
+[data-theme="pokemon"] .nm-link-icon-pokemon  { display: flex; align-items: center; justify-content: center; width: 20px; }
+[data-theme="pokemon"] .nm-link-icon-default  { display: none; }
+
+/* ═══════════════════════════════════════════════
+   FONDO: CAMPO DE BATALLA POKÉMON
+   Marco de madera · campo verde · Pokéball central
+═══════════════════════════════════════════════ */
+html[data-theme="pokemon"] {
+    background-color: #1e3050;
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect width='1280' height='720' fill='%23253040'/><rect x='0' y='0' width='1280' height='64' fill='%232d3d52'/><rect x='0' y='656' width='1280' height='64' fill='%232d3d52'/><rect x='0' y='0' width='64' height='720' fill='%232d3d52'/><rect x='1216' y='0' width='64' height='720' fill='%232d3d52'/><rect x='0' y='0' width='64' height='64' fill='%23344660'/><rect x='1216' y='0' width='64' height='64' fill='%23344660'/><rect x='0' y='656' width='64' height='64' fill='%23344660'/><rect x='1216' y='656' width='64' height='64' fill='%23344660'/><line x1='64' y1='16' x2='1216' y2='16' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='32' x2='1216' y2='32' stroke='rgba(0,0,0,0.07)' stroke-width='2'/><line x1='64' y1='48' x2='1216' y2='48' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='672' x2='1216' y2='672' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='688' x2='1216' y2='688' stroke='rgba(0,0,0,0.07)' stroke-width='2'/><line x1='64' y1='704' x2='1216' y2='704' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><rect x='64' y='64' width='1152' height='59' fill='%23375c88'/><rect x='64' y='123' width='1152' height='59' fill='%23406898'/><rect x='64' y='182' width='1152' height='59' fill='%23375c88'/><rect x='64' y='241' width='1152' height='59' fill='%23406898'/><rect x='64' y='300' width='1152' height='60' fill='%23375c88'/><rect x='64' y='360' width='1152' height='59' fill='%234370a2'/><rect x='64' y='419' width='1152' height='59' fill='%234d7cb0'/><rect x='64' y='478' width='1152' height='59' fill='%234370a2'/><rect x='64' y='537' width='1152' height='59' fill='%234d7cb0'/><rect x='64' y='596' width='1152' height='60' fill='%234370a2'/><rect x='64' y='64' width='1152' height='592' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='360' x2='1216' y2='360' stroke='rgba(255,255,255,0.28)' stroke-width='3'/><path d='M536,360 A104,104 0 0,0 744,360 Z' fill='%23a01c1c'/><path d='M536,360 A104,104 0 0,1 744,360 Z' fill='%23d4c9a8'/><circle cx='640' cy='360' r='104' fill='none' stroke='rgba(0,0,0,0.18)' stroke-width='4'/><rect x='536' y='352' width='208' height='16' fill='rgba(0,0,0,0.22)'/><circle cx='640' cy='360' r='22' fill='white' stroke='%23333' stroke-width='5'/><circle cx='640' cy='360' r='10' fill='%23cccccc'/><rect x='318' y='64' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='318' cy='73' r='9' fill='%236a9ac4'/><circle cx='402' cy='73' r='9' fill='%236a9ac4'/><rect x='878' y='64' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='878' cy='73' r='9' fill='%236a9ac4'/><circle cx='962' cy='73' r='9' fill='%236a9ac4'/><rect x='318' y='638' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='318' cy='647' r='9' fill='%236a9ac4'/><circle cx='402' cy='647' r='9' fill='%236a9ac4'/><rect x='878' y='638' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='878' cy='647' r='9' fill='%236a9ac4'/><circle cx='962' cy='647' r='9' fill='%236a9ac4'/></svg>");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* Contenedores de página transparentes para ver el campo */
+[data-theme="pokemon"] body,
+[data-theme="pokemon"] .page,
+[data-theme="pokemon"] main,
+[data-theme="pokemon"] .content,
+[data-theme="pokemon"] .pn-page,
+[data-theme="pokemon"] .pl-page,
+[data-theme="pokemon"] .wrap {
+    background: transparent !important;
+}
+
+/* ── Cards: borde y hover temático, sin tocar estructura ── */
+[data-theme="pokemon"] .pn-stat-card:hover {
+    border-color: rgba(255,203,5,.3);
+    box-shadow: 0 0 16px rgba(255,203,5,.07);
+}
+
+/* Spinner amarillo Pikachu */
+[data-theme="pokemon"] .pn-spinner {
+    border-color: rgba(255,203,5,.2);
+    border-top-color: #ffcb05;
+}
+
+/* Tabla jugadores — hover amarillo sutil */
+[data-theme="pokemon"] .pl-table tbody tr:hover {
+    background: rgba(255,203,5,.04);
+}
+
+/* Empty/loading states visibles sobre el fondo */
+[data-theme="pokemon"] .pl-empty,
+[data-theme="pokemon"] .pl-loading,
+[data-theme="pokemon"] .map-empty,
+[data-theme="pokemon"] .pn-loading {
+    color: rgba(255,255,255,0.7) !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+/* Paginación — amarillo solo en elemento activo */
+[data-theme="pokemon"] .pl-page-active,
+[data-theme="pokemon"] .adm-page-active {
+    background: rgba(255,203,5,.1) !important;
+    border-color: rgba(255,203,5,.4) !important;
+    color: #ffcb05 !important;
+    box-shadow: 0 0 8px rgba(255,203,5,.1) !important;
+}
+
+/* ── Glassmorphism: fondo siempre visible con contenido legible ── */
+[data-theme="pokemon"] .pn-stat-card,
+[data-theme="pokemon"] .pn-header,
+[data-theme="pokemon"] .pn-controls,
+[data-theme="pokemon"] .pn-offline-card,
+[data-theme="pokemon"] .pn-toast,
+[data-theme="pokemon"] .card,
+[data-theme="pokemon"] .tab,
+[data-theme="pokemon"] .sub-tab,
+[data-theme="pokemon"] .admins-table-wrap,
+[data-theme="pokemon"] .admins-pager,
+[data-theme="pokemon"] .console-out,
+[data-theme="pokemon"] .perm-preview,
+[data-theme="pokemon"] .map-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="pokemon"] .admins-table thead tr,
+[data-theme="pokemon"] .admins-table tbody tr:hover {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+[data-theme="pokemon"] .sidebar {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+/* =================================================
+   TEMA ELECTRIC
+   Azul eléctrico — gaming / infra / cloud
+================================================= */
+
+[data-theme="forest"] .sidebar {
+    background: linear-gradient(180deg, #0A1F4D 0%, #050B14 100%);
+    border-right: 1px solid #123A7A;
+    box-shadow: 2px 0 20px rgba(0,191,255,.06);
+}
+
+[data-theme="forest"] .sidebar::before,
+[data-theme="forest"] .sidebar::after { display: none; }
+
+[data-theme="forest"] .nm-logo-icon {
+    background: rgba(0,191,255,.12);
+    color: #00BFFF;
+    box-shadow: 0 0 14px rgba(0,191,255,.2);
+}
+
+[data-theme="forest"] .nm-link { color: #6b8cba; }
+
+[data-theme="forest"] .nm-link:hover {
+    background: rgba(0,191,255,.06);
+    color: #33CCFF;
+    border-color: rgba(0,191,255,.15);
+}
+
+[data-theme="forest"] .nm-link.active {
+    background: rgba(0,191,255,.1);
+    color: #00BFFF;
+    border-color: rgba(0,191,255,.3);
+    box-shadow: inset 2px 0 0 #00BFFF, 0 0 16px rgba(0,191,255,.08);
+}
+
+[data-theme="forest"] .nm-divider {
+    background: linear-gradient(90deg, transparent, #123A7A 40%, #123A7A 60%, transparent);
+}
+
+[data-theme="forest"] .pn-stat-card:hover {
+    border-color: rgba(0,191,255,.3);
+    box-shadow: 0 4px 20px rgba(0,191,255,.08);
+}
+
+[data-theme="forest"] .pn-spinner {
+    border-color: #123A7A;
+    border-top-color: #00BFFF;
+}
+
+[data-theme="forest"] .pl-page-active,
+[data-theme="forest"] .adm-page-active {
+    background: rgba(0,191,255,.1) !important;
+    border-color: rgba(0,191,255,.4) !important;
+    color: #00BFFF !important;
+    box-shadow: 0 0 8px rgba(0,191,255,.1) !important;
 }
 
 /* -------------------------------------------------

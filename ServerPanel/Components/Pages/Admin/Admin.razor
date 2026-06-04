@@ -54,6 +54,9 @@
             <div class="divider"></div>
 
             <div class="sub-tabs">
+                <button type="button" class="sub-tab @(PermSub == "list" ? "sub-active-purple" : "")" @onclick="HandleLoadAllAdmins">
+                    <i class="ti ti-list"></i> Todos los permisos
+                </button>
                 <button type="button" class="sub-tab @(PermSub == "get" ? "sub-active-purple" : "")" @onclick="@(() => PermSub = "get")">
                     <i class="ti ti-eye"></i> @L["Admin.Perms.View"]
                 </button>
@@ -64,6 +67,106 @@
                     <i class="ti ti-shield-x"></i> @L["Admin.Perms.Remove"]
                 </button>
             </div>
+
+            @* ── Lista de admins ── *@
+            @if (PermSub == "list")
+            {
+                @if (AllAdminsLoading)
+                {
+                    <div class="map-loading">
+                        <div class="map-spinner"></div>
+                        <p>Leyendo admins.json...</p>
+                    </div>
+                }
+                else if (AllAdmins.Count == 0)
+                {
+                    <div class="map-empty">
+                        <i class="ti ti-shield-off"></i>
+                        <p>No hay administradores configurados</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="admins-table-wrap">
+                        <table class="admins-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="ti ti-user"></i> Nombre</th>
+                                    <th><i class="ti ti-id"></i> SteamID</th>
+                                    <th><i class="ti ti-shield"></i> Permisos</th>
+                                    <th><i class="ti ti-star"></i> Immunity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var (name, entry) in PagedAdmins)
+                                {
+                                    <tr>
+                                        <td class="admin-name">@name</td>
+                                        <td class="admin-steamid">
+                                            <span class="mono">@entry.Identity</span>
+                                        </td>
+                                        <td>
+                                            <div class="admin-flags">
+                                                @foreach (var flag in entry.Flags)
+                                                {
+                                                    var opt = PermOptions.FirstOrDefault(p => p.Value == flag);
+                                                    <span class="admin-flag-tag" title="@flag">
+                                                        @if (opt is not null)
+                                                        {
+                                                            <i class="ti @opt.Icon"></i>
+                                                            @opt.Label
+                                                        }
+                                                        else
+                                                        {
+                                                            @flag
+                                                        }
+                                                    </span>
+                                                }
+                                                @if (entry.Flags.Count == 0)
+                                                {
+                                                    <span class="admin-flag-empty">Sin flags</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="admin-immunity">@entry.Immunity</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="admins-pager">
+                        <span class="admins-pager-info">
+                            Mostrando <strong>@AdminPagerFrom–@AdminPagerTo</strong> de <strong>@AllAdmins.Count</strong> administradores
+                        </span>
+                        <div class="admins-pager-btns">
+                            @if (AdminTotalPages > 1)
+                            {
+                                <button type="button" class="adm-page-btn" @onclick="AdminPrevPage" disabled="@(AdminPage == 1)" title="Anterior">
+                                    <i class="ti ti-chevron-left"></i>
+                                </button>
+                                @foreach (var i in AdminVisiblePages())
+                                {
+                                    @if (i == 0)
+                                    {
+                                        <span class="adm-page-ellipsis">…</span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="adm-page-btn @(AdminPage == i ? "adm-page-active" : "")" @onclick="() => AdminGoToPage(i)">@i</button>
+                                    }
+                                }
+                                <button type="button" class="adm-page-btn" @onclick="AdminNextPage" disabled="@(AdminPage == AdminTotalPages)" title="Siguiente">
+                                    <i class="ti ti-chevron-right"></i>
+                                </button>
+                            }
+                            <button type="button" class="btn btn-ghost" style="padding:6px 12px;font-size:12px" @onclick="HandleLoadAllAdmins">
+                                <i class="ti ti-refresh"></i> Recargar
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
 
             @* ── Ver ── *@
             @if (PermSub == "get")
@@ -191,8 +294,40 @@
                     <p class="card-title">@L["Admin.Console.Title"]</p>
                     <p class="card-sub">@L["Admin.Console.Subtitle"]</p>
                 </div>
+                <button type="button" class="btn btn-ghost cmd-help-btn" @onclick="@(() => ShowCmdHelp = !ShowCmdHelp)">
+                    <i class="ti @(ShowCmdHelp ? "ti-x" : "ti-help")"></i>
+                    @(ShowCmdHelp ? "Cerrar" : "Comandos")
+                </button>
             </div>
-            <div class="divider"></div>
+
+            @if (ShowCmdHelp)
+            {
+                <div class="cmd-ref">
+                    @foreach (var cat in CmdCategories)
+                    {
+                        <div class="cmd-cat">
+                            <div class="cmd-cat-title">
+                                <i class="ti @cat.Icon"></i> @cat.Name
+                            </div>
+                            <div class="cmd-list">
+                                @foreach (var cmd in cat.Commands)
+                                {
+                                    <button type="button" class="cmd-chip" @onclick="@(() => { ConsoleCommand = cmd.Cmd; ShowCmdHelp = false; })" title="@cmd.Desc">
+                                        <span class="cmd-chip-code">@cmd.Cmd</span>
+                                        <span class="cmd-chip-desc">@cmd.Desc</span>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="divider"></div>
+            }
+            else
+            {
+                <div class="divider"></div>
+            }
+
             <div class="field">
                 <p class="lbl"><i class="ti ti-terminal-2"></i> Comando</p>
                 <div class="cmd-wrap">

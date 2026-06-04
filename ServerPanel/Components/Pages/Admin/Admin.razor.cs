@@ -13,6 +13,33 @@ public partial class Admin
     string ActiveSection = "map";
 
     string PermSub = "get";
+    Dictionary<string, PermissionEntry> AllAdmins = new();
+    bool AllAdminsLoading;
+    int AdminPage = 1;
+    const int AdminPageSize = 10;
+    int AdminTotalPages => Math.Max(1, (int)Math.Ceiling(AllAdmins.Count / (double)AdminPageSize));
+    IEnumerable<KeyValuePair<string, PermissionEntry>> PagedAdmins =>
+        AllAdmins.Skip((AdminPage - 1) * AdminPageSize).Take(AdminPageSize);
+    int AdminPagerFrom => (AdminPage - 1) * AdminPageSize + 1;
+    int AdminPagerTo   => Math.Min(AdminPage * AdminPageSize, AllAdmins.Count);
+
+    IEnumerable<int> AdminVisiblePages()
+    {
+        if (AdminTotalPages <= 7)
+            return Enumerable.Range(1, AdminTotalPages);
+        var pages = new List<int> { 1 };
+        if (AdminPage > 3) pages.Add(0);
+        var start = Math.Max(2, AdminPage - 1);
+        var end   = Math.Min(AdminTotalPages - 1, AdminPage + 1);
+        for (var i = start; i <= end; i++) pages.Add(i);
+        if (AdminPage < AdminTotalPages - 2) pages.Add(0);
+        pages.Add(AdminTotalPages);
+        return pages;
+    }
+
+    void AdminNextPage()     { if (AdminPage < AdminTotalPages) AdminPage++; }
+    void AdminPrevPage()     { if (AdminPage > 1) AdminPage--; }
+    void AdminGoToPage(int p) { if (p >= 1 && p <= AdminTotalPages) AdminPage = p; }
     string SharedSteamId = "";
     string PermPlayerName = "";
     HashSet<string> SelectedPerms = new();
@@ -49,6 +76,70 @@ public partial class Admin
 
     string ConsoleCommand = "";
     string ConsoleOutput = "";
+    bool ShowCmdHelp = false;
+
+    private record CmdEntry(string Cmd, string Desc);
+    private record CmdCategory(string Name, string Icon, CmdEntry[] Commands);
+
+    private readonly CmdCategory[] CmdCategories =
+    [
+        new("Partida", "ti-trophy", [
+            new("mp_restartgame 1",        "Reiniciar partida"),
+            new("mp_roundtime 2",          "Tiempo de ronda (minutos)"),
+            new("mp_maxrounds 30",         "Máximo de rondas"),
+            new("mp_halftime 1",           "Activar medio tiempo"),
+            new("mp_overtime_enable 1",    "Activar prórroga"),
+            new("mp_warmuptime 30",        "Tiempo de calentamiento (seg)"),
+            new("mp_warmup_end",           "Terminar calentamiento"),
+            new("mp_pause_match",          "Pausar partida"),
+            new("mp_unpause_match",        "Reanudar partida"),
+        ]),
+        new("Jugadores", "ti-users", [
+            new("status",                  "Ver jugadores conectados"),
+            new("kick #id",                "Expulsar jugador por ID"),
+            new("banid 60 #id",            "Banear ID 60 minutos"),
+            new("mp_friendlyfire 1",       "Activar fuego amigo"),
+            new("mp_autoteambalance 1",    "Balance automático de equipos"),
+            new("mp_limitteams 0",         "Sin límite de equipos"),
+            new("sv_alltalk 1",            "Todo el mundo habla entre sí"),
+        ]),
+        new("Bots", "ti-robot", [
+            new("bot_add",                 "Añadir bot"),
+            new("bot_add_t",               "Añadir bot terrorista"),
+            new("bot_add_ct",              "Añadir bot CT"),
+            new("bot_kick",                "Expulsar todos los bots"),
+            new("bot_stop 1",              "Congelar bots"),
+            new("bot_difficulty 3",        "Dificultad bots (0-3)"),
+            new("bot_quota 5",             "Número de bots"),
+        ]),
+        new("Mapas", "ti-map", [
+            new("changelevel de_dust2",    "Cambiar a Dust2"),
+            new("changelevel de_mirage",   "Cambiar a Mirage"),
+            new("changelevel de_inferno",  "Cambiar a Inferno"),
+            new("changelevel de_nuke",     "Cambiar a Nuke"),
+            new("changelevel de_ancient",  "Cambiar a Ancient"),
+            new("changelevel de_anubis",   "Cambiar a Anubis"),
+            new("changelevel de_vertigo",  "Cambiar a Vertigo"),
+        ]),
+        new("Servidor", "ti-server", [
+            new("sv_cheats 1",             "Activar cheats"),
+            new("sv_cheats 0",             "Desactivar cheats"),
+            new("sv_password \"1234\"",    "Poner contraseña"),
+            new("sv_password \"\"",        "Quitar contraseña"),
+            new("sv_lan 0",               "Modo online"),
+            new("sv_airaccelerate 12",     "Velocidad en el aire"),
+            new("sv_gravity 800",          "Gravedad normal"),
+            new("exec gamemode_competitive", "Ejecutar config competitivo"),
+        ]),
+        new("Práctica", "ti-target", [
+            new("sv_cheats 1; sv_infinite_ammo 1; sv_grenade_trajectory_prac_pipreview 1; sv_showimpacts 1", "Modo práctica granadas"),
+            new("noclip",                  "Volar (requiere sv_cheats 1)"),
+            new("give weapon_flashbang",   "Dar flashbang"),
+            new("give weapon_smokegrenade","Dar granada de humo"),
+            new("give weapon_molotov",     "Dar molotov"),
+            new("mp_buy_anywhere 1",       "Comprar en cualquier lugar"),
+        ]),
+    ];
 
     bool ToastVisible;
     bool ToastOk;
@@ -100,6 +191,27 @@ public partial class Admin
         DraggedMap = null;
         if (tab == "map" && WorkshopMaps.Count == 0)
             _ = LoadMaps();
+    }
+
+    async Task HandleLoadAllAdmins()
+    {
+        PermSub = "list";
+        AllAdminsLoading = true;
+        StateHasChanged();
+        try
+        {
+            AllAdmins = await PlayerService.GetAllAdminsAsync();
+            AdminPage = 1;
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, ex.Message);
+        }
+        finally
+        {
+            AllAdminsLoading = false;
+            StateHasChanged();
+        }
     }
 
     async Task HandleGetPerms()

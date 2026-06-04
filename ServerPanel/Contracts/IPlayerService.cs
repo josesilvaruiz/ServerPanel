@@ -13,4 +13,5 @@ public interface IPlayerService
     Task SetPermissionsAsync(string playerName, string steamId, string permission);
     Task RemovePermissionAsync(string steamId, string flag);
     Task<PermissionEntry?> GetPermissionsAsync(string steamId);
+    Task<Dictionary<string, PermissionEntry>> GetAllAdminsAsync();
 }

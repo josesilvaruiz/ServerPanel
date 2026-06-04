@@ -1,13 +1,39 @@
-@inject IStringLocalizer<SharedResource> L
 @inject NavigationManager Nav
 
 <nav class="nm-nav">
 
     <div class="nm-logo">
         <div class="nm-logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z" />
-            </svg>
+            @*Icono normal*@
+            <span class="nm-icon-default">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z" />
+                </svg>
+            </span>
+            @*Pikachu tema Scarlet*@
+            <span class="nm-icon-pokemon">
+                <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
+                    {{!-- Orejas --}}
+                    <polygon points="18,18 10,2 30,14" fill="#FFD700"/>
+                    <polygon points="18,18 12,4 22,14" fill="#1a1a1a"/>
+                    <polygon points="82,18 90,2 70,14" fill="#FFD700"/>
+                    <polygon points="82,18 88,4 78,14" fill="#1a1a1a"/>
+                    {{!-- Cara --}}
+                    <circle cx="50" cy="52" r="34" fill="#FFD700"/>
+                    {{!-- Mejillas rojas --}}
+                    <circle cx="26" cy="62" r="9" fill="#FF4444" opacity=".85"/>
+                    <circle cx="74" cy="62" r="9" fill="#FF4444" opacity=".85"/>
+                    {{!-- Ojos --}}
+                    <circle cx="37" cy="46" r="5" fill="#1a1a1a"/>
+                    <circle cx="63" cy="46" r="5" fill="#1a1a1a"/>
+                    <circle cx="39" cy="44" r="2" fill="white"/>
+                    <circle cx="65" cy="44" r="2" fill="white"/>
+                    {{!-- Nariz --}}
+                    <ellipse cx="50" cy="56" rx="3" ry="2" fill="#1a1a1a"/>
+                    {{!-- Boca --}}
+                    <path d="M43,62 Q50,70 57,62" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
+            </span>
         </div>
         <div class="nm-logo-text">
             <span class="nm-logo-title">ServerPanel</span>
@@ -19,30 +45,98 @@
 
     <div class="nm-links">
         <NavLink class="nm-link" href="/panel" Match="NavLinkMatch.All">
-            <span class="nm-link-icon">
+            <span class="nm-link-icon nm-link-icon-default">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                     <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
                 </svg>
             </span>
-            <span class="nm-link-label">@L["Nav.Dashboard"]</span>
+            <span class="nm-link-icon-pokemon" title="Charmander">
+                <svg viewBox="0 0 100 100" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="58" rx="28" ry="30" fill="#FF6B35"/>
+                    <ellipse cx="50" cy="56" rx="18" ry="12" fill="#FFDAB9"/>
+                    <circle cx="38" cy="48" r="5" fill="#1a1a1a"/>
+                    <circle cx="62" cy="48" r="5" fill="#1a1a1a"/>
+                    <circle cx="40" cy="46" r="2" fill="white"/>
+                    <circle cx="64" cy="46" r="2" fill="white"/>
+                    <ellipse cx="35" cy="60" rx="6" ry="4" fill="#FF4444" opacity=".7"/>
+                    <ellipse cx="65" cy="60" rx="6" ry="4" fill="#FF4444" opacity=".7"/>
+                    <path d="M43,65 Q50,72 57,65" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="36" cy="88" rx="8" ry="5" fill="#FF6B35"/>
+                    <ellipse cx="64" cy="88" rx="8" ry="5" fill="#FF6B35"/>
+                    <path d="M55,85 Q65,75 72,60 Q76,50 70,42 Q66,36 60,40 Q65,48 60,55 Q55,62 55,85" fill="#FF8C42"/>
+                    <ellipse cx="68" cy="38" rx="5" ry="8" fill="#FF6B35" transform="rotate(-20,68,38)"/>
+                    <ellipse cx="68" cy="38" rx="3" ry="5" fill="#FFD700" transform="rotate(-20,68,38)"/>
+                </svg>
+            </span>
+            <span class="nm-link-label">Dashboard</span>
         </NavLink>
 
         <NavLink class="nm-link" href="/players">
-            <span class="nm-link-icon">
+            <span class="nm-link-icon nm-link-icon-default">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                     <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                 </svg>
             </span>
-            <span class="nm-link-label">@L["Nav.Players"]</span>
+            <span class="nm-link-icon-pokemon" title="Bulbasaur">
+                <svg viewBox="0 0 100 100" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Bulbo en la espalda -->
+                    <ellipse cx="58" cy="35" rx="22" ry="20" fill="#4a7c3f"/>
+                    <ellipse cx="58" cy="33" rx="18" ry="16" fill="#5a9e4a"/>
+                    <!-- Manchas del bulbo -->
+                    <circle cx="50" cy="28" r="4" fill="#3d6b35" opacity=".7"/>
+                    <circle cx="64" cy="26" r="3" fill="#3d6b35" opacity=".7"/>
+                    <circle cx="68" cy="38" r="3" fill="#3d6b35" opacity=".7"/>
+                    <!-- Cuerpo -->
+                    <ellipse cx="45" cy="62" rx="30" ry="26" fill="#78c850"/>
+                    <!-- Barriga crema -->
+                    <ellipse cx="45" cy="68" rx="18" ry="14" fill="#c8e8a0"/>
+                    <!-- Orejas -->
+                    <ellipse cx="22" cy="46" rx="7" ry="10" fill="#78c850" transform="rotate(-15,22,46)"/>
+                    <ellipse cx="68" cy="46" rx="7" ry="10" fill="#78c850" transform="rotate(15,68,46)"/>
+                    <ellipse cx="22" cy="46" rx="4" ry="6" fill="#c8e8a0" transform="rotate(-15,22,46)"/>
+                    <ellipse cx="68" cy="46" rx="4" ry="6" fill="#c8e8a0" transform="rotate(15,68,46)"/>
+                    <!-- Ojos -->
+                    <circle cx="36" cy="55" r="6" fill="#e0002c"/>
+                    <circle cx="56" cy="55" r="6" fill="#e0002c"/>
+                    <circle cx="36" cy="55" r="3.5" fill="#1a1a1a"/>
+                    <circle cx="56" cy="55" r="3.5" fill="#1a1a1a"/>
+                    <circle cx="37" cy="53" r="1.5" fill="white"/>
+                    <circle cx="57" cy="53" r="1.5" fill="white"/>
+                    <!-- Boca -->
+                    <path d="M38,68 Q46,75 54,68" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    <!-- Patitas -->
+                    <ellipse cx="28" cy="84" rx="10" ry="7" fill="#78c850"/>
+                    <ellipse cx="62" cy="84" rx="10" ry="7" fill="#78c850"/>
+                </svg>
+            </span>
+            <span class="nm-link-label">Jugadores</span>
         </NavLink>
 
         <NavLink class="nm-link" href="/admin">
-            <span class="nm-link-icon">
+            <span class="nm-link-icon nm-link-icon-default">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                     <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z" />
                 </svg>
             </span>
-            <span class="nm-link-label">@L["Nav.Admin"]</span>
+            <span class="nm-link-icon-pokemon" title="Squirtle">
+                <svg viewBox="0 0 100 100" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="55" rx="30" ry="28" fill="#6BB5D6"/>
+                    <ellipse cx="50" cy="58" rx="20" ry="14" fill="#E8F4F8"/>
+                    <circle cx="38" cy="47" r="6" fill="white"/>
+                    <circle cx="62" cy="47" r="6" fill="white"/>
+                    <circle cx="39" cy="48" r="4" fill="#1a1a1a"/>
+                    <circle cx="63" cy="48" r="4" fill="#1a1a1a"/>
+                    <circle cx="40" cy="46" r="1.5" fill="white"/>
+                    <circle cx="64" cy="46" r="1.5" fill="white"/>
+                    <ellipse cx="34" cy="60" rx="6" ry="4" fill="#FF9999" opacity=".7"/>
+                    <ellipse cx="66" cy="60" rx="6" ry="4" fill="#FF9999" opacity=".7"/>
+                    <path d="M43,65 Q50,72 57,65" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    <path d="M44,38 Q50,28 56,38" stroke="#6BB5D6" stroke-width="5" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="50" cy="27" rx="10" ry="7" fill="#6BB5D6"/>
+                    <ellipse cx="50" cy="27" rx="7" ry="4" fill="#4A90C4"/>
+                </svg>
+            </span>
+            <span class="nm-link-label">Admin</span>
         </NavLink>
     </div>
 
@@ -60,6 +154,10 @@
             </Authorized>
         </AuthorizeView>
     </div>
+
+    <div class="nm-divider"></div>
+    <div class="nm-section-lbl">Tema</div>
+    <ThemePicker />
 
     <div class="nm-lang">
         @{

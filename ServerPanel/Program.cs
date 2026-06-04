@@ -21,9 +21,22 @@ builder.Services
     .AddAuthentication("ServerPanel")
     .AddCookie("ServerPanel", options =>
     {
-        // Use the Razor Page /Login as the login path
         options.LoginPath = "/Login";
-        options.AccessDeniedPath = "/";
+        options.AccessDeniedPath = "/Login";
+    })
+    .AddCookie("External")
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Google:ClientId"]!;
+        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+        options.SignInScheme = "External";
+        options.CallbackPath = "/signin-google";
+    })
+    .AddSteam(options =>
+    {
+        options.ApplicationKey = builder.Configuration["Steam:ApiKey"]!;
+        options.SignInScheme = "External";
+        options.CallbackPath = "/signin-steam";
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
