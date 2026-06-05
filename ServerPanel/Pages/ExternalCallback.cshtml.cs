@@ -33,6 +33,6 @@ public class ExternalCallbackModel : PageModel
         var identity = new ClaimsIdentity(claims, "ServerPanel");
         await HttpContext.SignInAsync("ServerPanel", new ClaimsPrincipal(identity));
 
-        return Redirect("/panel");
+        return Redirect("/");
     }
 }

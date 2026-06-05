@@ -70,6 +70,7 @@ var app = builder.Build();
 
 // VERY IMPORTANT: before authentication and HTTPS handling
 app.UseForwardedHeaders();
+app.UsePathBase("/panel");
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

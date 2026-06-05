@@ -8,7 +8,7 @@ public class ExternalLoginModel : PageModel
 {
     public IActionResult OnGet()
     {
-        var props = new AuthenticationProperties { RedirectUri = "/ExternalCallback" };
+        var props = new AuthenticationProperties { RedirectUri = "/panel/ExternalCallback" };
         return Challenge(props, "Google");
     }
 }
