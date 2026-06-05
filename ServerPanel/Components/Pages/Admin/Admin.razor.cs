@@ -157,6 +157,7 @@ public partial class Admin
         {
             var info = await ServerQueryService.GetServerInfoAsync();
             CurrentMap = info.Map;
+            await InvokeAsync(StateHasChanged);
         }
         catch
         {
@@ -268,7 +269,7 @@ public partial class Admin
     {
         MapLoading = true;
         MapError = null;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
         try
         {
             WorkshopMaps = await Cs2ServerService.GetWorkshopMapsAsync(WorkshopCollectionId);
@@ -280,7 +281,7 @@ public partial class Admin
         finally
         {
             MapLoading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
