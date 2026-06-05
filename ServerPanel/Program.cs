@@ -40,17 +40,6 @@ builder.Services
     {
         options.LoginPath = "/Login";
         options.AccessDeniedPath = "/Login";
-
-        options.Events.OnSigningIn = context =>
-        {
-            Console.WriteLine("=== SERVERPANEL COOKIE SIGNING IN ===");
-            Console.WriteLine($"Path: {context.Options.Cookie.Path}");
-            Console.WriteLine($"Domain: {context.Options.Cookie.Domain}");
-            Console.WriteLine($"SameSite: {context.Options.Cookie.SameSite}");
-            Console.WriteLine($"SecurePolicy: {context.Options.Cookie.SecurePolicy}");
-            Console.WriteLine("====================================");
-            return Task.CompletedTask;
-        };
     })
     .AddCookie("External", options =>
     {
@@ -105,32 +94,6 @@ app.UseRequestLocalization(
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.Use(async (ctx, next) =>
-{
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {ctx.Request.Method} {ctx.Request.Path} | PathBase={ctx.Request.PathBase} | Auth={ctx.User.Identity?.IsAuthenticated} | User={ctx.User.Identity?.Name}");
-    await next();
-});
-
-app.Use(async (ctx, next) =>
-{
-    if (ctx.Request.Path.Value?.Contains("_blazor/negotiate") == true)
-    {
-        Console.WriteLine("========== NEGOTIATE ==========");
-        Console.WriteLine($"Path: {ctx.Request.Path}");
-        Console.WriteLine($"Method: {ctx.Request.Method}");
-        Console.WriteLine("--- Headers ---");
-        foreach (var h in ctx.Request.Headers)
-            Console.WriteLine($"{h.Key}: {h.Value}");
-        Console.WriteLine("--- Cookies ---");
-        foreach (var c in ctx.Request.Cookies)
-            Console.WriteLine($"{c.Key}={c.Value}");
-        Console.WriteLine("===============================");
-    }
-    await next();
-    if (ctx.Request.Path.Value?.Contains("_blazor/negotiate") == true)
-        Console.WriteLine($"[NEGOTIATE POST] Status={ctx.Response.StatusCode}");
-});
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -139,15 +102,5 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapRazorPages();
-
-// ── Diagnostic: listar todos los endpoints registrados ───────────────────
-var endpointDataSources = app.Services.GetServices<EndpointDataSource>();
-foreach (var source in endpointDataSources)
-    foreach (var endpoint in source.Endpoints)
-    {
-        var route = endpoint as RouteEndpoint;
-        var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
-        Console.WriteLine($"{endpoint.DisplayName} | Pattern={route?.RoutePattern.RawText} | Methods={string.Join(",", methods ?? [])}");
-    }
 
 app.Run();
