@@ -145,9 +145,10 @@ public partial class Admin
     bool ToastOk;
     string ToastMessage = "";
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await Task.WhenAll(LoadMaps(), FetchCurrentMap());
+        _ = Task.WhenAll(LoadMaps(), FetchCurrentMap())
+            .ContinueWith(_ => InvokeAsync(StateHasChanged));
     }
 
     async Task FetchCurrentMap()
