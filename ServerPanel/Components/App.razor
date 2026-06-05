@@ -1,11 +1,12 @@
 @inject IHttpContextAccessor HttpContextAccessor
 
 @{
-    var theme = HttpContextAccessor.HttpContext?.Request.Cookies["sp-theme"] ?? "default";
+    var theme  = HttpContextAccessor.HttpContext?.Request.Cookies["sp-theme"]  ?? "default";
+    var layout = HttpContextAccessor.HttpContext?.Request.Cookies["sp-layout"] ?? "sidebar";
 }
 
 <!DOCTYPE html>
-<html lang="en" data-theme="@theme">
+<html lang="en" data-theme="@theme" data-layout="@(layout)">
 
 <head>
     <meta charset="utf-8" />
@@ -17,6 +18,9 @@
     <link rel="stylesheet" href="@Assets["ServerPanel.styles.css"]" />
     <ImportMap />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@@latest/tabler-icons.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
 </head>

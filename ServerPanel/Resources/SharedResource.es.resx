@@ -65,4 +65,68 @@
   <data name="Login.Button" xml:space="preserve"><value>Iniciar sesión</value></data>
   <data name="Login.Google" xml:space="preserve"><value>Entrar con Google</value></data>
   <data name="Login.Steam" xml:space="preserve"><value>Entrar con Steam</value></data>
+  <data name="Players.Loading" xml:space="preserve"><value>Cargando jugadores...</value></data>
+  <data name="Players.Empty" xml:space="preserve"><value>No hay jugadores conectados</value></data>
+  <data name="Players.Col.Player" xml:space="preserve"><value>Jugador</value></data>
+  <data name="Players.Col.Type" xml:space="preserve"><value>Tipo</value></data>
+  <data name="Players.Col.Group" xml:space="preserve"><value>Grupo / Clan</value></data>
+  <data name="Players.Col.Actions" xml:space="preserve"><value>Acciones</value></data>
+  <data name="Players.Human" xml:space="preserve"><value>HUMANO</value></data>
+  <data name="Players.ServerBot" xml:space="preserve"><value>Bot del servidor</value></data>
+  <data name="Players.Pager.Showing" xml:space="preserve"><value>Mostrando</value></data>
+  <data name="Players.Pager.Of" xml:space="preserve"><value>de</value></data>
+  <data name="Players.Pager.Players" xml:space="preserve"><value>jugadores</value></data>
+  <data name="Admin.Console.Commands" xml:space="preserve"><value>Comandos</value></data>
+  <data name="Admin.Console.Close" xml:space="preserve"><value>Cerrar</value></data>
+  <data name="Admin.Console.Command" xml:space="preserve"><value>Comando</value></data>
+  <data name="Admin.Cmd.Match" xml:space="preserve"><value>Partida</value></data>
+  <data name="Admin.Cmd.Players" xml:space="preserve"><value>Jugadores</value></data>
+  <data name="Admin.Cmd.Bots" xml:space="preserve"><value>Bots</value></data>
+  <data name="Admin.Cmd.Maps" xml:space="preserve"><value>Mapas</value></data>
+  <data name="Admin.Cmd.Server" xml:space="preserve"><value>Servidor</value></data>
+  <data name="Admin.Cmd.Practice" xml:space="preserve"><value>Práctica</value></data>
+  <data name="Admin.Cmd.RestartGame" xml:space="preserve"><value>Reiniciar partida</value></data>
+  <data name="Admin.Cmd.RoundTime" xml:space="preserve"><value>Tiempo de ronda (minutos)</value></data>
+  <data name="Admin.Cmd.MaxRounds" xml:space="preserve"><value>Máximo de rondas</value></data>
+  <data name="Admin.Cmd.Halftime" xml:space="preserve"><value>Activar medio tiempo</value></data>
+  <data name="Admin.Cmd.Overtime" xml:space="preserve"><value>Activar prórroga</value></data>
+  <data name="Admin.Cmd.WarmupTime" xml:space="preserve"><value>Tiempo de calentamiento (seg)</value></data>
+  <data name="Admin.Cmd.WarmupEnd" xml:space="preserve"><value>Terminar calentamiento</value></data>
+  <data name="Admin.Cmd.PauseMatch" xml:space="preserve"><value>Pausar partida</value></data>
+  <data name="Admin.Cmd.UnpauseMatch" xml:space="preserve"><value>Reanudar partida</value></data>
+  <data name="Admin.Cmd.StatusPlayers" xml:space="preserve"><value>Ver jugadores conectados</value></data>
+  <data name="Admin.Cmd.KickById" xml:space="preserve"><value>Expulsar jugador por ID</value></data>
+  <data name="Admin.Cmd.BanId" xml:space="preserve"><value>Banear ID 60 minutos</value></data>
+  <data name="Admin.Cmd.FriendlyFire" xml:space="preserve"><value>Activar fuego amigo</value></data>
+  <data name="Admin.Cmd.AutoBalance" xml:space="preserve"><value>Balance automático de equipos</value></data>
+  <data name="Admin.Cmd.TeamLimit" xml:space="preserve"><value>Sin límite de equipos</value></data>
+  <data name="Admin.Cmd.AllTalk" xml:space="preserve"><value>Todo el mundo habla entre sí</value></data>
+  <data name="Admin.Cmd.BotAdd" xml:space="preserve"><value>Añadir bot</value></data>
+  <data name="Admin.Cmd.BotAddT" xml:space="preserve"><value>Añadir bot terrorista</value></data>
+  <data name="Admin.Cmd.BotAddCT" xml:space="preserve"><value>Añadir bot CT</value></data>
+  <data name="Admin.Cmd.BotKick" xml:space="preserve"><value>Expulsar todos los bots</value></data>
+  <data name="Admin.Cmd.BotStop" xml:space="preserve"><value>Congelar bots</value></data>
+  <data name="Admin.Cmd.BotDifficulty" xml:space="preserve"><value>Dificultad bots (0-3)</value></data>
+  <data name="Admin.Cmd.BotQuota" xml:space="preserve"><value>Número de bots</value></data>
+  <data name="Admin.Cmd.Dust2" xml:space="preserve"><value>Cambiar a Dust2</value></data>
+  <data name="Admin.Cmd.Mirage" xml:space="preserve"><value>Cambiar a Mirage</value></data>
+  <data name="Admin.Cmd.Inferno" xml:space="preserve"><value>Cambiar a Inferno</value></data>
+  <data name="Admin.Cmd.Nuke" xml:space="preserve"><value>Cambiar a Nuke</value></data>
+  <data name="Admin.Cmd.Ancient" xml:space="preserve"><value>Cambiar a Ancient</value></data>
+  <data name="Admin.Cmd.Anubis" xml:space="preserve"><value>Cambiar a Anubis</value></data>
+  <data name="Admin.Cmd.Vertigo" xml:space="preserve"><value>Cambiar a Vertigo</value></data>
+  <data name="Admin.Cmd.CheatsOn" xml:space="preserve"><value>Activar cheats</value></data>
+  <data name="Admin.Cmd.CheatsOff" xml:space="preserve"><value>Desactivar cheats</value></data>
+  <data name="Admin.Cmd.SetPassword" xml:space="preserve"><value>Poner contraseña</value></data>
+  <data name="Admin.Cmd.RemovePassword" xml:space="preserve"><value>Quitar contraseña</value></data>
+  <data name="Admin.Cmd.OnlineMode" xml:space="preserve"><value>Modo online</value></data>
+  <data name="Admin.Cmd.AirAccelerate" xml:space="preserve"><value>Velocidad en el aire</value></data>
+  <data name="Admin.Cmd.Gravity" xml:space="preserve"><value>Gravedad normal</value></data>
+  <data name="Admin.Cmd.ExecCompetitive" xml:space="preserve"><value>Ejecutar config competitivo</value></data>
+  <data name="Admin.Cmd.PracticeMode" xml:space="preserve"><value>Modo práctica granadas</value></data>
+  <data name="Admin.Cmd.Noclip" xml:space="preserve"><value>Volar (requiere sv_cheats 1)</value></data>
+  <data name="Admin.Cmd.Flashbang" xml:space="preserve"><value>Dar flashbang</value></data>
+  <data name="Admin.Cmd.Smoke" xml:space="preserve"><value>Dar granada de humo</value></data>
+  <data name="Admin.Cmd.Molotov" xml:space="preserve"><value>Dar molotov</value></data>
+  <data name="Admin.Cmd.BuyAnywhere" xml:space="preserve"><value>Comprar en cualquier lugar</value></data>
 </root>

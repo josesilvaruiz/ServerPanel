@@ -296,7 +296,7 @@
                 </div>
                 <button type="button" class="btn btn-ghost cmd-help-btn" @onclick="@(() => ShowCmdHelp = !ShowCmdHelp)">
                     <i class="ti @(ShowCmdHelp ? "ti-x" : "ti-help")"></i>
-                    @(ShowCmdHelp ? "Cerrar" : "Comandos")
+                    @(ShowCmdHelp ? L["Admin.Console.Close"] : L["Admin.Console.Commands"])
                 </button>
             </div>
 
@@ -307,14 +307,14 @@
                     {
                         <div class="cmd-cat">
                             <div class="cmd-cat-title">
-                                <i class="ti @cat.Icon"></i> @cat.Name
+                                <i class="ti @cat.Icon"></i> @L[cat.Name]
                             </div>
                             <div class="cmd-list">
                                 @foreach (var cmd in cat.Commands)
                                 {
-                                    <button type="button" class="cmd-chip" @onclick="@(() => { ConsoleCommand = cmd.Cmd; ShowCmdHelp = false; })" title="@cmd.Desc">
+                                    <button type="button" class="cmd-chip" @onclick="@(() => { ConsoleCommand = cmd.Cmd; ShowCmdHelp = false; })" title="@L[cmd.Desc]">
                                         <span class="cmd-chip-code">@cmd.Cmd</span>
-                                        <span class="cmd-chip-desc">@cmd.Desc</span>
+                                        <span class="cmd-chip-desc">@L[cmd.Desc]</span>
                                     </button>
                                 }
                             </div>
@@ -329,7 +329,7 @@
             }
 
             <div class="field">
-                <p class="lbl"><i class="ti ti-terminal-2"></i> Comando</p>
+                <p class="lbl"><i class="ti ti-terminal-2"></i> @L["Admin.Console.Command"]</p>
                 <div class="cmd-wrap">
                     <span class="cmd-pfx">$</span>
                     <input class="inp cmd-inp" @bind="ConsoleCommand" placeholder="sv_cheats 1, mp_restartgame 1..." />

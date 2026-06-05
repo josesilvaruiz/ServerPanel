@@ -64,7 +64,7 @@
     {
         <div class="pl-loading">
             <div class="pl-spinner"></div>
-            <span>Cargando jugadores...</span>
+            <span>@L["Players.Loading"]</span>
         </div>
     }
     else if (!Model.Players.Any())
@@ -73,7 +73,7 @@
             <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40" style="opacity:.3">
                 <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
             </svg>
-            <span>No hay jugadores conectados</span>
+            <span>@L["Players.Empty"]</span>
         </div>
     }
     else
@@ -83,12 +83,12 @@
             <table class="pl-table">
                 <thead>
                     <tr>
-                        <th>Jugador</th>
+                        <th>@L["Players.Col.Player"]</th>
                         <th class="pl-th-center">ID</th>
                         <th class="pl-th-center">Ping</th>
-                        <th class="pl-th-center">Tipo</th>
-                        <th>Grupo / Clan</th>
-                        <th class="pl-th-right">Acciones</th>
+                        <th class="pl-th-center">@L["Players.Col.Type"]</th>
+                        <th>@L["Players.Col.Group"]</th>
+                        <th class="pl-th-right">@L["Players.Col.Actions"]</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -133,7 +133,7 @@
                                 }
                                 else
                                 {
-                                    <span class="pl-badge pl-badge-human">HUMANO</span>
+                                    <span class="pl-badge pl-badge-human">@L["Players.Human"]</span>
                                 }
                             </td>
 
@@ -213,7 +213,7 @@
                                 }
                                 else
                                 {
-                                    <span class="pl-empty-cell">Bot del servidor</span>
+                                    <span class="pl-empty-cell">@L["Players.ServerBot"]</span>
                                 }
                             </td>
 
@@ -228,7 +228,7 @@
         {
             <div class="pl-pager">
                 <span class="pl-pager-info">
-                    Mostrando <strong>@PagerFrom–@PagerTo</strong> de <strong>@Model.Players.Count</strong> jugadores
+                    @L["Players.Pager.Showing"] <strong>@PagerFrom–@PagerTo</strong> @L["Players.Pager.Of"] <strong>@Model.Players.Count</strong> @L["Players.Pager.Players"]
                 </span>
                 <div class="pl-pager-btns">
                     <button class="pl-page-btn" @onclick="PreviousPage" disabled="@(Model.CurrentPage == 1)" title="Anterior">

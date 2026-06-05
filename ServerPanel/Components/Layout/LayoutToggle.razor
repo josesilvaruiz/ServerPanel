@@ -1,0 +1,40 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<button class="nm-layout-toggle" title="@(_isTopbar ? "Sidebar" : "Top bar")" @onclick="Toggle">
+    @if (_isTopbar)
+    {
+        @* sidebar icon *@
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M3 3h7v9H3zm0 11h7v7H3zm9-11h9v4h-9zm0 6h9v4h-9zm0 6h9v4h-9z"/>
+        </svg>
+    }
+    else
+    {
+        @* topbar icon *@
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M3 3h18v5H3zm0 7h18v4H3zm0 6h18v5H3z"/>
+        </svg>
+    }
+    <span class="nm-layout-toggle-label">@(_isTopbar ? "Sidebar" : "Top bar")</span>
+</button>
+
+@code {
+    bool _isTopbar;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var layout = await JS.InvokeAsync<string>("layoutManager.load");
+            _isTopbar = layout == "topbar";
+            StateHasChanged();
+        }
+    }
+
+    async Task Toggle()
+    {
+        var next = await JS.InvokeAsync<string>("layoutManager.toggle");
+        _isTopbar = next == "topbar";
+    }
+}

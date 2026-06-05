@@ -18,6 +18,7 @@ builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
+builder.Services.AddScoped<ServerPanel.Services.ThemeState>();
 
 // Support reverse proxies such as Nginx
 builder.Services.Configure<ForwardedHeadersOptions>(options =>

@@ -19,6 +19,13 @@
     --bdh:          #2d3748;
     --sb-from:      rgb(5,39,103);
     --sb-to:        #3a0647;
+
+    /* ── Nav shared (sidebar + topbar) ── */
+    --nav-bg:       rgb(5,39,103);
+    --nav-bg-end:   #3a0647;
+    --nav-border:   #1e2a3a;
+    --nav-backdrop: none;
+
     --th-accent:    #22d3ee;
     --th-accent-bg: rgba(34,211,238,.1);
     --th-accent-bd: rgba(34,211,238,.25);
@@ -45,13 +52,54 @@
     --bd:           rgba(26,48,96,0.80);
     --bd2:          rgba(30,53,104,0.80);
     --bdh:          rgba(39,69,128,0.85);
-    --sb-from:      #e00000;
-    --sb-to:        #060d1e;
-    --th-accent:    #FFD700;
-    --th-accent-bg: rgba(255,215,0,.1);
-    --th-accent-bd: rgba(255,215,0,.3);
+    --sb-from:      #1a2535;
+    --sb-to:        #111b2a;
+
+    /* ── Nav shared ── */
+    --nav-bg:       rgba(26,37,53,0.90);
+    --nav-bg-end:   rgba(17,27,42,0.92);
+    --nav-border:   rgba(224,53,53,0.14);
+    --nav-backdrop: blur(22px);
+
+    --th-accent:    #e03535;
+    --th-accent-bg: rgba(224,53,53,.10);
+    --th-accent-bd: rgba(224,53,53,.28);
     --bg-start:     transparent;
     --bg-end:       rgba(13,26,53,0.72);
+}
+
+/* ── Zelda: verde Hyrule + dorado Triforce ── */
+[data-theme="zelda"] {
+    --bg-page:      transparent;
+    --bg-card:      rgba(30,45,30,0.72);
+    --bg-surface:   rgba(38,51,38,0.72);
+    --bg-input:     rgba(26,42,26,0.70);
+    --bg-hover:     rgba(34,46,34,0.65);
+    --bg-hover2:    rgba(37,48,37,0.68);
+    --bd:           #3a5c2e;
+    --bd2:          #334f28;
+    --bdh:          #4a7a3a;
+    --sb-from:      #263326;
+    --sb-to:        #1a2215;
+
+    /* ── Nav shared ── */
+    --nav-bg:       rgba(12,22,10,0.72);
+    --nav-bg-end:   rgba(8,16,6,0.78);
+    --nav-border:   rgba(200,160,32,0.30);
+    --nav-backdrop: blur(28px);
+
+    --th-accent:    #d4a843;
+    --th-accent-bg: rgba(212,168,67,.10);
+    --th-accent-bd: rgba(212,168,67,.30);
+    --bg-start:     transparent;
+    --bg-end:       rgba(30,45,30,0.72);
+    --accent:       #d4a843;
+    --accent-600:   #b88a2e;
+    --text:         #e8dfc0;
+    --text-muted:   #b8a878;
+    --surface:      rgba(26,34,21,.92);
+    --surface-light:rgba(255,255,255,.03);
+    --border:       rgba(58,92,46,.60);
 }
 
 /* ── Electric: azul eléctrico gaming/infra ── */
@@ -115,8 +163,11 @@ main {
 
 .sidebar {
     width: 220px;
-    background: linear-gradient(180deg, var(--sb-from) 0%, var(--sb-to) 100%);
+    background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-end) 100%);
+    border-right: 1px solid var(--nav-border);
     box-shadow: 2px 0 20px rgba(2,6,23,.60);
+    backdrop-filter: var(--nav-backdrop);
+    -webkit-backdrop-filter: var(--nav-backdrop);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -260,67 +311,6 @@ main {
 }
 
 /* ── ThemePicker ── */
-.tp-row {
-    display: flex;
-    gap: 4px;
-    padding: 0.25rem 0.5rem;
-}
-
-.tp-swatch {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 4px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    background: transparent;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background .15s, border-color .15s, transform .1s;
-}
-
-    .tp-swatch:hover {
-        background: rgba(255,255,255,.05);
-        transform: translateY(-1px);
-    }
-
-    .tp-swatch:active { transform: translateY(0); }
-
-    .tp-swatch.tp-swatch-active {
-        background: rgba(255,255,255,.06);
-        border-color: rgba(255,255,255,.12);
-    }
-
-.tp-swatch-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    display: block;
-    transition: box-shadow .15s, transform .15s;
-}
-
-.tp-swatch:hover .tp-swatch-dot {
-    box-shadow: 0 0 8px currentColor;
-}
-
-.tp-swatch-active .tp-swatch-dot {
-    box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 10px currentColor;
-    transform: scale(1.15);
-}
-
-.tp-swatch-name {
-    font-size: .62rem;
-    font-weight: 600;
-    color: #374151;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    transition: color .15s;
-}
-
-.tp-swatch:hover .tp-swatch-name     { color: #64748b; }
-.tp-swatch-active .tp-swatch-name    { color: #94a3b8; }
 
 /* -------------------------------------------------
    PANEL CS2
@@ -519,14 +509,158 @@ main {
     text-align: start;
 }
 
-/* -------------------------------------------------
-   RESPONSIVE
-------------------------------------------------- */
+/* =================================================
+   MOBILE RESPONSIVE  ≤ 768px
+================================================= */
 
-@media (max-width: 640px) {
-    .topbar-logo-title { display: none; }
-    .topbar-link span  { display: none; }
-    .layout-main { padding: 1rem; }
+/* Hamburger: oculto en desktop */
+.nm-hamburger { display: none; }
+.nm-overlay   { display: none; }
+.nm-tb-hamburger { display: none; }
+.nm-tb-mobile-menu { display: none; }
+
+@media (max-width: 768px) {
+
+    /* ── Sidebar: off-canvas drawer ── */
+    html[data-layout="sidebar"] .sidebar,
+    :not(html[data-layout="topbar"]) .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        z-index: 300;
+        box-shadow: none;
+    }
+
+    body.nav-open .sidebar {
+        transform: translateX(0);
+        box-shadow: 4px 0 32px rgba(0,0,0,.45);
+    }
+
+    /* Overlay */
+    .nm-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+        backdrop-filter: blur(2px);
+        z-index: 299;
+        cursor: pointer;
+        transition: opacity .25s;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    body.nav-open .nm-overlay {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Hamburger botón fijo (sidebar mode) */
+    html[data-layout="sidebar"] .nm-hamburger,
+    html:not([data-layout="topbar"]) .nm-hamburger {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 0.7rem;
+        left: 0.7rem;
+        z-index: 200;
+        width: 38px;
+        height: 38px;
+        border-radius: 9px;
+        background: var(--bg-card);
+        border: 1px solid var(--bd);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: background .15s, color .15s;
+    }
+
+    html[data-layout="topbar"] .nm-hamburger { display: none !important; }
+
+    /* Main: espacio para el hamburger en sidebar mode */
+    html:not([data-layout="topbar"]) main {
+        padding-top: 3.5rem !important;
+    }
+
+    /* ── Topbar: hamburger + menú desplegable ── */
+    html[data-layout="topbar"] .nm-tb-links    { display: none; }
+    html[data-layout="topbar"] .nm-tb-divider-v { display: none; }
+    html[data-layout="topbar"] .nm-tb-hamburger {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--bd);
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background .15s;
+    }
+    html[data-layout="topbar"] .nm-tb-right { margin-left: 0; }
+
+    body.tb-open .nm-tb-mobile-menu {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 58px;
+        left: 0;
+        right: 0;
+        background: var(--bg-surface);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--bd);
+        z-index: 200;
+        padding: 0.4rem 0.75rem 0.6rem;
+        gap: 0.15rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+
+    .nm-tb-mobile-link {
+        padding: 0.55rem 0.75rem !important;
+        font-size: .9rem !important;
+        border-radius: 8px;
+    }
+
+    /* ── Layout general ── */
+    main { padding: 1rem !important; }
+
+    .card {
+        border-radius: 12px;
+        margin: 0 0 1rem;
+    }
+
+    .card-body { padding: 1rem !important; }
+    .card-header { padding: 0.85rem 1rem !important; }
+
+    /* ── Tabla jugadores: ocultar columnas secundarias ── */
+    .pl-table-wrap { overflow-x: auto; }
+
+    .pl-table th:nth-child(2),
+    .pl-table th:nth-child(3),
+    .pl-table th:nth-child(4),
+    .pl-table th:nth-child(5),
+    .pl-table td:nth-child(2),
+    .pl-table td:nth-child(3),
+    .pl-table td:nth-child(4),
+    .pl-table td:nth-child(5) { display: none; }
+
+    .pl-table th:nth-child(6),
+    .pl-table td:nth-child(6) { text-align: right; }
+
+    /* ── Action buttons: solo icono en móvil ── */
+    .pl-action-btn { padding: 0.3rem 0.4rem; font-size: .7rem; }
+
+    /* ── Paginación compacta ── */
+    .pl-pager { flex-direction: column; gap: 0.5rem; align-items: center; }
+    .pl-pager-info { font-size: .75rem; }
 }
 
 /* =================================================
@@ -536,18 +670,9 @@ main {
 
 /* ── Sidebar: Pokéball moderna — rojo vivo / negro / azul marino ── */
 [data-theme="pokemon"] .sidebar {
-    background: linear-gradient(180deg,
-        #8a1515 0%,
-        #a01c1c 35%,
-        #8a1515 44%,
-        #1a1a1a 45%,
-        #1a1a1a 55%,
-        #253040 56%,
-        #1e3050 100%
-    );
-    border-right: 1px solid rgba(255,203,5,.1);
     position: relative;
     overflow: hidden;
+    box-shadow: 2px 0 24px rgba(0,0,0,.25);
 }
 
 /* Pokéball grande decorativa — zona roja, derecha */
@@ -612,16 +737,15 @@ main {
 
 /* ── Logo ── */
 [data-theme="pokemon"] .nm-logo-icon {
-    background: rgba(255,203,5,.15);
-    color: #ffcb05;
-    box-shadow: 0 0 16px rgba(255,203,5,.2), inset 0 0 0 1px rgba(255,203,5,.15);
+    background: rgba(224,53,53,.15);
+    color: #e03535;
+    box-shadow: 0 0 16px rgba(224,53,53,.22), inset 0 0 0 1px rgba(224,53,53,.15);
 }
 
 [data-theme="pokemon"] .nm-logo-title { color: #fff; font-weight: 700; }
 
 [data-theme="pokemon"] .nm-logo-sub {
-    color: #ffcb05;
-    opacity: .7;
+    color: rgba(224,53,53,.75);
     font-weight: 600;
     font-size: .65rem;
     text-transform: uppercase;
@@ -653,17 +777,17 @@ main {
 [data-theme="pokemon"] .nm-link { color: rgba(255,255,255,.7); }
 
 [data-theme="pokemon"] .nm-link:hover {
-    background: rgba(255,203,5,.08);
+    background: rgba(224,53,53,.07);
     color: #fff;
-    border-color: rgba(255,203,5,.2);
+    border-color: rgba(224,53,53,.18);
 }
 
 [data-theme="pokemon"] .nm-link.active {
-    background: rgba(255,203,5,.12);
-    color: #ffcb05;
-    border-color: rgba(255,203,5,.4);
+    background: rgba(224,53,53,.12);
+    color: #e03535;
+    border-color: rgba(224,53,53,.38);
     font-weight: 600;
-    box-shadow: inset 2px 0 0 #ffcb05, 0 0 12px rgba(255,203,5,.1);
+    box-shadow: inset 2px 0 0 #e03535, 0 0 12px rgba(224,53,53,.08);
 }
 
 [data-theme="pokemon"] .nm-logout:hover {
@@ -676,9 +800,33 @@ main {
 [data-theme="pokemon"] .nm-section-lbl    { color: rgba(255,255,255,.2); }
 [data-theme="pokemon"] .nm-lang-btn       { color: rgba(255,255,255,.4); }
 [data-theme="pokemon"] .nm-lang-btn:hover { color: rgba(255,255,255,.8); }
-[data-theme="pokemon"] .nm-lang-active    { color: #ffcb05 !important; }
+[data-theme="pokemon"] .nm-lang-active    { color: #e03535 !important; }
 [data-theme="pokemon"] .nm-lang-sep       { color: rgba(255,255,255,.1); }
-[data-theme="pokemon"] .tp-swatch-active .tp-swatch-name { color: #ffcb05; }
+
+/* ── Tipografía Rajdhani ── */
+[data-theme="pokemon"] .nm-nav,
+[data-theme="pokemon"] .nm-tb-inner {
+    font-family: 'Rajdhani', sans-serif;
+}
+[data-theme="pokemon"] .nm-link,
+[data-theme="pokemon"] .nm-tb-link {
+    font-size: .95rem;
+    font-weight: 500;
+    letter-spacing: .03em;
+    font-family: 'Rajdhani', sans-serif;
+}
+[data-theme="pokemon"] .nm-logo-title,
+[data-theme="pokemon"] .nm-tb-logo-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+[data-theme="pokemon"] .nm-section-lbl {
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: .1em;
+}
 
 /* ── Iconos Pokémon: ocultos por defecto, visibles solo en tema pokemon ── */
 .nm-icon-pokemon       { display: none; }
@@ -697,17 +845,30 @@ main {
 ═══════════════════════════════════════════════ */
 html[data-theme="pokemon"] {
     background-color: #1e3050;
+    position: relative;
+}
+
+html[data-theme="pokemon"]::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
     background-image:
-        linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.78)),
+        linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.28)),
         url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect width='1280' height='720' fill='%23253040'/><rect x='0' y='0' width='1280' height='64' fill='%232d3d52'/><rect x='0' y='656' width='1280' height='64' fill='%232d3d52'/><rect x='0' y='0' width='64' height='720' fill='%232d3d52'/><rect x='1216' y='0' width='64' height='720' fill='%232d3d52'/><rect x='0' y='0' width='64' height='64' fill='%23344660'/><rect x='1216' y='0' width='64' height='64' fill='%23344660'/><rect x='0' y='656' width='64' height='64' fill='%23344660'/><rect x='1216' y='656' width='64' height='64' fill='%23344660'/><line x1='64' y1='16' x2='1216' y2='16' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='32' x2='1216' y2='32' stroke='rgba(0,0,0,0.07)' stroke-width='2'/><line x1='64' y1='48' x2='1216' y2='48' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='672' x2='1216' y2='672' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='688' x2='1216' y2='688' stroke='rgba(0,0,0,0.07)' stroke-width='2'/><line x1='64' y1='704' x2='1216' y2='704' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><rect x='64' y='64' width='1152' height='59' fill='%23375c88'/><rect x='64' y='123' width='1152' height='59' fill='%23406898'/><rect x='64' y='182' width='1152' height='59' fill='%23375c88'/><rect x='64' y='241' width='1152' height='59' fill='%23406898'/><rect x='64' y='300' width='1152' height='60' fill='%23375c88'/><rect x='64' y='360' width='1152' height='59' fill='%234370a2'/><rect x='64' y='419' width='1152' height='59' fill='%234d7cb0'/><rect x='64' y='478' width='1152' height='59' fill='%234370a2'/><rect x='64' y='537' width='1152' height='59' fill='%234d7cb0'/><rect x='64' y='596' width='1152' height='60' fill='%234370a2'/><rect x='64' y='64' width='1152' height='592' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='2'/><line x1='64' y1='360' x2='1216' y2='360' stroke='rgba(255,255,255,0.28)' stroke-width='3'/><path d='M536,360 A104,104 0 0,0 744,360 Z' fill='%23a01c1c'/><path d='M536,360 A104,104 0 0,1 744,360 Z' fill='%23d4c9a8'/><circle cx='640' cy='360' r='104' fill='none' stroke='rgba(0,0,0,0.18)' stroke-width='4'/><rect x='536' y='352' width='208' height='16' fill='rgba(0,0,0,0.22)'/><circle cx='640' cy='360' r='22' fill='white' stroke='%23333' stroke-width='5'/><circle cx='640' cy='360' r='10' fill='%23cccccc'/><rect x='318' y='64' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='318' cy='73' r='9' fill='%236a9ac4'/><circle cx='402' cy='73' r='9' fill='%236a9ac4'/><rect x='878' y='64' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='878' cy='73' r='9' fill='%236a9ac4'/><circle cx='962' cy='73' r='9' fill='%236a9ac4'/><rect x='318' y='638' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='318' cy='647' r='9' fill='%236a9ac4'/><circle cx='402' cy='647' r='9' fill='%236a9ac4'/><rect x='878' y='638' width='84' height='18' fill='%232a5080' rx='3'/><circle cx='878' cy='647' r='9' fill='%236a9ac4'/><circle cx='962' cy='647' r='9' fill='%236a9ac4'/></svg>");
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
     background-repeat: no-repeat;
 }
 
 /* Contenedores de página transparentes para ver el campo */
-[data-theme="pokemon"] body,
+[data-theme="pokemon"] body {
+    background: transparent !important;
+    position: relative;
+    z-index: 1;
+}
+
 [data-theme="pokemon"] .page,
 [data-theme="pokemon"] main,
 [data-theme="pokemon"] .content,
@@ -719,19 +880,17 @@ html[data-theme="pokemon"] {
 
 /* ── Cards: borde y hover temático, sin tocar estructura ── */
 [data-theme="pokemon"] .pn-stat-card:hover {
-    border-color: rgba(255,203,5,.3);
-    box-shadow: 0 0 16px rgba(255,203,5,.07);
+    border-color: rgba(224,53,53,.28);
+    box-shadow: 0 0 16px rgba(224,53,53,.06);
 }
 
-/* Spinner amarillo Pikachu */
 [data-theme="pokemon"] .pn-spinner {
-    border-color: rgba(255,203,5,.2);
-    border-top-color: #ffcb05;
+    border-color: rgba(224,53,53,.2);
+    border-top-color: #e03535;
 }
 
-/* Tabla jugadores — hover amarillo sutil */
 [data-theme="pokemon"] .pl-table tbody tr:hover {
-    background: rgba(255,203,5,.04);
+    background: rgba(224,53,53,.04);
 }
 
 /* Empty/loading states visibles sobre el fondo */
@@ -743,13 +902,12 @@ html[data-theme="pokemon"] {
     text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 
-/* Paginación — amarillo solo en elemento activo */
 [data-theme="pokemon"] .pl-page-active,
 [data-theme="pokemon"] .adm-page-active {
-    background: rgba(255,203,5,.1) !important;
-    border-color: rgba(255,203,5,.4) !important;
-    color: #ffcb05 !important;
-    box-shadow: 0 0 8px rgba(255,203,5,.1) !important;
+    background: rgba(224,53,53,.10) !important;
+    border-color: rgba(224,53,53,.38) !important;
+    color: #e03535 !important;
+    box-shadow: 0 0 8px rgba(224,53,53,.08) !important;
 }
 
 /* ── Glassmorphism: fondo siempre visible con contenido legible ── */
@@ -776,10 +934,6 @@ html[data-theme="pokemon"] {
     -webkit-backdrop-filter: blur(8px);
 }
 
-[data-theme="pokemon"] .sidebar {
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
 
 /* =================================================
    TEMA ELECTRIC
@@ -859,3 +1013,359 @@ html[data-theme="pokemon"] {
 .nm-lang-btn:hover { color: #94a3b8; }
 .nm-lang-active { color: #22d3ee !important; }
 .nm-lang-sep { color: #1e2a3a; font-size: 11px; }
+
+/* =================================================
+   TEMA ZELDA — Verde Hyrule · Dorado Triforce
+================================================= */
+
+[data-theme="zelda"] .sidebar {
+    box-shadow: 2px 0 32px rgba(0,0,0,.50), inset -1px 0 0 rgba(200,160,32,0.12);
+}
+
+[data-theme="zelda"] .sidebar::before,
+[data-theme="zelda"] .sidebar::after { display: none; }
+
+[data-theme="zelda"] .nm-logo-icon {
+    background: rgba(200,160,32,.15);
+    color: #c8a020;
+    box-shadow: 0 0 18px rgba(200,160,32,.35), inset 0 0 0 1px rgba(200,160,32,.20);
+}
+
+[data-theme="zelda"] .nm-logo-title { color: #e8dfc0; }
+
+[data-theme="zelda"] .nm-logo-sub {
+    color: #b8a878;
+}
+
+[data-theme="zelda"] .nm-divider {
+    background: linear-gradient(90deg, transparent, rgba(200,160,32,0.45) 40%, rgba(200,160,32,0.45) 60%, transparent);
+    height: 1px;
+}
+
+[data-theme="zelda"] .nm-link { color: #b8a878; }
+
+[data-theme="zelda"] .nm-link:hover {
+    background: rgba(212,168,67,.07);
+    color: #e8dfc0;
+    border-color: rgba(212,168,67,.18);
+}
+
+[data-theme="zelda"] .nm-link.active {
+    background: rgba(212,168,67,.12);
+    color: #d4a843;
+    border-color: rgba(212,168,67,.35);
+    box-shadow: inset 2px 0 0 #d4a843, 0 0 14px rgba(212,168,67,.08);
+}
+
+[data-theme="zelda"] .nm-logout:hover {
+    background: rgba(220,60,60,.08) !important;
+    color: #f87171 !important;
+    border-color: rgba(220,60,60,.2) !important;
+}
+
+[data-theme="zelda"] .nm-section-lbl    { color: rgba(184,168,120,.35); }
+[data-theme="zelda"] .nm-lang-btn       { color: rgba(184,168,120,.45); }
+[data-theme="zelda"] .nm-lang-btn:hover { color: #e8dfc0; }
+[data-theme="zelda"] .nm-lang-active    { color: #d4a843 !important; }
+[data-theme="zelda"] .nm-lang-sep       { color: rgba(58,92,46,.6); }
+
+/* ── Iconos Zelda: ocultos por defecto, visibles solo en tema zelda ── */
+.nm-link-icon-zelda { display: none; }
+
+[data-theme="zelda"] .nm-link-icon-zelda {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    font-size: 14px;
+    line-height: 1;
+}
+[data-theme="zelda"] .nm-link-icon-default  { display: none; }
+[data-theme="zelda"] .nm-link-icon-pokemon  { display: none; }
+
+/* ── Componentes ── */
+[data-theme="zelda"] .pn-stat-card:hover {
+    border-color: rgba(212,168,67,.30);
+    box-shadow: 0 4px 20px rgba(212,168,67,.08);
+}
+
+[data-theme="zelda"] .pn-spinner {
+    border-color: #3a5c2e;
+    border-top-color: #d4a843;
+}
+
+[data-theme="zelda"] .pl-table tbody tr:hover {
+    background: rgba(212,168,67,.04);
+}
+
+[data-theme="zelda"] .pl-page-active,
+[data-theme="zelda"] .adm-page-active {
+    background: rgba(212,168,67,.10) !important;
+    border-color: rgba(212,168,67,.40) !important;
+    color: #d4a843 !important;
+    box-shadow: 0 0 8px rgba(212,168,67,.10) !important;
+}
+
+[data-theme="zelda"] .pl-empty,
+[data-theme="zelda"] .pl-loading,
+[data-theme="zelda"] .map-empty,
+[data-theme="zelda"] .pn-loading {
+    color: #b8a878 !important;
+}
+
+/* ═══════════════════════════════════════════════
+   FONDO: TRIFORCE DE HYRULE
+   Fondo verde Hyrule · Triforce dorada central
+═══════════════════════════════════════════════ */
+html[data-theme="zelda"] {
+    background-color: #1e2d1e;
+    position: relative;
+}
+
+html[data-theme="zelda"]::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.28)),
+        url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect width='1280' height='720' fill='%231e2d1e'/><polygon points='640,174 550,330 730,330' fill='%23c8a020'/><polygon points='550,330 460,486 640,486' fill='%23c8a020'/><polygon points='730,330 640,486 820,486' fill='%23c8a020'/><text x='640' y='545' text-anchor='middle' font-family='serif' font-size='72' font-weight='bold' letter-spacing='16' fill='%23c8a020'>ZELDA</text></svg>");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Contenedores de página transparentes para ver el fondo */
+[data-theme="zelda"] body {
+    background: transparent !important;
+    position: relative;
+    z-index: 1;
+}
+
+[data-theme="zelda"] .page,
+[data-theme="zelda"] main,
+[data-theme="zelda"] .content,
+[data-theme="zelda"] .pn-page,
+[data-theme="zelda"] .pl-page,
+[data-theme="zelda"] .wrap {
+    background: transparent !important;
+}
+
+/* ── Glassmorphism: fondo siempre visible con contenido legible ── */
+[data-theme="zelda"] .pn-stat-card,
+[data-theme="zelda"] .pn-header,
+[data-theme="zelda"] .pn-controls,
+[data-theme="zelda"] .pn-offline-card,
+[data-theme="zelda"] .pn-toast,
+[data-theme="zelda"] .card,
+[data-theme="zelda"] .tab,
+[data-theme="zelda"] .sub-tab,
+[data-theme="zelda"] .admins-table-wrap,
+[data-theme="zelda"] .admins-pager,
+[data-theme="zelda"] .console-out,
+[data-theme="zelda"] .perm-preview,
+[data-theme="zelda"] .map-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="zelda"] .admins-table thead tr,
+[data-theme="zelda"] .admins-table tbody tr:hover {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+
+/* =================================================
+   TOPBAR LAYOUT
+   Activado con data-layout="topbar" en <html>
+================================================= */
+
+.nm-topbar-wrap { display: none; }
+
+html[data-layout="topbar"] .sidebar       { display: none !important; }
+html[data-layout="topbar"] .nm-topbar-wrap {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    height: 58px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, var(--nav-bg) 0%, var(--nav-bg-end) 100%);
+    border-bottom: 1px solid var(--nav-border);
+    box-shadow: 0 2px 20px rgba(2,6,23,.50);
+    backdrop-filter: var(--nav-backdrop);
+    -webkit-backdrop-filter: var(--nav-backdrop);
+    position: relative;
+    z-index: 100;
+}
+html[data-layout="topbar"] .page  { flex-direction: column !important; height: 100vh; }
+html[data-layout="topbar"] main   { flex: 1 1 auto; padding: 1.5rem 2rem; overflow-y: auto; min-height: 0; }
+
+/* ── Inner ── */
+.nm-tb-inner {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 1rem;
+    gap: 0.4rem;
+}
+
+.nm-tb-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-shrink: 0;
+    padding-right: 0.25rem;
+}
+
+.nm-tb-logo-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--th-accent-bg);
+    color: var(--th-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 10px var(--th-accent-bg);
+}
+
+.nm-tb-logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.nm-tb-logo-title { font-size: .88rem; font-weight: 700; color: white; white-space: nowrap; }
+.nm-tb-logo-sub   { font-size: .60rem; color: #64748b; font-weight: 500; }
+
+.nm-tb-divider-v {
+    width: 1px;
+    height: 22px;
+    background: var(--bd);
+    margin: 0 0.3rem;
+    flex-shrink: 0;
+}
+
+/* ── Links ── */
+.nm-tb-links {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    flex: 1;
+}
+
+.nm-tb-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.38rem 0.7rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: rgba(255,255,255,.6);
+    font-size: .83rem;
+    font-weight: 500;
+    transition: background .15s, color .15s, border-color .15s;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.nm-tb-link:hover {
+    background: rgba(255,255,255,.06);
+    color: #e2e8f0;
+    border-color: var(--bd);
+}
+
+.nm-tb-link.active {
+    background: var(--th-accent-bg);
+    color: var(--th-accent);
+    border-color: var(--th-accent-bd);
+    font-weight: 600;
+}
+
+/* ── Right ── */
+.nm-tb-right {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.nm-tb-lang {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .72rem;
+    padding: 0 0.2rem;
+}
+
+.nm-tb-logout {
+    color: rgba(255,255,255,.45) !important;
+    border-color: transparent !important;
+    padding: 0.38rem 0.5rem !important;
+}
+.nm-tb-logout:hover {
+    background: rgba(239,68,68,.08) !important;
+    color: #f87171 !important;
+    border-color: rgba(239,68,68,.2) !important;
+}
+
+/* ThemePicker inside topbar — compact */
+.nm-tb-right .tp-wrap {
+    padding: 0 0.25rem;
+}
+.nm-tb-right .tp-wrap select {
+    padding: 4px 8px !important;
+    font-size: .72rem !important;
+    border-radius: 7px !important;
+}
+
+/* ── Layout toggle button ── */
+.nm-layout-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0 0.6rem;
+    height: 30px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(255,255,255,.45);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .78rem;
+    font-weight: 500;
+    transition: background .15s, color .15s, border-color .15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.nm-layout-toggle:hover {
+    background: rgba(255,255,255,.06);
+    color: #e2e8f0;
+    border-color: var(--bd);
+}
+
+.nm-layout-toggle-label { font-size: .78rem; }
+
+/* In sidebar: full-width style */
+div[style*="padding:0 0.5rem"] .nm-layout-toggle {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.48rem 0.85rem;
+    height: auto;
+    border-radius: 9px;
+    color: rgba(255,255,255,.4);
+    font-size: .80rem;
+}
+
+/* ── Topbar: solo el box-shadow cambia de dirección respecto al sidebar ── */
+[data-theme="zelda"] .nm-topbar-wrap {
+    box-shadow: 0 2px 24px rgba(0,0,0,.4);
+}
+
+[data-theme="pokemon"] .nm-tb-link.active {
+    box-shadow: inset 0 -2px 0 #e03535;
+}
+[data-theme="zelda"] .nm-tb-link.active {
+    box-shadow: inset 0 -2px 0 #c8a020;
+}

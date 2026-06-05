@@ -65,4 +65,68 @@
   <data name="Login.Button" xml:space="preserve"><value>Sign in</value></data>
   <data name="Login.Google" xml:space="preserve"><value>Sign in with Google</value></data>
   <data name="Login.Steam" xml:space="preserve"><value>Sign in with Steam</value></data>
+  <data name="Players.Loading" xml:space="preserve"><value>Loading players...</value></data>
+  <data name="Players.Empty" xml:space="preserve"><value>No players connected</value></data>
+  <data name="Players.Col.Player" xml:space="preserve"><value>Player</value></data>
+  <data name="Players.Col.Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Players.Col.Group" xml:space="preserve"><value>Group / Clan</value></data>
+  <data name="Players.Col.Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="Players.Human" xml:space="preserve"><value>HUMAN</value></data>
+  <data name="Players.ServerBot" xml:space="preserve"><value>Server bot</value></data>
+  <data name="Players.Pager.Showing" xml:space="preserve"><value>Showing</value></data>
+  <data name="Players.Pager.Of" xml:space="preserve"><value>of</value></data>
+  <data name="Players.Pager.Players" xml:space="preserve"><value>players</value></data>
+  <data name="Admin.Console.Commands" xml:space="preserve"><value>Commands</value></data>
+  <data name="Admin.Console.Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Admin.Console.Command" xml:space="preserve"><value>Command</value></data>
+  <data name="Admin.Cmd.Match" xml:space="preserve"><value>Match</value></data>
+  <data name="Admin.Cmd.Players" xml:space="preserve"><value>Players</value></data>
+  <data name="Admin.Cmd.Bots" xml:space="preserve"><value>Bots</value></data>
+  <data name="Admin.Cmd.Maps" xml:space="preserve"><value>Maps</value></data>
+  <data name="Admin.Cmd.Server" xml:space="preserve"><value>Server</value></data>
+  <data name="Admin.Cmd.Practice" xml:space="preserve"><value>Practice</value></data>
+  <data name="Admin.Cmd.RestartGame" xml:space="preserve"><value>Restart game</value></data>
+  <data name="Admin.Cmd.RoundTime" xml:space="preserve"><value>Round time (minutes)</value></data>
+  <data name="Admin.Cmd.MaxRounds" xml:space="preserve"><value>Max rounds</value></data>
+  <data name="Admin.Cmd.Halftime" xml:space="preserve"><value>Enable halftime</value></data>
+  <data name="Admin.Cmd.Overtime" xml:space="preserve"><value>Enable overtime</value></data>
+  <data name="Admin.Cmd.WarmupTime" xml:space="preserve"><value>Warmup time (sec)</value></data>
+  <data name="Admin.Cmd.WarmupEnd" xml:space="preserve"><value>End warmup</value></data>
+  <data name="Admin.Cmd.PauseMatch" xml:space="preserve"><value>Pause match</value></data>
+  <data name="Admin.Cmd.UnpauseMatch" xml:space="preserve"><value>Resume match</value></data>
+  <data name="Admin.Cmd.StatusPlayers" xml:space="preserve"><value>List connected players</value></data>
+  <data name="Admin.Cmd.KickById" xml:space="preserve"><value>Kick player by ID</value></data>
+  <data name="Admin.Cmd.BanId" xml:space="preserve"><value>Ban ID 60 minutes</value></data>
+  <data name="Admin.Cmd.FriendlyFire" xml:space="preserve"><value>Enable friendly fire</value></data>
+  <data name="Admin.Cmd.AutoBalance" xml:space="preserve"><value>Auto team balance</value></data>
+  <data name="Admin.Cmd.TeamLimit" xml:space="preserve"><value>No team limit</value></data>
+  <data name="Admin.Cmd.AllTalk" xml:space="preserve"><value>Everyone talks to each other</value></data>
+  <data name="Admin.Cmd.BotAdd" xml:space="preserve"><value>Add bot</value></data>
+  <data name="Admin.Cmd.BotAddT" xml:space="preserve"><value>Add terrorist bot</value></data>
+  <data name="Admin.Cmd.BotAddCT" xml:space="preserve"><value>Add CT bot</value></data>
+  <data name="Admin.Cmd.BotKick" xml:space="preserve"><value>Remove all bots</value></data>
+  <data name="Admin.Cmd.BotStop" xml:space="preserve"><value>Freeze bots</value></data>
+  <data name="Admin.Cmd.BotDifficulty" xml:space="preserve"><value>Bot difficulty (0-3)</value></data>
+  <data name="Admin.Cmd.BotQuota" xml:space="preserve"><value>Number of bots</value></data>
+  <data name="Admin.Cmd.Dust2" xml:space="preserve"><value>Change to Dust2</value></data>
+  <data name="Admin.Cmd.Mirage" xml:space="preserve"><value>Change to Mirage</value></data>
+  <data name="Admin.Cmd.Inferno" xml:space="preserve"><value>Change to Inferno</value></data>
+  <data name="Admin.Cmd.Nuke" xml:space="preserve"><value>Change to Nuke</value></data>
+  <data name="Admin.Cmd.Ancient" xml:space="preserve"><value>Change to Ancient</value></data>
+  <data name="Admin.Cmd.Anubis" xml:space="preserve"><value>Change to Anubis</value></data>
+  <data name="Admin.Cmd.Vertigo" xml:space="preserve"><value>Change to Vertigo</value></data>
+  <data name="Admin.Cmd.CheatsOn" xml:space="preserve"><value>Enable cheats</value></data>
+  <data name="Admin.Cmd.CheatsOff" xml:space="preserve"><value>Disable cheats</value></data>
+  <data name="Admin.Cmd.SetPassword" xml:space="preserve"><value>Set password</value></data>
+  <data name="Admin.Cmd.RemovePassword" xml:space="preserve"><value>Remove password</value></data>
+  <data name="Admin.Cmd.OnlineMode" xml:space="preserve"><value>Online mode</value></data>
+  <data name="Admin.Cmd.AirAccelerate" xml:space="preserve"><value>Air acceleration</value></data>
+  <data name="Admin.Cmd.Gravity" xml:space="preserve"><value>Normal gravity</value></data>
+  <data name="Admin.Cmd.ExecCompetitive" xml:space="preserve"><value>Run competitive config</value></data>
+  <data name="Admin.Cmd.PracticeMode" xml:space="preserve"><value>Grenade practice mode</value></data>
+  <data name="Admin.Cmd.Noclip" xml:space="preserve"><value>Fly (requires sv_cheats 1)</value></data>
+  <data name="Admin.Cmd.Flashbang" xml:space="preserve"><value>Give flashbang</value></data>
+  <data name="Admin.Cmd.Smoke" xml:space="preserve"><value>Give smoke grenade</value></data>
+  <data name="Admin.Cmd.Molotov" xml:space="preserve"><value>Give molotov</value></data>
+  <data name="Admin.Cmd.BuyAnywhere" xml:space="preserve"><value>Buy anywhere</value></data>
 </root>

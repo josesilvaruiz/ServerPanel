@@ -1,10 +1,20 @@
 @inherits LayoutComponentBase
 
+<div class="nm-overlay" onclick="navManager.close()"></div>
+
+<button class="nm-hamburger" onclick="navManager.toggle()" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+    </svg>
+</button>
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
     </div>
-
+    <div class="nm-topbar-wrap">
+        <TopNavBar />
+    </div>
     <main>
         <article class="content px-4">
             @Body

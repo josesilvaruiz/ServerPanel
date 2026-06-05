@@ -1,43 +1,33 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JS
+@inject ServerPanel.Services.ThemeState ThemeState
+@implements IDisposable
 
-<div class="tp-row">
-    @foreach (var t in _themes)
-    {
-        <button type="button"
-                class="tp-swatch @(_active == t.Key ? "tp-swatch-active" : "")"
-                title="@t.Hint"
-                @onclick="() => Pick(t.Key)">
-            <span class="tp-swatch-dot" style="background:@t.Color"></span>
-            <span class="tp-swatch-name">@t.Label</span>
-        </button>
-    }
+<div style="padding:0 0.5rem 0.25rem;">
+    <select style="width:100%;background:var(--th-accent-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--th-accent-bd);border-radius:9px;color:var(--th-accent);font-family:inherit;font-size:0.8rem;font-weight:600;padding:6px 12px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;transition:border-color .15s,box-shadow .15s;" @onchange="OnChange">
+        <option value="default" selected="@(ThemeState.Theme == "default")" style="background:#0d1117;color:#e2e8f0;">Default</option>
+        <option value="pokemon" selected="@(ThemeState.Theme == "pokemon")" style="background:#0d1117;color:#e2e8f0;">Pokemon</option>
+        <option value="zelda"   selected="@(ThemeState.Theme == "zelda")"   style="background:#0d1117;color:#e2e8f0;">Zelda</option>
+    </select>
 </div>
 
 @code {
-    private string _active = "default";
-
-    private record ThemeOption(string Key, string Label, string Hint, string Color);
-
-    private readonly ThemeOption[] _themes =
-    [
-        new("default", "Void",       "La oscuridad original",   "#22d3ee"),
-        new("pokemon", "Scarlet",    "Algo se esconde aquí...", "#FF4444"),
-        new("forest",  "Electric",   "Velocidad y control",     "#00BFFF"),
-    ];
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            _active = await JS.InvokeAsync<string>("themeManager.load");
-            StateHasChanged();
+            var theme = await JS.InvokeAsync<string>("themeManager.load");
+            ThemeState.Set(theme);
+            ThemeState.OnChange += StateHasChanged;
         }
     }
 
-    private async Task Pick(string key)
+    private async Task OnChange(ChangeEventArgs e)
     {
-        _active = key;
+        var key = e.Value?.ToString() ?? "default";
+        ThemeState.Set(key);
         await JS.InvokeVoidAsync("themeManager.apply", key);
     }
+
+    public void Dispose() => ThemeState.OnChange -= StateHasChanged;
 }
