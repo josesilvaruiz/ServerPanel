@@ -145,10 +145,10 @@ public partial class Admin
     bool ToastOk;
     string ToastMessage = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _ = Task.WhenAll(LoadMaps(), FetchCurrentMap())
-            .ContinueWith(_ => InvokeAsync(StateHasChanged));
+        if (!firstRender) return;
+        await Task.WhenAll(LoadMaps(), FetchCurrentMap());
     }
 
     async Task FetchCurrentMap()
@@ -190,6 +190,7 @@ public partial class Admin
     {
         ActiveSection = tab;
         DraggedMap = null;
+        StateHasChanged();
         if (tab == "map" && WorkshopMaps.Count == 0)
             _ = LoadMaps();
     }
