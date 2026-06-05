@@ -1,0 +1,126 @@
+@namespace ServerPanel.Components.Pages
+@page "/metrics"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using ServerPanel.Contracts
+@using ServerPanel.Models
+@attribute [Authorize]
+@inject IServerMetricsService MetricsService
+@inject IStringLocalizer<SharedResource> L
+
+<div class="wrap">
+
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-server"></i></div>
+        <div>
+            <p class="top-title">Métricas del VPS</p>
+            <p class="top-sub">Estado actual del servidor en tiempo real</p>
+        </div>
+        <button type="button" class="btn btn-ghost" style="margin-left:auto" @onclick="LoadMetrics" disabled="@Loading">
+            <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i> Actualizar
+        </button>
+    </div>
+
+    <div class="card card-anim">
+
+        @if (Loading)
+        {
+            <div class="state-box">
+                <div class="spinner"></div>
+                <p>Consultando servidor...</p>
+            </div>
+        }
+        else if (Error is not null)
+        {
+            <div class="state-box state-error">
+                <i class="ti ti-alert-circle"></i>
+                <p>@Error</p>
+                <button type="button" class="btn btn-ghost" @onclick="LoadMetrics">
+                    <i class="ti ti-refresh"></i> Reintentar
+                </button>
+            </div>
+        }
+        else if (Data is not null)
+        {
+            <div class="metrics-list">
+
+                <div class="metrics-section-lbl">Sistema</div>
+
+                <div class="metric-row">
+                    <div class="metric-icon mi-green"><i class="ti ti-cpu"></i></div>
+                    <span class="metric-lbl">RAM</span>
+                    <span class="metric-val">@($"{Data.MemoryUsedMb / 1024.0:0.#} / {Data.MemoryTotalMb / 1024.0:0.#} GB")</span>
+                    <div class="metric-bar-wrap">
+                        <div class="metric-bar" style="width:@(MemPercent)%;background:@MemColor"></div>
+                    </div>
+                    <span class="metric-pct">@($"{MemPercent:0}%")</span>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-icon mi-purple"><i class="ti ti-cpu"></i></div>
+                    <span class="metric-lbl">CPU</span>
+                    <span class="metric-val">@($"{Data.CpuUsagePercent:0.#} %")</span>
+                    <div class="metric-bar-wrap">
+                        <div class="metric-bar" style="width:@(Data.CpuUsagePercent)%;background:@CpuColor"></div>
+                    </div>
+                    <span class="metric-pct">@($"{Data.CpuUsagePercent:0}%")</span>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-icon mi-amber"><i class="ti ti-database"></i></div>
+                    <span class="metric-lbl">Disco</span>
+                    <span class="metric-val">@($"{Data.DiskUsagePercent:0.#} %")</span>
+                    <div class="metric-bar-wrap">
+                        <div class="metric-bar" style="width:@(Data.DiskUsagePercent)%;background:@DiskColor"></div>
+                    </div>
+                    <span class="metric-pct">@($"{Data.DiskUsagePercent:0}%")</span>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-icon mi-cyan"><i class="ti ti-trending-up"></i></div>
+                    <span class="metric-lbl">Load Average</span>
+                    <span class="metric-val">@($"{Data.LoadAverage:0.##}")</span>
+                </div>
+
+                <div class="metrics-section-lbl" style="margin-top:1rem">CS2</div>
+
+                @if (Data.Cs2Running)
+                {
+                    <div class="metric-row">
+                        <div class="metric-icon mi-green"><i class="ti ti-brand-steam"></i></div>
+                        <span class="metric-lbl">Estado</span>
+                        <span class="metric-val metric-online"><i class="ti ti-circle-filled" style="font-size:9px"></i> Activo</span>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-icon mi-purple"><i class="ti ti-cpu-2"></i></div>
+                        <span class="metric-lbl">CPU</span>
+                        <span class="metric-val">@($"{Data.Cs2CpuPercent:0.#} %")</span>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-icon mi-purple"><i class="ti ti-memory"></i></div>
+                        <span class="metric-lbl">RAM</span>
+                        <span class="metric-val">@($"{Data.Cs2MemoryMb} MB")</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="metric-row metric-row-off">
+                        <div class="metric-icon mi-off"><i class="ti ti-brand-steam"></i></div>
+                        <span class="metric-lbl">Estado</span>
+                        <span class="metric-val">No está corriendo</span>
+                    </div>
+                }
+
+            </div>
+        }
+        else
+        {
+            <div class="state-box">
+                <i class="ti ti-server-off"></i>
+                <p>Pulsa Actualizar para cargar las métricas</p>
+            </div>
+        }
+
+    </div>
+
+</div>

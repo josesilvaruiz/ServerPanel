@@ -19,6 +19,29 @@ public class PlayerService : IPlayerService
         _logger = logger;
     }
 
+    public async Task<List<PlayerInfo>> GetPlayersBasicAsync()
+    {
+        var players = new List<PlayerInfo>();
+
+        try
+        {
+            var output = await _ssh.ExecuteAsync(
+                "su - steam -c \"tmux send-keys -t cs2 'status' Enter; sleep 1; tmux capture-pane -t cs2 -p\"");
+
+            _logger.LogInformation("STATUS RAW:\n{Output}", output);
+
+            players = ParseStatusOutput(output);
+
+            _logger.LogInformation("Players encontrados: {Count}", players.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error obteniendo jugadores (basic)");
+        }
+
+        return players;
+    }
+
     public async Task<List<PlayerInfo>> GetPlayersAsync()
     {
         var players = new List<PlayerInfo>();
@@ -32,64 +55,7 @@ public class PlayerService : IPlayerService
                 "STATUS RAW:\n{Output}",
                 output);
 
-            var lines = output.Split(
-                '\n',
-                StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var line in lines)
-            {
-                var trimmed = line.Trim();
-
-                var nameMatch =
-                    Regex.Match(
-                        trimmed,
-                        @"'([^']+)'");
-
-                if (!nameMatch.Success)
-                    continue;
-
-                var name =
-                    nameMatch.Groups[1].Value;
-
-                var isBot =
-                    trimmed.Contains(
-                        "BOT",
-                        StringComparison.OrdinalIgnoreCase);
-
-                int userId = 0;
-                int ping = 0;
-
-                if (!isBot)
-                {
-                    var statusMatch =
-                        Regex.Match(
-                            trimmed,
-                            @"^\s*(\d+)\s+\S+\s+(\d+)");
-
-                    if (statusMatch.Success)
-                    {
-                        int.TryParse(
-                            statusMatch.Groups[1].Value,
-                            out userId);
-
-                        int.TryParse(
-                            statusMatch.Groups[2].Value,
-                            out ping);
-                    }
-                }
-
-                players.Add(new PlayerInfo
-                {
-                    UserId = userId,
-                    Name = name,
-                    Ping = ping,
-                    IsBot = isBot,
-                    SteamId = isBot ? "BOT" : "",
-                    Clan = "",
-                    Groups = "",
-                    CommunityUrl = ""
-                });
-            }
+            players = ParseStatusOutput(output);
 
             _logger.LogInformation(
                 "Players encontrados: {Count}",
@@ -273,6 +239,54 @@ public class PlayerService : IPlayerService
             "su - steam -c \"tmux send-keys -t cs2 'css_plugins reload 1' Enter\"";
 
         await _ssh.ExecuteAsync(reloadCommand);
+    }
+
+    private static List<PlayerInfo> ParseStatusOutput(string output)
+    {
+        var players = new List<PlayerInfo>();
+
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+
+            var nameMatch = Regex.Match(trimmed, @"'([^']+)'");
+
+            if (!nameMatch.Success)
+                continue;
+
+            var name  = nameMatch.Groups[1].Value;
+            var isBot = trimmed.Contains("BOT", StringComparison.OrdinalIgnoreCase);
+
+            int userId = 0;
+            int ping   = 0;
+
+            if (!isBot)
+            {
+                var statusMatch = Regex.Match(trimmed, @"^\s*(\d+)\s+\S+\s+(\d+)");
+
+                if (statusMatch.Success)
+                {
+                    int.TryParse(statusMatch.Groups[1].Value, out userId);
+                    int.TryParse(statusMatch.Groups[2].Value, out ping);
+                }
+            }
+
+            players.Add(new PlayerInfo
+            {
+                UserId       = userId,
+                Name         = name,
+                Ping         = ping,
+                IsBot        = isBot,
+                SteamId      = isBot ? "BOT" : "",
+                Clan         = "",
+                Groups       = "",
+                CommunityUrl = ""
+            });
+        }
+
+        return players;
     }
 
     private static string EscapeArg(string value)

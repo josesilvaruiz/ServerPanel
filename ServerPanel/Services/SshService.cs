@@ -26,6 +26,47 @@ public class SshService : ISshService
         }
     }
 
+    public IAsyncDisposable OpenTunnel(uint localPort, string remoteHost, uint remotePort)
+    {
+        if (_settings == null)
+            throw new InvalidOperationException("La configuración SSH no existe.");
+
+        var client = new SshClient(_settings.Host, _settings.User, _settings.Password);
+        client.Connect();
+
+        var port = new Renci.SshNet.ForwardedPortLocal("127.0.0.1", localPort, remoteHost, remotePort);
+        client.AddForwardedPort(port);
+        port.Start();
+
+        _logger.LogInformation("SSH Túnel abierto: localhost:{Local} → {Remote}:{RemotePort}", localPort, remoteHost, remotePort);
+
+        return new SshTunnel(client, port, _logger);
+    }
+
+    private sealed class SshTunnel : IAsyncDisposable
+    {
+        private readonly SshClient _client;
+        private readonly Renci.SshNet.ForwardedPortLocal _port;
+        private readonly ILogger _logger;
+
+        public SshTunnel(SshClient client, Renci.SshNet.ForwardedPortLocal port, ILogger logger)
+        {
+            _client = client;
+            _port   = port;
+            _logger = logger;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            _port.Stop();
+            _client.Disconnect();
+            _client.Dispose();
+            _port.Dispose();
+            _logger.LogInformation("SSH Túnel cerrado");
+            return ValueTask.CompletedTask;
+        }
+    }
+
     public async Task<string> ExecuteAsync(string command)
     {
         if (_settings == null)

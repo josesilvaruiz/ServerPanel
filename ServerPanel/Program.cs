@@ -1,7 +1,12 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using ServerPanel.Components;
 using ServerPanel.Contracts;
+using ServerPanel.Data;
+using ServerPanel.Models;
 using ServerPanel.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +24,16 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
+builder.Services.AddSingleton<IServerMetricsService, ServerMetricsService>();
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHostedService<MetricsCollectorBackgroundService>();
+builder.Services.AddHostedService<Cs2MetricsCollectorBackgroundService>();
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddHostedService<PostgresTunnelService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<ServerPanel.Services.ThemeState>();
 
@@ -68,10 +83,50 @@ builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Analytics:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Analytics", policy =>
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader());
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("analytics", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit          = 30,
+                Window               = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit           = 0,
+            }));
+
+    options.OnRejected = (ctx, _) =>
+    {
+        ctx.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        var logger = ctx.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Analytics");
+        logger.LogWarning(
+            "Analytics rate limit exceeded — IP:{IP}",
+            ctx.HttpContext.Connection.RemoteIpAddress);
+        return ValueTask.CompletedTask;
+    };
+});
+
 var app = builder.Build();
 
 // VERY IMPORTANT: before authentication and HTTPS handling
 app.UseForwardedHeaders();
+app.UseCors("Analytics");
+app.UseRateLimiter();
 app.UsePathBase("/panel");
 app.UseRouting();
 
@@ -102,5 +157,40 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapRazorPages();
+
+app.MapPost("/api/analytics/visit", async (
+    PageVisitRequest req,
+    HttpContext ctx,
+    ApplicationDbContext db,
+    ILoggerFactory loggerFactory,
+    CancellationToken ct) =>
+{
+    var logger = loggerFactory.CreateLogger("Analytics");
+    var origin = ctx.Request.Headers.Origin.FirstOrDefault() ?? "";
+
+    if (!allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    {
+        logger.LogWarning(
+            "Analytics rejected — invalid Origin:{Origin} IP:{IP}",
+            origin, ctx.Connection.RemoteIpAddress);
+        return Results.Forbid();
+    }
+
+    var visit = new PageVisit
+    {
+        TimestampUtc = DateTime.UtcNow,
+        Path         = req.Path,
+        Referrer     = ctx.Request.Headers.Referer.FirstOrDefault(),
+        UserAgent    = ctx.Request.Headers.UserAgent.FirstOrDefault(),
+    };
+
+    db.PageVisits.Add(visit);
+    await db.SaveChangesAsync(ct);
+
+    return Results.Ok();
+})
+.RequireCors("Analytics")
+.RequireRateLimiting("analytics")
+.WithName("TrackVisit");
 
 app.Run();

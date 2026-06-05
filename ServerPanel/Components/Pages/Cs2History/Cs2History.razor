@@ -1,0 +1,283 @@
+@namespace ServerPanel.Components.Pages
+@page "/cs2-history"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using ServerPanel.Data
+@using ServerPanel.Models
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject IJSRuntime JS
+
+<div class="wrap">
+
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-brand-steam"></i></div>
+        <div>
+            <p class="top-title">Historial CS2</p>
+            <p class="top-sub">Actividad del servidor de juego</p>
+        </div>
+        <button type="button" class="btn-refresh" @onclick="LoadAsync" disabled="@Loading">
+            <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
+        </button>
+    </div>
+
+    @if (Loading)
+    {
+        <div class="state-box">
+            <div class="spinner"></div>
+            <p>Cargando...</p>
+        </div>
+    }
+    else if (Error is not null)
+    {
+        <div class="state-box state-error">
+            <i class="ti ti-alert-circle"></i>
+            <p>@Error</p>
+        </div>
+    }
+    else if (Kpi is null)
+    {
+        <div class="state-box">
+            <i class="ti ti-database-off"></i>
+            <p>Sin datos todavía. El servicio escribe un snapshot cada 60 s.</p>
+        </div>
+    }
+    else
+    {
+        @* ── KPIs globales ── *@
+        <div class="kpi-section-lbl">Global</div>
+        <div class="kpi-grid kpi-grid-3">
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-database"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.TotalSnapshots</p>
+                    <p class="kpi-lbl">Snapshots totales</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-event"></i></span>
+                <div>
+                    <p class="kpi-val mono-sm">@Kpi.FirstSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-lbl">Primer snapshot</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-check"></i></span>
+                <div>
+                    <p class="kpi-val mono-sm">@Kpi.LastSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-lbl">Último snapshot</p>
+                </div>
+            </div>
+        </div>
+
+        @* ── KPIs 24h ── *@
+        <div class="kpi-section-lbl" style="margin-top:.25rem">Últimas 24 horas</div>
+        <div class="kpi-grid kpi-grid-4">
+            <div class="kpi-card">
+                <span class="kpi-icon ki-green"><i class="ti ti-users"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.MaxPlayers24h</p>
+                    <p class="kpi-lbl">Jugadores máx.</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-users"></i></span>
+                <div>
+                    <p class="kpi-val">@($"{Kpi.AvgPlayers24h:0.#}")</p>
+                    <p class="kpi-lbl">Jugadores media</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon @(Kpi.UptimePct24h >= 90 ? "ki-green" : Kpi.UptimePct24h >= 60 ? "ki-amber" : "ki-red")">
+                    <i class="ti ti-heartbeat"></i>
+                </span>
+                <div>
+                    <p class="kpi-val @(Kpi.UptimePct24h >= 90 ? "" : Kpi.UptimePct24h >= 60 ? "mid" : "hi")">
+                        @($"{Kpi.UptimePct24h:0.#} %")
+                    </p>
+                    <p class="kpi-lbl">Uptime</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-chart-bar"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.Snapshots24h</p>
+                    <p class="kpi-lbl">Snapshots 24 h</p>
+                </div>
+            </div>
+        </div>
+
+        @* ── Gráficas 24h ── *@
+        @if (Chart is not null)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Gráficas · últimas 24 h</div>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-users"></i> Jugadores online</p>
+                    <div class="chart-wrap"><canvas id="chart-players"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-heartbeat"></i> Estado online/offline</p>
+                    <div class="chart-wrap"><canvas id="chart-online"></canvas></div>
+                </div>
+            </div>
+        }
+
+        @* ── Tabla ── *@
+        @if (Rows.Count > 0)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Últimos 100 registros</div>
+            <div class="table-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Fecha (UTC)</th>
+                            <th>Online</th>
+                            <th>Jugadores</th>
+                            <th>Máximo</th>
+                            <th>Mapa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Rows)
+                        {
+                            <tr>
+                                <td class="mono">@r.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>
+                                    @if (r.IsOnline)
+                                    {
+                                        <span class="badge badge-on">Online</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-off">Offline</span>
+                                    }
+                                </td>
+                                <td class="num">@r.CurrentPlayers</td>
+                                <td class="num muted">@r.MaxPlayers</td>
+                                <td class="map-cell">@(r.Map ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="count-lbl">@Rows.Count registro(s) mostrados</p>
+        }
+    }
+
+</div>
+
+@code {
+    record KpiData(
+        long     TotalSnapshots,
+        DateTime FirstSnapshot,
+        DateTime LastSnapshot,
+        int      MaxPlayers24h,
+        double   AvgPlayers24h,
+        double   UptimePct24h,
+        long     Snapshots24h);
+
+    record ChartData(string[] Labels, double[] Players, double[] Online);
+
+    KpiData?               Kpi;
+    ChartData?             Chart;
+    List<Cs2ServerSnapshot> Rows    = new();
+    bool                   Loading = true;
+    string?                Error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAsync();
+            return;
+        }
+
+        if (Chart is not null)
+            await RenderChartsAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        Loading = true;
+        Error   = null;
+        Chart   = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+
+            var g = await Db.Cs2ServerSnapshots
+                .GroupBy(_ => 1)
+                .Select(g => new {
+                    Total = g.LongCount(),
+                    First = g.Min(s => s.TimestampUtc),
+                    Last  = g.Max(s => s.TimestampUtc)
+                })
+                .FirstOrDefaultAsync();
+
+            var h = await Db.Cs2ServerSnapshots
+                .Where(s => s.TimestampUtc >= cutoff)
+                .GroupBy(_ => 1)
+                .Select(g => new {
+                    MaxPlayers = g.Max(s => s.CurrentPlayers),
+                    AvgPlayers = g.Average(s => (double)s.CurrentPlayers),
+                    OnlineCount = g.Count(s => s.IsOnline),
+                    Total       = g.Count()
+                })
+                .FirstOrDefaultAsync();
+
+            Rows = await Db.Cs2ServerSnapshots
+                .OrderByDescending(s => s.TimestampUtc)
+                .Take(100)
+                .ToListAsync();
+
+            var chartRows = await Db.Cs2ServerSnapshots
+                .Where(s => s.TimestampUtc >= cutoff)
+                .OrderBy(s => s.TimestampUtc)
+                .Select(s => new { s.TimestampUtc, s.CurrentPlayers, s.IsOnline })
+                .ToListAsync();
+
+            if (g is null) { Kpi = null; return; }
+
+            double uptimePct = h is { Total: > 0 }
+                ? h.OnlineCount * 100.0 / h.Total
+                : 0;
+
+            Kpi = new KpiData(
+                TotalSnapshots: g.Total,
+                FirstSnapshot:  g.First,
+                LastSnapshot:   g.Last,
+                MaxPlayers24h:  h?.MaxPlayers ?? 0,
+                AvgPlayers24h:  h?.AvgPlayers ?? 0,
+                UptimePct24h:   uptimePct,
+                Snapshots24h:   h?.Total ?? 0);
+
+            if (chartRows.Count > 0)
+            {
+                Chart = new ChartData(
+                    Labels:  chartRows.Select(r => r.TimestampUtc.ToString("HH:mm")).ToArray(),
+                    Players: chartRows.Select(r => (double)r.CurrentPlayers).ToArray(),
+                    Online:  chartRows.Select(r => r.IsOnline ? 1.0 : 0.0).ToArray()
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task RenderChartsAsync()
+    {
+        if (Chart is null) return;
+        await JS.InvokeVoidAsync("spRenderChart", "chart-players", Chart.Labels, Chart.Players, "Jugadores", "#22d3ee", "");
+        await JS.InvokeVoidAsync("spRenderChart", "chart-online",  Chart.Labels, Chart.Online,  "Online",    "#4ade80", "");
+    }
+}

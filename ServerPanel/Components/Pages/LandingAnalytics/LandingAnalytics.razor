@@ -1,0 +1,245 @@
+@namespace ServerPanel.Components.Pages
+@page "/landing-analytics"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using ServerPanel.Data
+@using ServerPanel.Models
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject IJSRuntime JS
+
+<div class="wrap">
+
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-chart-dots-3"></i></div>
+        <div>
+            <p class="top-title">Analytics · Landing</p>
+            <p class="top-sub">Visitas registradas en randompicks.es</p>
+        </div>
+        <button type="button" class="btn-refresh" @onclick="LoadAsync" disabled="@Loading">
+            <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
+        </button>
+    </div>
+
+    @if (Loading)
+    {
+        <div class="state-box">
+            <div class="spinner"></div>
+            <p>Cargando...</p>
+        </div>
+    }
+    else if (Error is not null)
+    {
+        <div class="state-box state-error">
+            <i class="ti ti-alert-circle"></i>
+            <p>@Error</p>
+        </div>
+    }
+    else if (Kpi is null)
+    {
+        <div class="state-box">
+            <i class="ti ti-eye-off"></i>
+            <p>Sin visitas registradas todavía.</p>
+        </div>
+    }
+    else
+    {
+        @* ── KPIs ── *@
+        <div class="kpi-section-lbl">Visitas</div>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-sun"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.Today</p>
+                    <p class="kpi-lbl">Hoy</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-purple"><i class="ti ti-calendar-week"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.ThisWeek</p>
+                    <p class="kpi-lbl">Esta semana</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-amber"><i class="ti ti-calendar-month"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.ThisMonth</p>
+                    <p class="kpi-lbl">Este mes</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-green"><i class="ti ti-stack-2"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.Total</p>
+                    <p class="kpi-lbl">Total</p>
+                </div>
+            </div>
+        </div>
+
+        @* ── Gráfica 30 días ── *@
+        @if (Chart is not null)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Visitas diarias · últimos 30 días</div>
+            <div class="chart-card">
+                <div class="chart-wrap"><canvas id="chart-visits"></canvas></div>
+            </div>
+        }
+
+        @* ── Top Pages ── *@
+        @if (TopPages.Count > 0)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Top páginas</div>
+            <div class="table-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Página</th>
+                            <th>Visitas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int rank = 1; }
+                        @foreach (var p in TopPages)
+                        {
+                            <tr>
+                                <td class="muted mono">@(rank++)</td>
+                                <td class="path-cell">@p.Path</td>
+                                <td class="num">@p.Count</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @* ── Top Referrers ── *@
+        @if (TopReferrers.Count > 0)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Top referrers</div>
+            <div class="table-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Referrer</th>
+                            <th>Visitas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int rrank = 1; }
+                        @foreach (var r in TopReferrers)
+                        {
+                            <tr>
+                                <td class="muted mono">@(rrank++)</td>
+                                <td class="path-cell">@r.Referrer</td>
+                                <td class="num">@r.Count</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+</div>
+
+@code {
+    record KpiData(long Today, long ThisWeek, long ThisMonth, long Total);
+    record PageCount(string Path, int Count);
+    record ReferrerCount(string Referrer, int Count);
+    record ChartData(string[] Labels, double[] Values);
+
+    KpiData?             Kpi;
+    ChartData?           Chart;
+    List<PageCount>      TopPages    = new();
+    List<ReferrerCount>  TopReferrers = new();
+    bool                 Loading     = true;
+    string?              Error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) { await LoadAsync(); return; }
+        if (Chart is not null) await RenderChartAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        Loading = true;
+        Error   = null;
+        Chart   = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var now       = DateTime.UtcNow;
+            var todayUtc  = now.Date;
+            var weekUtc   = todayUtc.AddDays(-(int)todayUtc.DayOfWeek);
+            var monthUtc  = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var day30Utc  = todayUtc.AddDays(-29);
+
+            var today     = await Db.PageVisits.LongCountAsync(v => v.TimestampUtc >= todayUtc);
+            var thisWeek  = await Db.PageVisits.LongCountAsync(v => v.TimestampUtc >= weekUtc);
+            var thisMonth = await Db.PageVisits.LongCountAsync(v => v.TimestampUtc >= monthUtc);
+            var total     = await Db.PageVisits.LongCountAsync();
+
+            if (total == 0) { Kpi = null; return; }
+
+            Kpi = new KpiData(today, thisWeek, thisMonth, total);
+
+            // Gráfica: visitas por día últimos 30 días
+            var dailyRaw = await Db.PageVisits
+                .Where(v => v.TimestampUtc >= day30Utc)
+                .GroupBy(v => v.TimestampUtc.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .OrderBy(x => x.Date)
+                .ToListAsync();
+
+            // Rellenar días sin visitas con 0
+            var dailyMap = dailyRaw.ToDictionary(x => x.Date, x => x.Count);
+            var labels   = new List<string>();
+            var values   = new List<double>();
+            for (var d = day30Utc; d <= todayUtc; d = d.AddDays(1))
+            {
+                labels.Add(d.ToString("dd/MM"));
+                values.Add(dailyMap.TryGetValue(d, out var c) ? c : 0);
+            }
+            Chart = new ChartData(labels.ToArray(), values.ToArray());
+
+            // Top páginas
+            var rawPages = await Db.PageVisits
+                .GroupBy(v => v.Path)
+                .Select(g => new { Path = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(10)
+                .ToListAsync();
+            TopPages = rawPages.Select(x => new PageCount(x.Path, x.Count)).ToList();
+
+            // Top referrers (solo los que tienen valor)
+            var rawRefs = await Db.PageVisits
+                .Where(v => v.Referrer != null && v.Referrer != "")
+                .GroupBy(v => v.Referrer!)
+                .Select(g => new { Referrer = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(10)
+                .ToListAsync();
+            TopReferrers = rawRefs.Select(x => new ReferrerCount(x.Referrer, x.Count)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task RenderChartAsync()
+    {
+        if (Chart is null) return;
+        await JS.InvokeVoidAsync("spRenderChart", "chart-visits", Chart.Labels, Chart.Values, "Visitas", "#22d3ee", "");
+    }
+}

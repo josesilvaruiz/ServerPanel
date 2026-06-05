@@ -5,6 +5,7 @@ namespace ServerPanel.Contracts;
 public interface IPlayerService
 {
     Task<List<PlayerInfo>> GetPlayersAsync();
+    Task<List<PlayerInfo>> GetPlayersBasicAsync();
     Task KickPlayerAsync(string playerName, string reason = "Kicked by admin");
     Task MutePlayerAsync(string playerName, int minutes);
     Task GagPlayerAsync(string playerName, int minutes);

@@ -1,0 +1,300 @@
+@namespace ServerPanel.Components.Pages
+@page "/metrics-history"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using ServerPanel.Data
+@using ServerPanel.Models
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> L
+
+<div class="wrap">
+
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-history"></i></div>
+        <div>
+            <p class="top-title">Historial de Métricas</p>
+            <p class="top-sub">Análisis y últimos 100 snapshots</p>
+        </div>
+        <button type="button" class="btn-refresh" @onclick="LoadAsync" disabled="@Loading">
+            <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
+        </button>
+    </div>
+
+    @if (Loading)
+    {
+        <div class="state-box">
+            <div class="spinner"></div>
+            <p>Cargando...</p>
+        </div>
+    }
+    else if (Error is not null)
+    {
+        <div class="state-box state-error">
+            <i class="ti ti-alert-circle"></i>
+            <p>@Error</p>
+        </div>
+    }
+    else if (Kpi is null)
+    {
+        <div class="state-box">
+            <i class="ti ti-database-off"></i>
+            <p>Sin datos todavía. El servicio escribe un snapshot cada 60 s.</p>
+        </div>
+    }
+    else
+    {
+        @* ── KPIs globales ── *@
+        <div class="kpi-section-lbl">Global</div>
+        <div class="kpi-grid kpi-grid-3">
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-database"></i></span>
+                <div>
+                    <p class="kpi-val">@Kpi.TotalSnapshots</p>
+                    <p class="kpi-lbl">Snapshots totales</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-event"></i></span>
+                <div>
+                    <p class="kpi-val mono-sm">@Kpi.FirstSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-lbl">Primer snapshot</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-check"></i></span>
+                <div>
+                    <p class="kpi-val mono-sm">@Kpi.LastSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-lbl">Último snapshot</p>
+                </div>
+            </div>
+        </div>
+
+        @* ── KPIs 24h ── *@
+        <div class="kpi-section-lbl" style="margin-top:.25rem">Últimas 24 horas</div>
+        <div class="kpi-grid kpi-grid-6">
+            <div class="kpi-card">
+                <span class="kpi-icon @LevelIcon(Kpi.CpuMax, 85, 65)"><i class="ti ti-cpu"></i></span>
+                <div>
+                    <p class="kpi-val @LevelText(Kpi.CpuMax, 85, 65)">@($"{Kpi.CpuMax:0.#} %")</p>
+                    <p class="kpi-lbl">CPU máx.</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon @LevelIcon(Kpi.CpuAvg, 70, 50)"><i class="ti ti-cpu"></i></span>
+                <div>
+                    <p class="kpi-val @LevelText(Kpi.CpuAvg, 70, 50)">@($"{Kpi.CpuAvg:0.#} %")</p>
+                    <p class="kpi-lbl">CPU media</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon @LevelIcon(Kpi.RamMaxPct, 85, 65)"><i class="ti ti-cpu-2"></i></span>
+                <div>
+                    <p class="kpi-val @LevelText(Kpi.RamMaxPct, 85, 65)">@($"{Kpi.RamMaxMb / 1024.0:0.#} GB")</p>
+                    <p class="kpi-lbl">RAM máx.</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon @LevelIcon(Kpi.RamAvgPct, 70, 50)"><i class="ti ti-cpu-2"></i></span>
+                <div>
+                    <p class="kpi-val @LevelText(Kpi.RamAvgPct, 70, 50)">@($"{Kpi.RamAvgMb / 1024.0:0.#} GB")</p>
+                    <p class="kpi-lbl">RAM media</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon @LevelIcon(Kpi.LoadMax, 4, 2)"><i class="ti ti-trending-up"></i></span>
+                <div>
+                    <p class="kpi-val @LevelText(Kpi.LoadMax, 4, 2)">@($"{Kpi.LoadMax:0.##}")</p>
+                    <p class="kpi-lbl">Load máx.</p>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-icon @LevelIcon(Kpi.LoadAvg, 3, 1.5)"><i class="ti ti-trending-up"></i></span>
+                <div>
+                    <p class="kpi-val @LevelText(Kpi.LoadAvg, 3, 1.5)">@($"{Kpi.LoadAvg:0.##}")</p>
+                    <p class="kpi-lbl">Load medio</p>
+                </div>
+            </div>
+        </div>
+
+        @* ── Gráficas 24h ── *@
+        @if (Chart is not null)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Gráficas · últimas 24 h</div>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-cpu"></i> CPU %</p>
+                    <div class="chart-wrap"><canvas id="chart-cpu"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-cpu-2"></i> RAM usada (GB)</p>
+                    <div class="chart-wrap"><canvas id="chart-ram"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-trending-up"></i> Load Average</p>
+                    <div class="chart-wrap"><canvas id="chart-load"></canvas></div>
+                </div>
+            </div>
+        }
+
+        @* ── Tabla ── *@
+        @if (Rows.Count > 0)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Últimos 100 registros</div>
+            <div class="table-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Fecha (UTC)</th>
+                            <th>CPU %</th>
+                            <th>RAM usada</th>
+                            <th>Disco %</th>
+                            <th>Load avg</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Rows)
+                        {
+                            <tr>
+                                <td class="mono">@r.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td class="num @LevelText(r.CpuPercent, 85, 65)">@($"{r.CpuPercent:0.#} %")</td>
+                                <td class="num">@($"{r.MemoryUsedMb / 1024.0:0.#} GB")</td>
+                                <td class="num @LevelText(r.DiskUsagePercent, 85, 65)">@($"{r.DiskUsagePercent:0.#} %")</td>
+                                <td class="num">@($"{r.LoadAverage:0.##}")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="count-lbl">@Rows.Count registro(s) mostrados</p>
+        }
+    }
+
+</div>
+
+@code {
+    record KpiData(
+        long     TotalSnapshots,
+        DateTime FirstSnapshot,
+        DateTime LastSnapshot,
+        double   CpuMax,  double CpuAvg,
+        long     RamMaxMb, double RamMaxPct,
+        long     RamAvgMb, double RamAvgPct,
+        double   LoadMax, double LoadAvg);
+
+    KpiData?                Kpi;
+    MetricsChartData?       Chart;
+    List<VpsMetricSnapshot> Rows    = new();
+    bool                    Loading = true;
+    string?                 Error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAsync();
+            return;
+        }
+
+        if (Chart is not null)
+            await RenderChartsAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        Loading = true;
+        Error   = null;
+        Chart   = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+
+            var g = await Db.VpsMetricSnapshots
+                .GroupBy(_ => 1)
+                .Select(g => new {
+                    Total = g.LongCount(),
+                    First = g.Min(s => s.TimestampUtc),
+                    Last  = g.Max(s => s.TimestampUtc)
+                })
+                .FirstOrDefaultAsync();
+
+            var h = await Db.VpsMetricSnapshots
+                .Where(s => s.TimestampUtc >= cutoff)
+                .GroupBy(_ => 1)
+                .Select(g => new {
+                    CpuMax   = g.Max(s => s.CpuPercent),
+                    CpuAvg   = g.Average(s => s.CpuPercent),
+                    RamMax   = g.Max(s => s.MemoryUsedMb),
+                    RamAvg   = g.Average(s => s.MemoryUsedMb),
+                    RamTotal = g.Max(s => s.MemoryTotalMb),
+                    LoadMax  = g.Max(s => s.LoadAverage),
+                    LoadAvg  = g.Average(s => s.LoadAverage)
+                })
+                .FirstOrDefaultAsync();
+
+            Rows = await Db.VpsMetricSnapshots
+                .OrderByDescending(s => s.TimestampUtc)
+                .Take(100)
+                .ToListAsync();
+
+            // datos para gráficas: últimas 24h en orden ascendente
+            var chartRows = await Db.VpsMetricSnapshots
+                .Where(s => s.TimestampUtc >= cutoff)
+                .OrderBy(s => s.TimestampUtc)
+                .Select(s => new { s.TimestampUtc, s.CpuPercent, s.MemoryUsedMb, s.LoadAverage })
+                .ToListAsync();
+
+            if (g is null) { Kpi = null; return; }
+
+            long ramTotal = h?.RamTotal ?? 1;
+            Kpi = new KpiData(
+                TotalSnapshots: g.Total,
+                FirstSnapshot:  g.First,
+                LastSnapshot:   g.Last,
+                CpuMax:    h?.CpuMax ?? 0,
+                CpuAvg:    h?.CpuAvg ?? 0,
+                RamMaxMb:  h?.RamMax ?? 0,
+                RamMaxPct: ramTotal > 0 ? (h?.RamMax ?? 0) * 100.0 / ramTotal : 0,
+                RamAvgMb:  (long)(h?.RamAvg ?? 0),
+                RamAvgPct: ramTotal > 0 ? (h?.RamAvg ?? 0) * 100.0 / ramTotal : 0,
+                LoadMax:   h?.LoadMax ?? 0,
+                LoadAvg:   h?.LoadAvg ?? 0);
+
+            if (chartRows.Count > 0)
+            {
+                Chart = new MetricsChartData(
+                    Labels: chartRows.Select(r => r.TimestampUtc.ToString("HH:mm")).ToArray(),
+                    Cpu:    chartRows.Select(r => Math.Round(r.CpuPercent, 1)).ToArray(),
+                    Ram:    chartRows.Select(r => Math.Round(r.MemoryUsedMb / 1024.0, 2)).ToArray(),
+                    Load:   chartRows.Select(r => Math.Round(r.LoadAverage, 2)).ToArray()
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task RenderChartsAsync()
+    {
+        if (Chart is null) return;
+        await JS.InvokeVoidAsync("spRenderChart", "chart-cpu",  Chart.Labels, Chart.Cpu,  "CPU %",        "#22d3ee", " %");
+        await JS.InvokeVoidAsync("spRenderChart", "chart-ram",  Chart.Labels, Chart.Ram,  "RAM (GB)",     "#a78bfa", " GB");
+        await JS.InvokeVoidAsync("spRenderChart", "chart-load", Chart.Labels, Chart.Load, "Load Average", "#4ade80", "");
+    }
+
+    static string LevelText(double v, double hi, double mid) =>
+        v >= hi ? "hi" : v >= mid ? "mid" : "";
+
+    static string LevelIcon(double v, double hi, double mid) =>
+        v >= hi ? "ki-red" : v >= mid ? "ki-amber" : "ki-green";
+}
