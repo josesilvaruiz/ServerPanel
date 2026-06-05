@@ -98,5 +98,5 @@ app.MapRazorPages();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-app.UsePathBase("/panel");
+
 app.Run();
