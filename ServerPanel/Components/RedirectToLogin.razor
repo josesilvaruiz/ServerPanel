@@ -3,6 +3,7 @@
 @code {
     protected override void OnInitialized()
     {
+        Console.WriteLine($"RedirectToLogin triggered. Current URL={Navigation.Uri}");
         var returnUrl = Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
         Navigation.NavigateTo($"/panel/Login?returnUrl={returnUrl}", forceLoad: true);
     }

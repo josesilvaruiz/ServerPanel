@@ -38,6 +38,17 @@ builder.Services
     {
         options.LoginPath = "/Login";
         options.AccessDeniedPath = "/Login";
+
+        options.Events.OnSigningIn = context =>
+        {
+            Console.WriteLine("=== SERVERPANEL COOKIE SIGNING IN ===");
+            Console.WriteLine($"Path: {context.Options.Cookie.Path}");
+            Console.WriteLine($"Domain: {context.Options.Cookie.Domain}");
+            Console.WriteLine($"SameSite: {context.Options.Cookie.SameSite}");
+            Console.WriteLine($"SecurePolicy: {context.Options.Cookie.SecurePolicy}");
+            Console.WriteLine("====================================");
+            return Task.CompletedTask;
+        };
     })
     .AddCookie("External", options =>
     {
@@ -90,6 +101,12 @@ app.UseRequestLocalization(
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (ctx, next) =>
+{
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {ctx.Request.Method} {ctx.Request.Path} | PathBase={ctx.Request.PathBase} | Auth={ctx.User.Identity?.IsAuthenticated} | User={ctx.User.Identity?.Name}");
+    await next();
+});
 
 app.UseAntiforgery();
 

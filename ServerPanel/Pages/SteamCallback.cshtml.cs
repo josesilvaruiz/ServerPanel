@@ -39,6 +39,6 @@ public class SteamCallbackModel : PageModel
         var identity = new ClaimsIdentity(claims, "ServerPanel");
         await HttpContext.SignInAsync("ServerPanel", new ClaimsPrincipal(identity));
 
-        return Redirect("/panel");
+        return LocalRedirect("~/panel");
     }
 }

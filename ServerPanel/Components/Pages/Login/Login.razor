@@ -10,8 +10,8 @@
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
-            Navigation.NavigateTo("/panel", true);
+            Navigation.NavigateTo("/panel/panel", true);
         else
-            Navigation.NavigateTo("/Login", true);
+            Navigation.NavigateTo("/panel/Login", true);
     }
 }
