@@ -59,14 +59,14 @@
             <div class="kpi-card">
                 <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-event"></i></span>
                 <div>
-                    <p class="kpi-val mono-sm">@Kpi.FirstSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-val mono-sm">@TimeZoneInfo.ConvertTimeFromUtc(Kpi.FirstSnapshot, _madrid).ToString("dd/MM/yy HH:mm")</p>
                     <p class="kpi-lbl">Primer snapshot</p>
                 </div>
             </div>
             <div class="kpi-card">
                 <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-check"></i></span>
                 <div>
-                    <p class="kpi-val mono-sm">@Kpi.LastSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-val mono-sm">@TimeZoneInfo.ConvertTimeFromUtc(Kpi.LastSnapshot, _madrid).ToString("dd/MM/yy HH:mm")</p>
                     <p class="kpi-lbl">Último snapshot</p>
                 </div>
             </div>
@@ -158,7 +158,7 @@
                         @foreach (var r in Rows)
                         {
                             <tr>
-                                <td class="mono">@r.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td class="mono">@ToMadrid(r.TimestampUtc)</td>
                                 <td class="num @LevelText(r.CpuPercent, 85, 65)">@($"{r.CpuPercent:0.#} %")</td>
                                 <td class="num">@($"{r.MemoryUsedMb / 1024.0:0.#} GB")</td>
                                 <td class="num @LevelText(r.DiskUsagePercent, 85, 65)">@($"{r.DiskUsagePercent:0.#} %")</td>
@@ -291,6 +291,13 @@
         await JS.InvokeVoidAsync("spRenderChart", "chart-ram",  Chart.Labels, Chart.Ram,  "RAM (GB)",     "#a78bfa", " GB");
         await JS.InvokeVoidAsync("spRenderChart", "chart-load", Chart.Labels, Chart.Load, "Load Average", "#4ade80", "");
     }
+
+    static readonly TimeZoneInfo _madrid =
+        TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Romance Standard Time" : "Europe/Madrid");
+
+    static string ToMadrid(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("yyyy-MM-dd HH:mm:ss");
 
     static string LevelText(double v, double hi, double mid) =>
         v >= hi ? "hi" : v >= mid ? "mid" : "";

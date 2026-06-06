@@ -58,14 +58,14 @@
             <div class="kpi-card">
                 <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-event"></i></span>
                 <div>
-                    <p class="kpi-val mono-sm">@Kpi.FirstSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-val mono-sm">@TimeZoneInfo.ConvertTimeFromUtc(Kpi.FirstSnapshot, _madrid).ToString("dd/MM/yy HH:mm")</p>
                     <p class="kpi-lbl">Primer snapshot</p>
                 </div>
             </div>
             <div class="kpi-card">
                 <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-check"></i></span>
                 <div>
-                    <p class="kpi-val mono-sm">@Kpi.LastSnapshot.ToString("dd/MM/yy HH:mm")</p>
+                    <p class="kpi-val mono-sm">@TimeZoneInfo.ConvertTimeFromUtc(Kpi.LastSnapshot, _madrid).ToString("dd/MM/yy HH:mm")</p>
                     <p class="kpi-lbl">Último snapshot</p>
                 </div>
             </div>
@@ -143,7 +143,7 @@
                         @foreach (var r in Rows)
                         {
                             <tr>
-                                <td class="mono">@r.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td class="mono">@ToMadrid(r.TimestampUtc)</td>
                                 <td>
                                     @if (r.IsOnline)
                                     {
@@ -280,4 +280,11 @@
         await JS.InvokeVoidAsync("spRenderChart", "chart-players", Chart.Labels, Chart.Players, "Jugadores", "#22d3ee", "");
         await JS.InvokeVoidAsync("spRenderChart", "chart-online",  Chart.Labels, Chart.Online,  "Online",    "#4ade80", "");
     }
+
+    static readonly TimeZoneInfo _madrid =
+        TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Romance Standard Time" : "Europe/Madrid");
+
+    static string ToMadrid(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("yyyy-MM-dd HH:mm:ss");
 }
