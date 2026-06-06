@@ -142,6 +142,41 @@
                 </table>
             </div>
         }
+
+        @* ── Últimas visitas ── *@
+        @if (RecentVisits.Count > 0)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Últimas 100 visitas · @Kpi!.Total en total</div>
+            <div class="table-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Página</th>
+                            <th>Referrer</th>
+                            <th>Idioma</th>
+                            <th>Resolución</th>
+                            <th>Tiempo</th>
+                            <th>Navegador</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in RecentVisits)
+                        {
+                            <tr>
+                                <td class="mono">@ToMadrid(v.TimestampUtc)</td>
+                                <td class="path-cell">@v.Path</td>
+                                <td class="path-cell muted">@(v.Referrer ?? "—")</td>
+                                <td class="muted">@(v.Language ?? "—")</td>
+                                <td class="muted mono">@(v.ScreenWidth is not null ? $"{v.ScreenWidth}×{v.ScreenHeight}" : "—")</td>
+                                <td class="num muted">@(v.TimeOnPageSeconds is not null ? $"{v.TimeOnPageSeconds}s" : "—")</td>
+                                <td class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@v.UserAgent">@(v.UserAgent ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     }
 
 </div>
@@ -154,10 +189,18 @@
 
     KpiData?             Kpi;
     ChartData?           Chart;
-    List<PageCount>      TopPages    = new();
+    List<PageCount>      TopPages     = new();
     List<ReferrerCount>  TopReferrers = new();
-    bool                 Loading     = true;
+    List<PageVisit>      RecentVisits = new();
+    bool                 Loading      = true;
     string?              Error;
+
+    static readonly TimeZoneInfo _madrid =
+        TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Romance Standard Time" : "Europe/Madrid");
+
+    static string ToMadrid(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("yyyy-MM-dd HH:mm:ss");
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -167,9 +210,10 @@
 
     async Task LoadAsync()
     {
-        Loading = true;
-        Error   = null;
-        Chart   = null;
+        Loading      = true;
+        Error        = null;
+        Chart        = null;
+        RecentVisits = new();
         await InvokeAsync(StateHasChanged);
         try
         {
@@ -225,6 +269,12 @@
                 .Take(10)
                 .ToListAsync();
             TopReferrers = rawRefs.Select(x => new ReferrerCount(x.Referrer, x.Count)).ToList();
+
+            // Últimas 100 visitas
+            RecentVisits = await Db.PageVisits
+                .OrderByDescending(v => v.TimestampUtc)
+                .Take(100)
+                .ToListAsync();
         }
         catch (Exception ex)
         {
