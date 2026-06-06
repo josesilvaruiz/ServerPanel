@@ -187,6 +187,9 @@ app.MapPost("/api/analytics/visit", async (
     }
 
     var key = ctx.Request.Headers["X-Analytics-Key"].FirstOrDefault() ?? "";
+    logger.LogWarning(
+        "Analytics Auth Debug | ReceivedKey:{ReceivedKey} | ConfiguredKey:{ConfiguredKey} | Origin:{Origin}",
+        key, analyticsApiKey, origin);
     if (analyticsApiKey.Length == 0 || key != analyticsApiKey)
     {
         logger.LogWarning("Analytics API key inválida — Origin:{Origin} IP:{IP}", origin, ip);
