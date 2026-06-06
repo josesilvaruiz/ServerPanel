@@ -174,6 +174,10 @@
                 <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
                 @L["Dashboard.Update"]
             </button>
+            <button class="pn-btn pn-btn-ghost pn-btn-full" @onclick="() => _metricsOpen = true">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+                Ver rendimiento VPS
+            </button>
         </div>
     </div>
 
@@ -188,4 +192,19 @@
 
 </div>
 
-<Metrics />
+@if (_metricsOpen)
+{
+    <div class="pn-modal-backdrop" @onclick="() => _metricsOpen = false">
+        <div class="pn-modal" @onclick:stopPropagation>
+            <div class="pn-modal-header">
+                <span>Rendimiento VPS</span>
+                <button class="pn-modal-close" @onclick="() => _metricsOpen = false">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="pn-modal-body">
+                <Metrics />
+            </div>
+        </div>
+    </div>
+}

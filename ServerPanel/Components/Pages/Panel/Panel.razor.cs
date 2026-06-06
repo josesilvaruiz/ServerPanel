@@ -12,6 +12,7 @@ public partial class Panel
     private bool Loading = true;
     private bool ActionRunning = false;
     private bool IsRunning = false;
+    private bool _metricsOpen = false;
     private ServerInfo? ServerInfo;
     private string StatusMessage = string.Empty;
 

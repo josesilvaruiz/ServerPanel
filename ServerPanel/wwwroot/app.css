@@ -6,6 +6,58 @@
     display: none;
 }
 
+/* ── Modal ── */
+.pn-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.pn-modal {
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+
+.pn-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--sp-border);
+    font-weight: 600;
+    font-size: .95rem;
+    color: var(--sp-text);
+}
+
+.pn-modal-close {
+    background: none;
+    border: none;
+    color: var(--sp-muted);
+    cursor: pointer;
+    padding: .25rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
+
+.pn-modal-close:hover { color: var(--sp-text); background: var(--sp-hover); }
+
+.pn-modal-body {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
 /* ── Theme tokens ── */
 :root {
     --bg-page:      #080d14;
