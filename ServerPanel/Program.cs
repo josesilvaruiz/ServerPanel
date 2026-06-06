@@ -125,10 +125,10 @@ var app = builder.Build();
 
 // VERY IMPORTANT: before authentication and HTTPS handling
 app.UseForwardedHeaders();
-app.UseCors("Analytics");
-app.UseRateLimiter();
 app.UsePathBase("/panel");
 app.UseRouting();
+app.UseCors("Analytics");
+app.UseRateLimiter();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

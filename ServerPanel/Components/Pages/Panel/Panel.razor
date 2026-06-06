@@ -5,6 +5,7 @@
 @using ServerPanel.Contracts
 @using ServerPanel.Models
 @using Microsoft.AspNetCore.Authorization
+@using ServerPanel.Components.Pages
 
 @attribute [Authorize]
 @inject IStringLocalizer<SharedResource> L
@@ -186,3 +187,5 @@
     }
 
 </div>
+
+<Metrics />
