@@ -87,6 +87,8 @@ var allowedOrigins = builder.Configuration
     .GetSection("Analytics:AllowedOrigins")
     .Get<string[]>() ?? Array.Empty<string>();
 
+var analyticsApiKey = builder.Configuration["Analytics:ApiKey"] ?? "";
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Analytics", policy =>
@@ -159,39 +161,61 @@ app.MapRazorComponents<App>()
 app.MapRazorPages();
 
 app.MapPost("/api/analytics/visit", async (
-    PageVisitRequest req,
     HttpContext ctx,
     ApplicationDbContext db,
     ILoggerFactory loggerFactory,
     CancellationToken ct) =>
 {
     var logger = loggerFactory.CreateLogger("Analytics");
-    var origin    = ctx.Request.Headers.Origin.FirstOrDefault() ?? "";
-    var ip        = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-    var method    = ctx.Request.Method;
-    var path      = ctx.Request.Path;
-    var body      = req.Path;
+    var origin = ctx.Request.Headers.Origin.FirstOrDefault() ?? "";
+    var ip     = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-    logger.LogInformation(
-        "Analytics POST recibido — Method:{Method} Path:{Path} Origin:{Origin} IP:{IP} Body.Path:{BodyPath}",
-        method, path, origin, ip, body);
+    if (!allowedOrigins.Contains(origin))
+    {
+        logger.LogWarning("Analytics origen no permitido — Origin:{Origin} IP:{IP}", origin, ip);
+        return Results.Json(new { error = "Forbidden" }, statusCode: 403);
+    }
 
-    logger.LogInformation("Analytics Origin (sin validar) — guardando visita Path:{BodyPath}", body);
+    var key = ctx.Request.Headers["X-Analytics-Key"].FirstOrDefault() ?? "";
+    if (analyticsApiKey.Length == 0 || key != analyticsApiKey)
+    {
+        logger.LogWarning("Analytics API key inválida — Origin:{Origin} IP:{IP}", origin, ip);
+        return Results.Json(new { error = "Unauthorized" }, statusCode: 401);
+    }
+
+    PageVisitRequest? req;
+    try
+    {
+        req = await System.Text.Json.JsonSerializer.DeserializeAsync<PageVisitRequest>(
+            ctx.Request.Body,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true },
+            ct);
+    }
+    catch
+    {
+        return Results.BadRequest("Body JSON inválido");
+    }
+
+    if (req is null) return Results.BadRequest("Body vacío");
 
     try
     {
         var visit = new PageVisit
         {
-            TimestampUtc = DateTime.UtcNow,
-            Path         = body,
-            Referrer     = ctx.Request.Headers.Referer.FirstOrDefault(),
-            UserAgent    = ctx.Request.Headers.UserAgent.FirstOrDefault(),
+            TimestampUtc      = DateTime.UtcNow,
+            Path              = req.Path,
+            Referrer          = ctx.Request.Headers.Referer.FirstOrDefault(),
+            UserAgent         = ctx.Request.Headers.UserAgent.FirstOrDefault(),
+            Language          = req.Language,
+            ScreenWidth       = req.ScreenWidth,
+            ScreenHeight      = req.ScreenHeight,
+            TimeOnPageSeconds = req.TimeOnPageSeconds,
         };
 
         db.PageVisits.Add(visit);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("Analytics visita guardada — Id:{Id} Path:{Path}", visit.Id, visit.Path);
+        logger.LogInformation("Analytics visita guardada — Id:{Id} Path:{Path} Origin:{Origin}", visit.Id, visit.Path, origin);
         return Results.Ok();
     }
     catch (Exception ex)
@@ -202,6 +226,8 @@ app.MapPost("/api/analytics/visit", async (
 })
 .RequireCors("Analytics")
 .RequireRateLimiting("analytics")
-.WithName("TrackVisit");
+.DisableAntiforgery()
+.AllowAnonymous()
+.WithName("TrackVisit"); // AllowAnonymous necesario — auth es por API key, no por cookie
 
 app.Run();
