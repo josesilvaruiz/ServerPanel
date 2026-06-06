@@ -166,28 +166,39 @@ app.MapPost("/api/analytics/visit", async (
     CancellationToken ct) =>
 {
     var logger = loggerFactory.CreateLogger("Analytics");
-    var origin = ctx.Request.Headers.Origin.FirstOrDefault() ?? "";
+    var origin    = ctx.Request.Headers.Origin.FirstOrDefault() ?? "";
+    var ip        = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    var method    = ctx.Request.Method;
+    var path      = ctx.Request.Path;
+    var body      = req.Path;
 
-    if (!allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    logger.LogInformation(
+        "Analytics POST recibido — Method:{Method} Path:{Path} Origin:{Origin} IP:{IP} Body.Path:{BodyPath}",
+        method, path, origin, ip, body);
+
+    logger.LogInformation("Analytics Origin (sin validar) — guardando visita Path:{BodyPath}", body);
+
+    try
     {
-        logger.LogWarning(
-            "Analytics rejected — invalid Origin:{Origin} IP:{IP}",
-            origin, ctx.Connection.RemoteIpAddress);
-        return Results.Forbid();
+        var visit = new PageVisit
+        {
+            TimestampUtc = DateTime.UtcNow,
+            Path         = body,
+            Referrer     = ctx.Request.Headers.Referer.FirstOrDefault(),
+            UserAgent    = ctx.Request.Headers.UserAgent.FirstOrDefault(),
+        };
+
+        db.PageVisits.Add(visit);
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Analytics visita guardada — Id:{Id} Path:{Path}", visit.Id, visit.Path);
+        return Results.Ok();
     }
-
-    var visit = new PageVisit
+    catch (Exception ex)
     {
-        TimestampUtc = DateTime.UtcNow,
-        Path         = req.Path,
-        Referrer     = ctx.Request.Headers.Referer.FirstOrDefault(),
-        UserAgent    = ctx.Request.Headers.UserAgent.FirstOrDefault(),
-    };
-
-    db.PageVisits.Add(visit);
-    await db.SaveChangesAsync(ct);
-
-    return Results.Ok();
+        logger.LogError(ex, "Analytics error al guardar visita");
+        throw;
+    }
 })
 .RequireCors("Analytics")
 .RequireRateLimiting("analytics")
