@@ -366,5 +366,6 @@ FodyWeavers.xsd
 deploy.sh
 deploy.ps1
 # Secrets
+appsettings.json
 appsettings.Development.json
 appsettings.*.json
