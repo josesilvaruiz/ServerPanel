@@ -55,6 +55,16 @@ builder.Services
     {
         options.LoginPath = "/Login";
         options.AccessDeniedPath = "/Login";
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+            {
+                ctx.Response.StatusCode = 401;
+                return Task.CompletedTask;
+            }
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        };
     })
     .AddCookie("External", options =>
     {
