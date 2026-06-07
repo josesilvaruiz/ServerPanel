@@ -1,3 +1,8 @@
+window.scrollConsoleToBottom = function (id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollTop = el.scrollHeight;
+};
+
 window.themeManager = {
     apply: function (theme) {
         document.documentElement.setAttribute('data-theme', theme);

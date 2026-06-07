@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
@@ -6,11 +7,12 @@ using System.Linq;
 
 namespace ServerPanel.Components.Pages;
 
-public partial class Admin
+public partial class Admin : IDisposable
 {
     [Inject] IJSRuntime JS { get; set; } = default!;
 
     string ActiveSection = "map";
+    CancellationTokenSource? _consoleCts;
 
     string PermSub = "get";
     Dictionary<string, PermissionEntry> AllAdmins = new();
@@ -75,7 +77,8 @@ public partial class Admin
     }
 
     string ConsoleCommand = "";
-    string ConsoleOutput = "";
+    string LiveConsole = "";
+    bool ConsoleCopied = false;
     bool ShowCmdHelp = false;
 
     private record CmdEntry(string Cmd, string Desc);
@@ -194,7 +197,45 @@ public partial class Admin
         StateHasChanged();
         if (tab == "map" && WorkshopMaps.Count == 0)
             _ = LoadMaps();
+        if (tab == "console")
+            StartLiveConsole();
+        else
+            StopLiveConsole();
     }
+
+    void StartLiveConsole()
+    {
+        StopLiveConsole();
+        _consoleCts = new CancellationTokenSource();
+        var token = _consoleCts.Token;
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    var output = await Cs2ServerService.GetLiveConsoleAsync();
+                    LiveConsole = output;
+                    await InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre");
+                    });
+                }
+                catch { }
+                try { await Task.Delay(2000, token); } catch { }
+            }
+        }, token);
+    }
+
+    void StopLiveConsole()
+    {
+        _consoleCts?.Cancel();
+        _consoleCts?.Dispose();
+        _consoleCts = null;
+    }
+
+    public void Dispose() => StopLiveConsole();
 
     async Task HandleLoadAllAdmins()
     {
@@ -303,13 +344,33 @@ public partial class Admin
         }
     }
 
+    async void CopyConsole()
+    {
+        if (string.IsNullOrEmpty(LiveConsole)) return;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", LiveConsole);
+        ConsoleCopied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        ConsoleCopied = false;
+        StateHasChanged();
+    }
+
+    async Task HandleConsoleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleConsole();
+    }
+
     async Task HandleConsole()
     {
         if (string.IsNullOrWhiteSpace(ConsoleCommand)) return;
         try
         {
-            ConsoleOutput = await Cs2ServerService.ExecuteConsoleCommandAsync(ConsoleCommand);
+            var cmd = ConsoleCommand;
             ConsoleCommand = "";
+            await Cs2ServerService.ExecuteConsoleCommandAsync(cmd);
+            var output = await Cs2ServerService.GetLiveConsoleAsync();
+            LiveConsole = output;
+            await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre");
         }
         catch (Exception ex)
         {

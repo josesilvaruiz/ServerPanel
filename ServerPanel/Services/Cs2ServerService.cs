@@ -135,10 +135,15 @@ public class Cs2ServerService : ICs2ServerService
 
     public async Task<string> ExecuteConsoleCommandAsync(string command)
     {
-        // Ejecuta el comando en la consola CS2 y devuelve la salida
         var fullCommand = $"su - steam -c \"tmux send-keys -t cs2 '{command}' Enter; sleep 1; tmux capture-pane -t cs2 -p\"";
         _logger.LogInformation("Ejecutando comando consola: {Command}", command);
         var output = await _ssh.ExecuteAsync(fullCommand);
+        return output;
+    }
+
+    public async Task<string> GetLiveConsoleAsync()
+    {
+        var output = await _ssh.ExecuteAsync("su - steam -c \"tmux capture-pane -t cs2 -p -S -200\"");
         return output;
     }
 

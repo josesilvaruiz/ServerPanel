@@ -328,24 +328,26 @@
                 <div class="divider"></div>
             }
 
-            <div class="field">
+            <div class="console-live">
+                <div class="console-bar">
+                    <div class="console-dot" style="background:#ef4444"></div>
+                    <div class="console-dot" style="background:#fbbf24"></div>
+                    <div class="console-dot" style="background:#4ade80"></div>
+                    <span class="console-live-lbl"><i class="ti ti-activity"></i> Live</span>
+                    <button type="button" class="console-copy-btn" @onclick="CopyConsole" title="Copiar consola">
+                        <i class="ti @(ConsoleCopied ? "ti-check" : "ti-copy")"></i>
+                        @(ConsoleCopied ? "Copiado" : "Copiar")
+                    </button>
+                </div>
+                <pre id="live-console-pre" class="console-pre console-pre-live">@(string.IsNullOrEmpty(LiveConsole) ? "Conectando al servidor..." : LiveConsole)</pre>
+            </div>
+            <div class="field" style="margin-top:12px;margin-bottom:0">
                 <p class="lbl"><i class="ti ti-terminal-2"></i> @L["Admin.Console.Command"]</p>
                 <div class="cmd-wrap">
                     <span class="cmd-pfx">$</span>
-                    <input class="inp cmd-inp" @bind="ConsoleCommand" placeholder="sv_cheats 1, mp_restartgame 1..." />
+                    <input class="inp cmd-inp" @bind="ConsoleCommand" @onkeydown="HandleConsoleKey" placeholder="sv_cheats 1, mp_restartgame 1..." />
                 </div>
             </div>
-            @if (!string.IsNullOrEmpty(ConsoleOutput))
-            {
-                <div class="console-out">
-                    <div class="console-bar">
-                        <div class="console-dot" style="background:#ef4444"></div>
-                        <div class="console-dot" style="background:#fbbf24"></div>
-                        <div class="console-dot" style="background:#4ade80"></div>
-                    </div>
-                    <pre class="console-pre">@ConsoleOutput</pre>
-                </div>
-            }
             <div class="footer">
                 <button type="button" class="btn btn-amber" @onclick="HandleConsole">
                     <i class="ti ti-player-play"></i> @L["Admin.Console.Run"]

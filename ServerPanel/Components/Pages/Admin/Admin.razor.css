@@ -462,6 +462,58 @@
     font-size: 13px !important;
 }
 
+.console-live {
+    border-radius: 8px;
+    background: #060a0f;
+    border: 0.5px solid #1e293b;
+    overflow: hidden;
+}
+
+.console-live-lbl {
+    margin-left: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #4ade80;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+}
+
+    .console-live-lbl i { font-size: 12px; }
+
+.console-copy-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 0.5px solid #1e293b;
+    background: transparent;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+    .console-copy-btn:hover {
+        border-color: #334155;
+        color: #94a3b8;
+        background: #0f1a26;
+    }
+
+    .console-copy-btn i { font-size: 13px; }
+
+.console-pre-live {
+    max-height: 60vh !important;
+    min-height: 300px;
+}
+
 .console-out {
     margin-top: 12px;
     border-radius: 8px;
