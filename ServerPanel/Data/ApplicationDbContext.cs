@@ -12,4 +12,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Cs2ServerSnapshot> Cs2ServerSnapshots => Set<Cs2ServerSnapshot>();
     public DbSet<Cs2PlayerSession> Cs2PlayerSessions => Set<Cs2PlayerSession>();
     public DbSet<PageVisit> PageVisits => Set<PageVisit>();
+    public DbSet<SavedCmdGroup> SavedCmdGroups => Set<SavedCmdGroup>();
+    public DbSet<SavedCmd> SavedCmds => Set<SavedCmd>();
 }

@@ -28,6 +28,8 @@ builder.Services.AddSingleton<IServerMetricsService, ServerMetricsService>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")), ServiceLifetime.Scoped);
 
 builder.Services.AddHostedService<MetricsCollectorBackgroundService>();
 builder.Services.AddHostedService<Cs2MetricsCollectorBackgroundService>();
@@ -134,6 +136,21 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        db.Database.Migrate();
+        await DbSeeder.SeedSharedCommandsAsync(db);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
+        logger.LogWarning("No se pudo conectar a la BD al arrancar: {Msg}. Comprueba el túnel SSH.", ex.Message);
+    }
+}
 
 // VERY IMPORTANT: before authentication and HTTPS handling
 app.UseForwardedHeaders();
