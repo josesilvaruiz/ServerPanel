@@ -363,7 +363,7 @@ public partial class Terminal : IDisposable
         public double Width { get; set; }
         public double Height { get; set; }
         public bool Minimized { get; set; }
-        public int FontSize { get; set; } = 22;
+        public int FontSize { get; set; } = 15;
         public string CurrentDir { get; set; } = "/root";
         public string CurrentUser { get; set; } = "root";
     }
@@ -589,16 +589,14 @@ public partial class Terminal : IDisposable
     static string StripAnsi(string s) => _ansiRe.Replace(s, "");
 
     static readonly System.Text.RegularExpressions.Regex _lsRe =
-        new(@"^(ls)(\s+|$)", System.Text.RegularExpressions.RegexOptions.Compiled);
+        new(@"^ls(\s+|$)", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     static string FormatLsCmd(string cmd)
     {
-        // Force column output for bare `ls` or `ls <path>` (no -l / -1 / existing column flags)
+        // Pipe bare `ls` (no -l / -1) through `column` for columnar output without TTY
         if (!_lsRe.IsMatch(cmd)) return cmd;
-        if (cmd.Contains("-l") || cmd.Contains("-1") || cmd.Contains("-C") || cmd.Contains("--width")) return cmd;
-        // Insert column flags right after `ls`
-        return _lsRe.Replace(cmd, m =>
-            m.Groups[1].Value + " --color=never -C --width=100" + (m.Groups[2].Value == "" ? "" : " "));
+        if (cmd.Contains("-l") || cmd.Contains("-1")) return cmd;
+        return cmd.TrimEnd() + " --color=never | column";
     }
 
     static string? ParseSu(string cmd)
@@ -687,7 +685,7 @@ public class TerminalSession
     public List<TermEntry> History { get; set; } = new();
     public List<string> CmdHistory { get; set; } = new();
     public int CmdHistoryIndex { get; set; } = -1;
-    public int FontSize { get; set; } = 22;
+    public int FontSize { get; set; } = 15;
 
     public double Left { get; set; }
     public double Top { get; set; }
