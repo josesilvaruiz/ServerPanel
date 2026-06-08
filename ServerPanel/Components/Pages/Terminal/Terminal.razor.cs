@@ -315,7 +315,13 @@ public partial class Terminal : IDisposable
 
     void CloseSession(TerminalSession s)   { Sessions.Remove(s); SaveLayout(); StateHasChanged(); }
     void ClearSession(TerminalSession s)   { s.History.Clear(); StateHasChanged(); }
-    void ToggleMinimize(TerminalSession s) { s.Minimized = !s.Minimized; SaveLayout(); StateHasChanged(); }
+    void ToggleMinimize(TerminalSession s)
+    {
+        if (s.Maximized) { s.Maximized = false; }
+        else { s.Minimized = !s.Minimized; }
+        SaveLayout();
+        StateHasChanged();
+    }
     void ToggleMaximize(TerminalSession s) { s.Maximized = !s.Maximized; StateHasChanged(); }
     void BringToFront(TerminalSession s)   { s.ZIndex = ++_maxZ; _activeSession = s; StateHasChanged(); }
 
@@ -398,7 +404,7 @@ public partial class Terminal : IDisposable
             string sshCmd = isCd
                 ? s.WrapCmd($"{(cmd == "cd" ? "cd ~" : cmd)} && pwd")
                 : s.WrapCmd(cmd);
-            var output = (await Ssh.ExecuteAsync(sshCmd)).TrimEnd();
+            var output = StripAnsi((await Ssh.ExecuteAsync(sshCmd)).TrimEnd());
             if (isCd)
             {
                 var newDir = output.Split('\n').LastOrDefault(l => l.StartsWith("/"))?.Trim();
@@ -420,6 +426,11 @@ public partial class Terminal : IDisposable
 
     async Task ScrollOutput(TerminalSession s) =>
         await JS.InvokeVoidAsync("scrollElementToBottom", $"out-{s.Id}");
+
+    static readonly System.Text.RegularExpressions.Regex _ansiRe =
+        new(@"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    static string StripAnsi(string s) => _ansiRe.Replace(s, "");
 
     static string? ParseSu(string cmd)
     {

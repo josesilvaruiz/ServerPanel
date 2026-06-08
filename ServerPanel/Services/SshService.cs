@@ -133,7 +133,11 @@ public class SshService : ISshService
 
                 client.Disconnect();
 
-                return result.Result ?? string.Empty;
+                var stdout = result.Result ?? "";
+                var stderr = result.Error  ?? "";
+                if (string.IsNullOrEmpty(stderr)) return stdout;
+                if (string.IsNullOrEmpty(stdout)) return stderr;
+                return stdout.TrimEnd('\n') + "\n" + stderr;
             });
         }
         catch (Exception ex)
