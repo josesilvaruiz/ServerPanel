@@ -689,6 +689,21 @@
 
     .term-welcome-sub span:hover { background: #0d2e1f; color: #4ade80; border-color: #2d6a4f; }
 
+/* ── Banner (MOTD) ── */
+.term-banner {
+    color: #94a3b8;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    background: #040810;
+    border-left: 2px solid #1e3a5f;
+    border-radius: 0 4px 4px 0;
+    line-height: 1.6;
+}
+
 /* ── Input bar ── */
 .term-win-inputbar {
     display: flex;
@@ -699,21 +714,66 @@
     border-top: 0.5px solid #0f1a26;
     flex-shrink: 0;
     font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    cursor: text;
 }
 
-.term-input {
+.term-input-wrap {
     flex: 1;
-    background: transparent;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.term-input-hidden {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
     border: none;
     outline: none;
-    color: #e2e8f0;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
     font-family: inherit;
     font-size: inherit;
-    caret-color: #4ade80;
+    padding: 0;
+    margin: 0;
+    cursor: text;
 }
 
-    .term-input::placeholder { color: #334155; }
-    .term-input:disabled { opacity: .4; }
+    .term-input-hidden:disabled { cursor: not-allowed; }
+
+.term-input-display {
+    color: #e2e8f0;
+    white-space: pre;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1;
+    pointer-events: none;
+    max-width: calc(100% - 14px);
+    overflow: hidden;
+}
+
+.term-block-cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.15em;
+    background: #4ade80;
+    vertical-align: text-bottom;
+    margin-left: 1px;
+    animation: blink-block 1.1s step-start infinite;
+    flex-shrink: 0;
+}
+
+    .term-cursor-hidden { visibility: hidden; }
+
+@keyframes blink-block {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
 
 .term-send-btn {
     width: 26px; height: 26px;
@@ -785,6 +845,156 @@
     flex-direction: column;
     overflow: hidden;
 }
+
+/* ── Dockable Cmd Panel ──────────────────────────────────────────────────── */
+
+.cmd-panel {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    background: #060b10;
+    border: 0.5px solid #1e2d3d;
+    z-index: 200;
+    overflow: hidden;
+    min-width: 220px;
+    min-height: 160px;
+    transition: box-shadow .15s;
+}
+
+.cmd-float {
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.75), 0 0 0 0.5px #0f1e2e;
+}
+
+.cmd-dock-left   { border-top: none; border-left: none; border-bottom: none; }
+.cmd-dock-right  { border-top: none; border-right: none; border-bottom: none; }
+.cmd-dock-top    { border-top: none; border-left: none; border-right: none; }
+.cmd-dock-bottom { border-bottom: none; border-left: none; border-right: none; }
+
+/* Titlebar of cmd panel */
+.cmd-panel-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #0a1017;
+    border-bottom: 0.5px solid #0f1e2e;
+    cursor: grab;
+    user-select: none;
+    flex-shrink: 0;
+}
+.cmd-panel-titlebar:active { cursor: grabbing; }
+.cmd-panel-drag-icon { color: #334155; font-size: 14px; flex-shrink: 0; }
+.cmd-panel-title { flex: 1; font-size: 13px; font-weight: 600; color: #e2e8f0; }
+
+/* Edge resize handle (docked) */
+.cmd-edge-resize {
+    position: absolute;
+    background: transparent;
+    transition: background .15s;
+    z-index: 10;
+}
+.cmd-edge-resize:hover { background: rgba(74,222,128,.2); }
+.cmd-edge-e { top:0; right:0; width:5px; height:100%; cursor:ew-resize; }
+.cmd-edge-w { top:0; left:0;  width:5px; height:100%; cursor:ew-resize; }
+.cmd-edge-s { bottom:0; left:0; width:100%; height:5px; cursor:ns-resize; }
+.cmd-edge-n { top:0;    left:0; width:100%; height:5px; cursor:ns-resize; }
+
+/* Corner resize handles (floating) */
+.cmd-rh {
+    position: absolute;
+    width: 16px; height: 16px;
+    z-index: 20;
+}
+.cmd-rh-se { bottom:0; right:0; cursor:se-resize; background: linear-gradient(135deg, transparent 60%, #1e293b 60%); border-radius: 0 0 8px 0; }
+.cmd-rh-sw { bottom:0; left:0;  cursor:sw-resize; background: linear-gradient(225deg, transparent 60%, #1e293b 60%); border-radius: 0 0 0 8px; }
+.cmd-rh-ne { top:0;    right:0; cursor:ne-resize; background: linear-gradient(45deg,  transparent 60%, #1e293b 60%); border-radius: 0 8px 0 0; }
+.cmd-rh-nw { top:0;    left:0;  cursor:nw-resize; background: linear-gradient(315deg, transparent 60%, #1e293b 60%); border-radius: 8px 0 0 0; }
+
+/* Export overlay */
+.cmd-export-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cmd-export-panel {
+    background: #0a1017;
+    border: 0.5px solid #1e2d3d;
+    border-radius: 10px;
+    padding: 16px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.cmd-export-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 4px;
+}
+.cmd-export-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: 0.5px solid #1e293b;
+    background: #060c14;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .12s;
+    text-align: left;
+}
+.cmd-export-btn:hover { background: #0f1e2e; border-color: #2d4a6a; color: #fff; }
+.cmd-export-btn i { font-size: 16px; }
+.cmd-export-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+    .cmd-export-group-list::-webkit-scrollbar { display: none; }
+
+.cmd-export-count {
+    font-size: 10px;
+    font-weight: 700;
+    color: #334155;
+    background: #0a1520;
+    border-radius: 10px;
+    padding: 1px 6px;
+    min-width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.cmd-export-cancel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 6px;
+    border: 0.5px solid #334155;
+    background: transparent;
+    color: #64748b;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all .12s;
+    margin-top: 2px;
+}
+.cmd-export-cancel:hover { background: #0a1017; color: #e2e8f0; }
 
 /* =============================================================
    MOBILE  ≤ 768px  — terminal pasa de floating a stacked

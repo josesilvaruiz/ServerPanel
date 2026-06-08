@@ -26,19 +26,68 @@
         </div>
     </div>
 
-    <div class="term-body">
+    <div class="term-body" style="position:relative">
 
-    @* ── Sidebar ── *@
+    @* ── Dockable Cmd Panel ── *@
     @if (SidebarOpen || _mobSidebarOpen)
     {
-        <div class="term-sidebar @(_mobSidebarOpen ? "mob-open" : "")" id="term-sidebar">
-            <div class="term-sidebar-header">
-                <i class="ti ti-bookmark" style="color:#4ade80"></i>
-                <span>Comandos</span>
-                <button type="button" class="term-sb-icon-btn" title="Nuevo grupo" @onclick='() => { ShowNewGroup = !ShowNewGroup; NewGroupShared = _sidebarTab == "shared"; }'>
+        <div id="cmd-panel" class="cmd-panel cmd-dock-@_cmdDock @(_cmdDock == "float" ? "cmd-float" : "")"
+             style="@CmdPanelStyle">
+
+            @* Drag titlebar *@
+            <div id="cmd-panel-titlebar" class="cmd-panel-titlebar">
+                <i class="ti ti-grip-vertical cmd-panel-drag-icon"></i>
+                <i class="ti ti-bookmark" style="color:#4ade80;font-size:14px"></i>
+                <span class="cmd-panel-title">Comandos</span>
+                <button type="button" class="term-sb-icon-btn" title="Exportar script" @onclick="() => { _showExport = !_showExport; _exportGroup = null; }" @onclick:stopPropagation="true">
+                    <i class="ti ti-download"></i>
+                </button>
+                <button type="button" class="term-sb-icon-btn" title="Nuevo grupo" @onclick='() => { ShowNewGroup = !ShowNewGroup; NewGroupShared = _sidebarTab == "shared"; }' @onclick:stopPropagation="true">
                     <i class="ti ti-folder-plus"></i>
                 </button>
             </div>
+
+            @* Export overlay *@
+            @if (_showExport)
+            {
+                <div class="cmd-export-overlay" @onclick="() => { _showExport = false; _exportGroup = null; }">
+                    <div class="cmd-export-panel" @onclick:stopPropagation="true">
+                        @if (_exportGroup == null)
+                        {
+                            <div class="cmd-export-title"><i class="ti ti-download"></i> ¿Qué grupo exportar?</div>
+                            <div class="cmd-export-group-list">
+                                @foreach (var grp in TabGroups)
+                                {
+                                    <button class="cmd-export-btn" @onclick="() => _exportGroup = grp">
+                                        <i class="ti @(grp.IsShared ? "ti-users" : "ti-user")" style="color:@(grp.IsShared ? "#fbbf24" : "#4ade80")"></i>
+                                        <span style="flex:1;text-align:left">@ExtractSubtitle(grp.Title)</span>
+                                        <span class="cmd-export-count">@grp.Commands.Count</span>
+                                    </button>
+                                }
+                                @if (!TabGroups.Any())
+                                {
+                                    <p style="color:#64748b;font-size:13px;text-align:center;padding:12px 0">Sin grupos en este tab</p>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="cmd-export-title"><i class="ti ti-file-export"></i> @ExtractSubtitle(_exportGroup.Title)</div>
+                            <button class="cmd-export-btn" @onclick='() => ExportScript("sh")'>
+                                <i class="ti ti-brand-debian" style="color:#d8455a"></i> Linux / Mac (.sh)
+                            </button>
+                            <button class="cmd-export-btn" @onclick='() => ExportScript("ps1")'>
+                                <i class="ti ti-brand-powershell" style="color:#3b82f6"></i> Windows PowerShell (.ps1)
+                            </button>
+                            <button class="cmd-export-btn" @onclick='() => ExportScript("bat")'>
+                                <i class="ti ti-terminal-windows" style="color:#94a3b8"></i> Windows Batch (.bat)
+                            </button>
+                            <button class="cmd-export-cancel" @onclick="() => _exportGroup = null"><i class="ti ti-arrow-left"></i> Atrás</button>
+                        }
+                        <button class="cmd-export-cancel" @onclick="() => { _showExport = false; _exportGroup = null; }"><i class="ti ti-x"></i> Cancelar</button>
+                    </div>
+                </div>
+            }
 
             <div class="term-sb-tabs">
                 <button type="button" class="term-sb-tab @(_sidebarTab == "shared" ? "term-sb-tab-active" : "")"
@@ -56,12 +105,10 @@
                 <div class="term-sb-newgroup">
                     <input class="term-sb-input" placeholder="Título del grupo..." @bind="NewGroupTitle" @onkeydown="HandleNewGroupKey" maxlength="40" autofocus />
                     <div class="term-sb-scope-toggle">
-                        <button type="button" class="term-sb-scope-btn @(!NewGroupShared ? "term-sb-scope-active" : "")"
-                                @onclick="() => NewGroupShared = false">
+                        <button type="button" class="term-sb-scope-btn @(!NewGroupShared ? "term-sb-scope-active" : "")" @onclick="() => NewGroupShared = false">
                             <i class="ti ti-user"></i> Solo yo
                         </button>
-                        <button type="button" class="term-sb-scope-btn @(NewGroupShared ? "term-sb-scope-active term-sb-scope-shared" : "")"
-                                @onclick="() => NewGroupShared = true">
+                        <button type="button" class="term-sb-scope-btn @(NewGroupShared ? "term-sb-scope-active term-sb-scope-shared" : "")" @onclick="() => NewGroupShared = true">
                             <i class="ti ti-users"></i> Shared
                         </button>
                     </div>
@@ -89,7 +136,6 @@
                             <span class="term-sb-topic-title">@topic.Key</span>
                             <span class="term-sb-topic-count">@topic.Count()</span>
                         </div>
-
                         @if (IsTopicExpanded(topic.Key))
                         {
                             @foreach (var grp in topic)
@@ -103,8 +149,7 @@
                                             {
                                                 <button type="button" class="term-sb-icon-btn term-sb-run @(grp.IsRunning ? "term-sb-running" : "")"
                                                         title="Ejecutar todos" @onclick:stopPropagation="true"
-                                                        @onclick="() => RunScript(grp)"
-                                                        disabled="@grp.IsRunning">
+                                                        @onclick="() => RunScript(grp)" disabled="@grp.IsRunning">
                                                     <i class="ti @(grp.IsRunning ? "ti-loader-2" : "ti-player-play")"></i>
                                                 </button>
                                             }
@@ -118,7 +163,6 @@
                                             </button>
                                         </div>
                                     </div>
-
                                     @if (grp.Expanded)
                                     {
                                         @if (grp.ShowAdd)
@@ -131,7 +175,6 @@
                                                 </div>
                                             </div>
                                         }
-
                                         @foreach (var item in grp.Commands)
                                         {
                                             <div class="term-sb-cmd-row">
@@ -143,7 +186,6 @@
                                                 </button>
                                             </div>
                                         }
-
                                         @if (grp.Commands.Count == 0 && !grp.ShowAdd)
                                         {
                                             <p class="term-sb-empty">Sin comandos</p>
@@ -154,7 +196,6 @@
                         }
                     </div>
                 }
-
                 @{ var tabEmpty = !TabGroups.Any(); }
                 @if (tabEmpty && !ShowNewGroup)
                 {
@@ -164,12 +205,25 @@
                     </div>
                 }
             </div>
-            <div class="term-sidebar-resize-handle" id="term-sidebar-resize"></div>
+
+            @* Docked edge resize handle *@
+            @if (_cmdDock != "float")
+            {
+                <div id="cmd-edge-resize" class="cmd-edge-resize cmd-edge-@(_cmdDock == "left" ? "e" : _cmdDock == "right" ? "w" : _cmdDock == "top" ? "s" : "n")"></div>
+            }
+            @* Floating corner resize handles *@
+            @if (_cmdDock == "float")
+            {
+                <div class="cmd-rh cmd-rh-nw" id="cmd-rh-nw"></div>
+                <div class="cmd-rh cmd-rh-ne" id="cmd-rh-ne"></div>
+                <div class="cmd-rh cmd-rh-sw" id="cmd-rh-sw"></div>
+                <div class="cmd-rh cmd-rh-se" id="cmd-rh-se"></div>
+            }
         </div>
     }
 
     @* ── Workspace ── *@
-    <div class="term-workspace">
+    <div class="term-workspace" style="@WorkspacePadding">
 
     @foreach (var session in Sessions)
     {
@@ -253,20 +307,27 @@
                 <div id="out-@session.Id" class="term-win-output" style="font-size:@(session.FontSize)px">
                     @foreach (var entry in session.History)
                     {
-                        <div class="term-entry">
-                            <div class="term-cmd-line">
-                                <span class="term-prompt">@entry.Prompt</span>
-                                <span class="term-cmd-text">@entry.Command</span>
+                        @if (entry.IsBanner)
+                        {
+                            <pre class="term-banner">@entry.Output</pre>
+                        }
+                        else
+                        {
+                            <div class="term-entry">
+                                <div class="term-cmd-line">
+                                    <span class="term-prompt">@entry.Prompt</span>
+                                    <span class="term-cmd-text">@entry.Command</span>
+                                </div>
+                                @if (entry.IsRunning)
+                                {
+                                    <div class="term-running"><span class="term-spinner"></span> ejecutando...</div>
+                                }
+                                else if (!string.IsNullOrEmpty(entry.Output))
+                                {
+                                    <pre class="term-out-pre @(entry.IsError ? "term-out-err" : "")">@entry.Output</pre>
+                                }
                             </div>
-                            @if (entry.IsRunning)
-                            {
-                                <div class="term-running"><span class="term-spinner"></span> ejecutando...</div>
-                            }
-                            else if (!string.IsNullOrEmpty(entry.Output))
-                            {
-                                <pre class="term-out-pre @(entry.IsError ? "term-out-err" : "")">@entry.Output</pre>
-                            }
-                        </div>
+                        }
                     }
                     @if (session.History.Count == 0)
                     {
@@ -283,16 +344,19 @@
                     }
                 </div>
 
-                <div class="term-win-inputbar" style="font-size:@(session.FontSize)px">
+                <div class="term-win-inputbar" style="font-size:@(session.FontSize)px"
+                     @onclick="() => FocusInput(session)">
                     <span class="term-prompt">@session.UserAtHost$&nbsp;</span>
-                    <input id="inp-@session.Id"
-                           class="term-input"
-                           value="@session.CurrentCommand"
-                           @oninput="e => session.CurrentCommand = e.Value?.ToString() ?? string.Empty"
-                           @onkeydown="e => HandleKey(e, session)"
-                           autocomplete="off" spellcheck="false"
-                           placeholder="comando..."
-                           disabled="@session.IsRunning" />
+                    <div class="term-input-wrap">
+                        <input id="inp-@session.Id"
+                               class="term-input-hidden"
+                               value="@session.CurrentCommand"
+                               @oninput="e => session.CurrentCommand = e.Value?.ToString() ?? string.Empty"
+                               @onkeydown="e => HandleKey(e, session)"
+                               autocomplete="off" spellcheck="false"
+                               disabled="@session.IsRunning" />
+                        <span class="term-input-display">@session.CurrentCommand</span><span class="term-block-cursor @(session.IsRunning ? "term-cursor-hidden" : "")"></span>
+                    </div>
                     <button type="button" class="term-send-btn"
                             @onclick="() => SendCommand(session)"
                             disabled="@(session.IsRunning || string.IsNullOrWhiteSpace(session.CurrentCommand))">

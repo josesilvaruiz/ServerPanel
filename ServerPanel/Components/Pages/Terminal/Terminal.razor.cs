@@ -26,14 +26,56 @@ public partial class Terminal : IDisposable
     DotNetObjectReference<Terminal>? _dotNetRef;
     TerminalSession? _activeSession;
 
-    // ── Sidebar ──────────────────────────────────────────────
+    // ── Cmd Panel (dockable) ─────────────────────────────────
     bool SidebarOpen { get; set; } = true;
     bool _mobSidebarOpen = false;
+    string _cmdDock = "left";
+    double _cmdPanelLeft = 0, _cmdPanelTop = 0;
+    double _cmdPanelWidth = 260, _cmdPanelHeight = 400;
+    bool _showExport = false;
+    CmdGroup? _exportGroup = null;
+    bool _cmdPanelJsInit = false;
+
+    string CmdPanelStyle => _cmdDock switch {
+        "left"   => $"left:0;top:0;width:{_cmdPanelWidth}px;height:100%",
+        "right"  => $"right:0;top:0;width:{_cmdPanelWidth}px;height:100%",
+        "top"    => $"left:0;top:0;width:100%;height:{_cmdPanelHeight}px",
+        "bottom" => $"left:0;bottom:0;width:100%;height:{_cmdPanelHeight}px",
+        _ => $"left:{_cmdPanelLeft}px;top:{_cmdPanelTop}px;width:{_cmdPanelWidth}px;height:{_cmdPanelHeight}px"
+    };
+
+    string WorkspacePadding => SidebarOpen ? _cmdDock switch {
+        "left"   => $"margin-left:{_cmdPanelWidth}px",
+        "right"  => $"margin-right:{_cmdPanelWidth}px",
+        "top"    => $"margin-top:{_cmdPanelHeight}px",
+        "bottom" => $"margin-bottom:{_cmdPanelHeight}px",
+        _ => ""
+    } : "";
+
+    [JSInvokable]
+    public void OnCmdPanelDocked(string dock, double x, double y, double w, double h)
+    {
+        _cmdDock = dock;
+        if (dock == "float") { _cmdPanelLeft = x; _cmdPanelTop = y; }
+        _cmdPanelWidth = w; _cmdPanelHeight = h;
+        _ = JS.InvokeVoidAsync("localStorage.setItem", "cmd-dock",
+            System.Text.Json.JsonSerializer.Serialize(new { dock, x, y, w, h }));
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnCmdPanelGeometry(double x, double y, double w, double h)
+    {
+        if (_cmdDock == "float") { _cmdPanelLeft = x; _cmdPanelTop = y; }
+        _cmdPanelWidth = w; _cmdPanelHeight = h;
+        StateHasChanged();
+    }
 
     void ToggleSidebar()
     {
         SidebarOpen = !SidebarOpen;
         _mobSidebarOpen = SidebarOpen;
+        if (SidebarOpen) _cmdPanelJsInit = false; // allow re-init
     }
     List<CmdGroup> CmdGroups { get; set; } = new();
     bool ShowNewGroup { get; set; }
@@ -200,11 +242,80 @@ public partial class Terminal : IDisposable
         SaveLayout();
     }
 
+    async Task ExportScript(string os)
+    {
+        if (_exportGroup == null) return;
+        var cmds = _exportGroup.Commands.Select(c => c.Text).ToList();
+        var safeName = System.Text.RegularExpressions.Regex.Replace(
+            ExtractSubtitle(_exportGroup.Title).ToLower(), @"[^\w]+", "-").Trim('-');
+        if (string.IsNullOrEmpty(safeName)) safeName = "commands";
+        string content, filename;
+        switch (os)
+        {
+            case "sh":
+                content = $"#!/bin/bash\n# {_exportGroup.Title}\nset -e\n\n" + string.Join("\n", cmds);
+                filename = safeName + ".sh"; break;
+            case "ps1":
+                content = $"# {_exportGroup.Title}\n\n" + string.Join("\n", cmds);
+                filename = safeName + ".ps1"; break;
+            default:
+                content = $"@echo off\nREM {_exportGroup.Title}\n\n" + string.Join("\r\n", cmds);
+                filename = safeName + ".bat"; break;
+        }
+        await JS.InvokeVoidAsync("downloadTextFile", filename, content);
+        _showExport = false;
+        _exportGroup = null;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        await RestoreLayout();
-        await JS.InvokeVoidAsync("initSidebarResize", "term-sidebar", "term-sidebar-resize");
+        if (firstRender)
+        {
+            await RestoreLayout();
+            // Restore cmd panel dock state
+            try
+            {
+                var json = await JS.InvokeAsync<string?>("localStorage.getItem", "cmd-dock");
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var d = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                    _cmdDock = d.GetProperty("dock").GetString() ?? "left";
+                    if (_cmdDock == "float") {
+                        _cmdPanelLeft = d.GetProperty("x").GetDouble();
+                        _cmdPanelTop  = d.GetProperty("y").GetDouble();
+                    }
+                    _cmdPanelWidth  = d.GetProperty("w").GetDouble();
+                    _cmdPanelHeight = d.GetProperty("h").GetDouble();
+                }
+            }
+            catch { }
+        }
+        if (SidebarOpen && !_cmdPanelJsInit)
+        {
+            _cmdPanelJsInit = true;
+            _prevDockForInit = _cmdDock;
+            await Task.Delay(50);
+            await JS.InvokeVoidAsync("initCmdPanel", "cmd-panel", "cmd-panel-titlebar", _dotNetRef);
+            await InitCmdResizeHandles();
+        }
+        else if (SidebarOpen && _prevDockForInit != _cmdDock)
+        {
+            _prevDockForInit = _cmdDock;
+            await Task.Delay(30);
+            await InitCmdResizeHandles();
+        }
+    }
+
+    string _prevDockForInit = "";
+
+    async Task InitCmdResizeHandles()
+    {
+        if (_cmdDock == "float")
+            foreach (var dir in new[] { "se", "sw", "ne", "nw" })
+                await JS.InvokeVoidAsync("initCmdPanelResize", "cmd-panel", $"cmd-rh-{dir}", _dotNetRef, dir);
+        else
+            await JS.InvokeVoidAsync("initCmdPanelResize", "cmd-panel", "cmd-edge-resize", _dotNetRef,
+                _cmdDock == "left" ? "e" : _cmdDock == "right" ? "w" : _cmdDock == "top" ? "s" : "n");
     }
 
     async Task RestoreLayout()
@@ -273,6 +384,23 @@ public partial class Terminal : IDisposable
         Sessions.Add(session);
         StateHasChanged();
         _ = InitWindowJs(session);
+        _ = LoadMotd(session);
+    }
+
+    async Task LoadMotd(TerminalSession session)
+    {
+        try
+        {
+            var raw = await Ssh.ExecuteAsync("uname -snrmo; echo; cat /etc/motd 2>/dev/null || true");
+            var motd = StripAnsi(raw.TrimEnd());
+            if (!string.IsNullOrWhiteSpace(motd))
+            {
+                var banner = new TermEntry { Prompt = "", Command = "", Output = motd, IsBanner = true };
+                session.History.Insert(0, banner);
+                StateHasChanged();
+            }
+        }
+        catch { }
     }
 
     async Task InitWindowJs(TerminalSession session)
@@ -409,6 +537,7 @@ public partial class Terminal : IDisposable
         await ScrollOutput(s);
         try
         {
+            cmd = FormatLsCmd(cmd);
             var suMatch = ParseSu(cmd);
             var isExit = cmd is "exit" or "logout";
             var isCd = cmd == "cd" || cmd.StartsWith("cd ") || cmd.StartsWith("cd\t");
@@ -448,6 +577,9 @@ public partial class Terminal : IDisposable
         }
     }
 
+    void FocusInput(TerminalSession s) =>
+        _ = JS.InvokeVoidAsync("focusElement", $"inp-{s.Id}");
+
     async Task ScrollOutput(TerminalSession s) =>
         await JS.InvokeVoidAsync("scrollElementToBottom", $"out-{s.Id}");
 
@@ -455,6 +587,19 @@ public partial class Terminal : IDisposable
         new(@"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     static string StripAnsi(string s) => _ansiRe.Replace(s, "");
+
+    static readonly System.Text.RegularExpressions.Regex _lsRe =
+        new(@"^(ls)(\s+|$)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    static string FormatLsCmd(string cmd)
+    {
+        // Force column output for bare `ls` or `ls <path>` (no -l / -1 / existing column flags)
+        if (!_lsRe.IsMatch(cmd)) return cmd;
+        if (cmd.Contains("-l") || cmd.Contains("-1") || cmd.Contains("-C") || cmd.Contains("--width")) return cmd;
+        // Insert column flags right after `ls`
+        return _lsRe.Replace(cmd, m =>
+            m.Groups[1].Value + " --color=never -C --width=100" + (m.Groups[2].Value == "" ? "" : " "));
+    }
 
     static string? ParseSu(string cmd)
     {
@@ -584,4 +729,5 @@ public class TermEntry
     public string Output { get; set; } = "";
     public bool IsRunning { get; set; }
     public bool IsError { get; set; }
+    public bool IsBanner { get; set; }
 }
