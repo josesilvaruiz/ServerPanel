@@ -327,10 +327,26 @@ public partial class Terminal : IDisposable
 
     void ExpandSession(TerminalSession s)
     {
-        s.Width  = 1200;
-        s.Height = 780;
-        s.Left   = Math.Max(0, s.Left - 250);
-        s.Top    = Math.Max(0, s.Top  - 160);
+        if (s.IsExpanded)
+        {
+            s.Left   = s.PreExpandLeft;
+            s.Top    = s.PreExpandTop;
+            s.Width  = s.PreExpandWidth;
+            s.Height = s.PreExpandHeight;
+            s.IsExpanded = false;
+        }
+        else
+        {
+            s.PreExpandLeft   = s.Left;
+            s.PreExpandTop    = s.Top;
+            s.PreExpandWidth  = s.Width;
+            s.PreExpandHeight = s.Height;
+            s.Width  = 1200;
+            s.Height = 780;
+            s.Left   = Math.Max(0, s.Left - 250);
+            s.Top    = Math.Max(0, s.Top  - 160);
+            s.IsExpanded = true;
+        }
         s.ZIndex = ++_maxZ;
         SaveLayout();
         StateHasChanged();
@@ -527,6 +543,11 @@ public class TerminalSession
     public int ZIndex { get; set; } = 10;
     public bool Minimized { get; set; }
     public bool Maximized { get; set; }
+    public bool IsExpanded { get; set; }
+    public double PreExpandLeft { get; set; }
+    public double PreExpandTop { get; set; }
+    public double PreExpandWidth { get; set; } = 700;
+    public double PreExpandHeight { get; set; } = 460;
 }
 
 public class CmdGroup

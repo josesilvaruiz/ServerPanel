@@ -198,6 +198,9 @@
                            @oninput="e => { session.FontSize = int.Parse(e.Value!.ToString()!); SaveLayout(); }"
                            @onclick:stopPropagation="true" />
                 </div>
+                <button class="term-win-expand-tb" title="@(session.IsExpanded ? "Reducir terminal" : "Ampliar terminal")" @onclick="() => ExpandSession(session)" @onclick:stopPropagation="true">
+                    <i class="ti @(session.IsExpanded ? "ti-arrows-minimize" : "ti-arrows-maximize")"></i>
+                </button>
                 <button class="term-win-close" @onclick="() => CloseSession(session)" @onclick:stopPropagation="true" title="Cerrar terminal">
                     <i class="ti ti-x"></i>
                 </button>
@@ -244,9 +247,6 @@
                     </button>
                     <button type="button" class="term-btn @(session.Copied ? "term-btn-ok" : "")" title="Copiar todo el historial al portapapeles" @onclick="() => CopySession(session)">
                         <i class="ti @(session.Copied ? "ti-check" : "ti-copy")"></i> @(session.Copied ? "Copiado" : "Copiar")
-                    </button>
-                    <button type="button" class="term-btn term-btn-expand" title="Ampliar terminal" @onclick="() => ExpandSession(session)" @onclick:stopPropagation="true">
-                        <i class="ti ti-arrows-maximize"></i>
                     </button>
                 </div>
 
