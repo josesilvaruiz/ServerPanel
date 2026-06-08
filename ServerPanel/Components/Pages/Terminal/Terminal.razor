@@ -175,7 +175,7 @@
     {
         <div id="win-@session.Id"
              class="term-window @(session.Minimized ? "term-window-minimized" : "") @(session.Maximized ? "term-window-maximized" : "")"
-             style="z-index:@session.ZIndex"
+             style="z-index:@session.ZIndex;left:@(session.Left)px;top:@(session.Top)px;width:@(session.Width)px;height:@(session.Height)px"
              @onmousedown="() => BringToFront(session)">
 
             @* Title bar *@
@@ -244,6 +244,9 @@
                     </button>
                     <button type="button" class="term-btn @(session.Copied ? "term-btn-ok" : "")" title="Copiar todo el historial al portapapeles" @onclick="() => CopySession(session)">
                         <i class="ti @(session.Copied ? "ti-check" : "ti-copy")"></i> @(session.Copied ? "Copiado" : "Copiar")
+                    </button>
+                    <button type="button" class="term-btn term-btn-expand" title="Ampliar terminal" @onclick="() => ExpandSession(session)" @onclick:stopPropagation="true">
+                        <i class="ti ti-arrows-maximize"></i>
                     </button>
                 </div>
 

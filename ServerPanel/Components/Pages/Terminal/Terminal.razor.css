@@ -571,6 +571,19 @@
 
 .term-btn-ok { color: #4ade80 !important; border-color: #166534 !important; }
 
+.term-btn-expand {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+    border-color: #1e3a5f;
+    background: #0a1520;
+    color: #60a5fa;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+    .term-btn-expand:hover { border-color: #3b82f6; color: #93c5fd; background: #0f1e2e; }
+
 /* ── Output ── */
 .term-win-output {
     flex: 1;

@@ -319,6 +319,18 @@ public partial class Terminal : IDisposable
     void ToggleMaximize(TerminalSession s) { s.Maximized = !s.Maximized; StateHasChanged(); }
     void BringToFront(TerminalSession s)   { s.ZIndex = ++_maxZ; _activeSession = s; StateHasChanged(); }
 
+    void ExpandSession(TerminalSession s)
+    {
+        s.Width  = 1200;
+        s.Height = 780;
+        s.Left   = Math.Max(0, s.Left - 250);
+        s.Top    = Math.Max(0, s.Top  - 160);
+        s.ZIndex = ++_maxZ;
+        SaveLayout();
+        StateHasChanged();
+        _ = JS.InvokeVoidAsync("setWindowGeometry", $"win-{s.Id}", s.Left, s.Top, s.Width, s.Height);
+    }
+
     async void CopySession(TerminalSession s)
     {
         var sb = new System.Text.StringBuilder();
