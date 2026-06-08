@@ -325,8 +325,16 @@ public partial class Terminal : IDisposable
     void ToggleMaximize(TerminalSession s) { s.Maximized = !s.Maximized; StateHasChanged(); }
     void BringToFront(TerminalSession s)   { s.ZIndex = ++_maxZ; _activeSession = s; StateHasChanged(); }
 
-    void ExpandSession(TerminalSession s)
+    async Task ExpandSession(TerminalSession s)
     {
+        // Sync actual DOM geometry into Blazor state before changing anything
+        try
+        {
+            var pos = await JS.InvokeAsync<double[]?>("getWindowPos", $"win-{s.Id}");
+            if (pos is { Length: 4 }) { s.Left = pos[0]; s.Top = pos[1]; s.Width = pos[2]; s.Height = pos[3]; }
+        }
+        catch { }
+
         if (s.IsExpanded)
         {
             s.Left   = s.PreExpandLeft;
@@ -349,8 +357,8 @@ public partial class Terminal : IDisposable
         }
         s.ZIndex = ++_maxZ;
         SaveLayout();
+        await JS.InvokeVoidAsync("setWindowGeometry", $"win-{s.Id}", s.Left, s.Top, s.Width, s.Height);
         StateHasChanged();
-        _ = JS.InvokeVoidAsync("setWindowGeometry", $"win-{s.Id}", s.Left, s.Top, s.Width, s.Height);
     }
 
     async void CopySession(TerminalSession s)
