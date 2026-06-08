@@ -28,6 +28,13 @@ public partial class Terminal : IDisposable
 
     // ── Sidebar ──────────────────────────────────────────────
     bool SidebarOpen { get; set; } = true;
+    bool _mobSidebarOpen = false;
+
+    void ToggleSidebar()
+    {
+        SidebarOpen = !SidebarOpen;
+        _mobSidebarOpen = SidebarOpen;
+    }
     List<CmdGroup> CmdGroups { get; set; } = new();
     bool ShowNewGroup { get; set; }
     string NewGroupTitle { get; set; } = string.Empty;
@@ -138,6 +145,7 @@ public partial class Terminal : IDisposable
         var target = _activeSession ?? Sessions.FirstOrDefault();
         if (target == null) return;
         target.CurrentCommand = cmd;
+        _mobSidebarOpen = false;
         StateHasChanged();
         _ = JS.InvokeVoidAsync("focusElement", $"inp-{target.Id}");
     }
@@ -271,7 +279,8 @@ public partial class Terminal : IDisposable
     {
         await Task.Delay(50);
         await JS.InvokeVoidAsync("initDragWindow", $"win-{session.Id}", $"titlebar-{session.Id}", _dotNetRef);
-        await JS.InvokeVoidAsync("initResizeWindow", $"win-{session.Id}", $"resize-{session.Id}", _dotNetRef);
+        foreach (var dir in new[] { "nw", "ne", "sw", "se" })
+            await JS.InvokeVoidAsync("initResizeWindow", $"win-{session.Id}", $"rh-{dir}-{session.Id}", _dotNetRef, dir);
         await JS.InvokeVoidAsync("focusElement", $"inp-{session.Id}");
     }
 

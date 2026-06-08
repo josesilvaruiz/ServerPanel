@@ -5,11 +5,14 @@
 @attribute [Authorize]
 @inject IStringLocalizer<SharedResource> L
 
+<div class="term-mob-overlay @(_mobSidebarOpen ? "mob-open" : "")" @onclick="() => _mobSidebarOpen = false"></div>
+
 <div class="term-desktop">
 
     <div class="term-desktop-bar">
         <div class="term-desktop-bar-left">
-            <button type="button" class="term-sidebar-toggle" title="Panel de comandos" @onclick="() => SidebarOpen = !SidebarOpen">
+            <button type="button" class="term-sidebar-toggle" title="Panel de comandos"
+                    @onclick="ToggleSidebar">
                 <i class="ti @(SidebarOpen ? "ti-layout-sidebar-left-collapse" : "ti-layout-sidebar")"></i>
             </button>
             <i class="ti ti-terminal-2" style="color:#4ade80;font-size:16px"></i>
@@ -26,9 +29,9 @@
     <div class="term-body">
 
     @* ── Sidebar ── *@
-    @if (SidebarOpen)
+    @if (SidebarOpen || _mobSidebarOpen)
     {
-        <div class="term-sidebar" id="term-sidebar">
+        <div class="term-sidebar @(_mobSidebarOpen ? "mob-open" : "")" id="term-sidebar">
             <div class="term-sidebar-header">
                 <i class="ti ti-bookmark" style="color:#4ade80"></i>
                 <span>Comandos</span>
@@ -294,7 +297,10 @@
                     </button>
                 </div>
 
-                <div class="term-win-resize-handle" id="resize-@session.Id"></div>
+                <div class="term-rh term-rh-nw" id="rh-nw-@session.Id"></div>
+                <div class="term-rh term-rh-ne" id="rh-ne-@session.Id"></div>
+                <div class="term-rh term-rh-sw" id="rh-sw-@session.Id"></div>
+                <div class="term-rh term-rh-se" id="rh-se-@session.Id"></div>
             }
         </div>
     }

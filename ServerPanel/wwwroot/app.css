@@ -174,11 +174,17 @@
     --bg-end:       #0A1F4D;
 }
 
+html {
+    font-size: 16px;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100vh;
     overflow: hidden;
     background: var(--bg-page);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 /* -------------------------------------------------
@@ -207,6 +213,13 @@ main {
     padding-top: 1rem;
     display: flex;
     flex-direction: column;
+}
+
+/* Terminal page: sin padding ni scroll en el contenedor */
+.content:has(.term-desktop),
+article.content:has(.term-desktop) {
+    padding: 0 !important;
+    overflow: hidden !important;
 }
 
 /* -------------------------------------------------
@@ -286,11 +299,12 @@ main {
     flex-direction: row;
     align-items: center;
     gap: 0.65rem;
-    padding: 0.65rem 0.85rem;
+    padding: 0.75rem 0.85rem;
+    min-height: 44px;
     border-radius: 9px;
     text-decoration: none;
     color: #94a3b8;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 500;
     transition: background .15s, color .15s, border-color .15s;
     border: 1px solid transparent;
@@ -324,17 +338,17 @@ main {
     align-items: center;
     gap: 0.65rem;
     width: 100%;
-    padding: 0.65rem 0.85rem;
+    padding: 0.75rem 0.85rem;
+    min-height: 44px;
     border-radius: 9px;
     background: transparent;
     border: 1px solid transparent;
     color: #64748b;
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: .06em;
-    font-size: 0.75rem;
     transition: background .15s, color .15s;
     text-align: left;
 }
@@ -361,8 +375,9 @@ main {
 }
 
 .nm-sublink {
-    padding: 0.45rem 0.75rem;
-    font-size: 0.82rem;
+    padding: 0.65rem 0.75rem;
+    min-height: 40px;
+    font-size: 0.9rem;
     gap: 0.5rem;
 }
 
@@ -679,12 +694,12 @@ main {
         align-items: center;
         justify-content: center;
         position: fixed;
-        top: 0.7rem;
-        left: 0.7rem;
+        top: 0.6rem;
+        left: 0.6rem;
         z-index: 200;
-        width: 38px;
-        height: 38px;
-        border-radius: 9px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
         background: var(--bg-card);
         border: 1px solid var(--bd);
         color: var(--text-muted);
@@ -696,8 +711,11 @@ main {
 
     /* Main: espacio para el hamburger en sidebar mode */
     html:not([data-layout="topbar"]) main {
-        padding-top: 3.5rem !important;
+        padding-top: 4rem !important;
     }
+
+    /* Bigger touch targets for all buttons in nav */
+    .nm-tb-hamburger { width: 44px !important; height: 44px !important; }
 
     /* ── Topbar: hamburger + menú desplegable ── */
     html[data-layout="topbar"] .nm-tb-links    { display: none; }

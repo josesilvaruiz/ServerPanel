@@ -5,7 +5,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: calc(100vh - 1rem);
+    height: 100%;
     overflow: hidden;
     background: #04080e;
 }
@@ -714,17 +714,17 @@
     .term-send-btn:hover:not(:disabled) { background: #166534; }
     .term-send-btn:disabled { opacity: .3; cursor: not-allowed; }
 
-/* ── Resize handle ── */
-.term-win-resize-handle {
+/* ── Resize handles (4 corners) ── */
+.term-rh {
     position: absolute;
-    right: 0;
-    bottom: 0;
     width: 16px;
     height: 16px;
-    cursor: se-resize;
-    background: linear-gradient(135deg, transparent 60%, #1e293b 60%);
-    border-radius: 0 0 10px 0;
+    z-index: 20;
 }
+.term-rh-se { bottom: 0; right: 0; cursor: se-resize; background: linear-gradient(135deg, transparent 60%, #1e293b 60%); border-radius: 0 0 10px 0; }
+.term-rh-sw { bottom: 0; left: 0;  cursor: sw-resize; background: linear-gradient(225deg, transparent 60%, #1e293b 60%); border-radius: 0 0 0 10px; }
+.term-rh-ne { top: 0;    right: 0; cursor: ne-resize; background: linear-gradient(45deg,  transparent 60%, #1e293b 60%);  border-radius: 0 10px 0 0; }
+.term-rh-nw { top: 0;    left: 0;  cursor: nw-resize; background: linear-gradient(315deg, transparent 60%, #1e293b 60%); border-radius: 10px 0 0 0; }
 
 /* ── Empty desktop ── */
 .term-empty-desktop {
@@ -765,6 +765,129 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+/* =============================================================
+   MOBILE  ≤ 768px  — terminal pasa de floating a stacked
+============================================================= */
+@media (max-width: 768px) {
+
+    .term-desktop {
+        height: 100%;
+    }
+
+    /* Sidebar: overlay desde la izquierda, ancho completo */
+    .term-sidebar {
+        position: fixed !important;
+        left: 0; top: 0;
+        height: 100dvh !important;
+        width: 88vw !important;
+        max-width: 320px !important;
+        transform: translateX(-105%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        z-index: 500;
+        box-shadow: none;
+    }
+
+    .term-sidebar.mob-open {
+        transform: translateX(0);
+        box-shadow: 6px 0 32px rgba(0,0,0,.6);
+    }
+
+    .term-mob-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.6);
+        backdrop-filter: blur(2px);
+        z-index: 499;
+    }
+
+    .term-mob-overlay.mob-open { display: block; }
+
+    .term-sidebar-resize-handle { display: none; }
+
+    /* Workspace: apilado vertical normal */
+    .term-workspace {
+        position: relative !important;
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        background: #04080e;
+    }
+
+    /* Windows: estáticas, apiladas, full width */
+    .term-window {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 60vh;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-top: none !important;
+        border-bottom: 1px solid #1e2d3d !important;
+        box-shadow: none !important;
+        flex-shrink: 0;
+    }
+
+    .term-window-minimized { min-height: 0 !important; }
+
+    /* Titlebar: sin cursor drag en móvil */
+    .term-win-titlebar { cursor: default; }
+
+    /* Output: altura fija razonable en móvil */
+    .term-win-output {
+        height: 52vh;
+        min-height: 200px;
+    }
+
+    /* Ocultar controles de desktop */
+    .term-win-fs      { display: none; }
+    .term-win-resize-handle { display: none; }
+    .term-dot-yellow,
+    .term-win-close   { display: none; }
+
+    /* Input más alto para el teclado táctil */
+    .term-win-inputbar {
+        padding: 10px 12px;
+        min-height: 52px;
+    }
+
+    .term-input { font-size: 16px !important; } /* evita zoom iOS */
+
+    .term-send-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    /* Toolbar compacto */
+    .term-win-toolbar { gap: 6px; padding: 4px 8px; }
+    .term-btn { font-size: 12px; padding: 5px 10px; min-height: 36px; }
+
+    /* Top bar del terminal: botón abrir sidebar */
+    .term-desktop-bar { padding: 6px 10px; }
+    .term-desktop-bar-left { gap: 6px; }
+    .term-new-btn { padding: 7px 12px; font-size: 13px; min-height: 40px; }
+
+    /* Sidebar: grupos con más espacio para tocar */
+    .term-sb-group-header { padding: 12px 12px 12px 20px; min-height: 48px; }
+    .term-sb-topic-header { padding: 10px 12px; min-height: 44px; }
+    .term-sb-cmd-row { padding: 4px 8px 4px 28px; }
+    .term-sb-cmd { padding: 8px 8px; min-height: 40px; }
+    .term-sb-cmd-text { font-size: 14px; }
+
+    .term-sb-tab { padding: 10px 4px; font-size: 13px; min-height: 44px; }
+    .term-sb-icon-btn { width: 36px; height: 36px; }
+
+    /* Empty desktop en móvil */
+    .term-empty-desktop { padding: 2rem; }
 }
 
 .term-help-header {
