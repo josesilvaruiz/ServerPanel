@@ -1,5 +1,14 @@
 // ── Terminal floating windows ───────────────────────────────────────────────
 
+window.setWindowGeometry = function (id, left, top, width, height) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.left   = left   + 'px';
+    el.style.top    = top    + 'px';
+    el.style.width  = width  + 'px';
+    el.style.height = height + 'px';
+};
+
 window.focusElement = function (id) {
     const el = document.getElementById(id);
     if (el) el.focus();

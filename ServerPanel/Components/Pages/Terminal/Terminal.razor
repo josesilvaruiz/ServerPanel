@@ -175,7 +175,7 @@
     {
         <div id="win-@session.Id"
              class="term-window @(session.Minimized ? "term-window-minimized" : "") @(session.Maximized ? "term-window-maximized" : "")"
-             style="left:@(session.Left)px;top:@(session.Top)px;width:@(session.Width)px;height:@(session.Height)px;z-index:@session.ZIndex"
+             style="z-index:@session.ZIndex"
              @onmousedown="() => BringToFront(session)">
 
             @* Title bar *@

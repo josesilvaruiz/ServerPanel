@@ -278,6 +278,8 @@ public partial class Terminal : IDisposable
     async Task InitWindowJs(TerminalSession session)
     {
         await Task.Delay(50);
+        await JS.InvokeVoidAsync("setWindowGeometry", $"win-{session.Id}",
+            session.Left, session.Top, session.Width, session.Height);
         await JS.InvokeVoidAsync("initDragWindow", $"win-{session.Id}", $"titlebar-{session.Id}", _dotNetRef);
         foreach (var dir in new[] { "nw", "ne", "sw", "se" })
             await JS.InvokeVoidAsync("initResizeWindow", $"win-{session.Id}", $"rh-{dir}-{session.Id}", _dotNetRef, dir);
