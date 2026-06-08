@@ -28,12 +28,23 @@
     @* ── Sidebar ── *@
     @if (SidebarOpen)
     {
-        <div class="term-sidebar">
+        <div class="term-sidebar" id="term-sidebar">
             <div class="term-sidebar-header">
                 <i class="ti ti-bookmark" style="color:#4ade80"></i>
-                <span>Mis comandos</span>
-                <button type="button" class="term-sb-icon-btn" title="Nuevo grupo" @onclick="() => ShowNewGroup = !ShowNewGroup">
+                <span>Comandos</span>
+                <button type="button" class="term-sb-icon-btn" title="Nuevo grupo" @onclick='() => { ShowNewGroup = !ShowNewGroup; NewGroupShared = _sidebarTab == "shared"; }'>
                     <i class="ti ti-folder-plus"></i>
+                </button>
+            </div>
+
+            <div class="term-sb-tabs">
+                <button type="button" class="term-sb-tab @(_sidebarTab == "shared" ? "term-sb-tab-active" : "")"
+                        @onclick='() => { _sidebarTab = "shared"; ShowNewGroup = false; }'>
+                    <i class="ti ti-users"></i> Shared
+                </button>
+                <button type="button" class="term-sb-tab @(_sidebarTab == "personal" ? "term-sb-tab-active" : "")"
+                        @onclick='() => { _sidebarTab = "personal"; ShowNewGroup = false; }'>
+                    <i class="ti ti-user"></i> Personal
                 </button>
             </div>
 
@@ -58,79 +69,99 @@
                 </div>
             }
 
+            @if (!string.IsNullOrEmpty(_cmdGroupsError))
+            {
+                <div style="padding:8px;color:#f87171;font-size:11px">
+                    <i class="ti ti-wifi-off"></i> Sin conexión BD
+                    <button type="button" style="margin-left:6px;background:#1e3a2f;border:none;color:#4ade80;cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px" @onclick="async () => { await LoadCmdGroups(); StateHasChanged(); }">Reintentar</button>
+                </div>
+            }
+
             <div class="term-sb-groups">
-                @foreach (var grp in CmdGroups)
+                @foreach (var topic in TabGroupsByTopic)
                 {
-                    <div class="term-sb-group">
-                        <div class="term-sb-group-header" @onclick="() => grp.Expanded = !grp.Expanded">
-                            <i class="ti @(grp.Expanded ? "ti-folder-open" : "ti-folder")" style="color:@(grp.IsShared ? "#fbbf24" : "#4ade80");font-size:13px"></i>
-                            <span class="term-sb-group-title">@grp.Title</span>
-                            @if (grp.IsShared)
-                            {
-                                <span class="term-sb-badge-shared" title="Visible para todos"><i class="ti ti-users"></i></span>
-                            }
-                            <div class="term-sb-group-actions">
-                                @if (grp.Commands.Count > 0)
-                                {
-                                    <button type="button" class="term-sb-icon-btn term-sb-run @(grp.IsRunning ? "term-sb-running" : "")"
-                                            title="Ejecutar todos los comandos" @onclick:stopPropagation="true"
-                                            @onclick="() => RunScript(grp)"
-                                            disabled="@grp.IsRunning">
-                                        <i class="ti @(grp.IsRunning ? "ti-loader-2" : "ti-player-play")"></i>
-                                    </button>
-                                }
-                                <button type="button" class="term-sb-icon-btn" title="Añadir comando" @onclick:stopPropagation="true"
-                                        @onclick="() => { grp.ShowAdd = !grp.ShowAdd; grp.NewCmd = string.Empty; }">
-                                    <i class="ti ti-plus"></i>
-                                </button>
-                                <button type="button" class="term-sb-icon-btn term-sb-del" title="Eliminar grupo" @onclick:stopPropagation="true"
-                                        @onclick="() => DeleteGroup(grp)">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
+                    <div class="term-sb-topic">
+                        <div class="term-sb-topic-header" @onclick="() => ToggleTopic(topic.Key)">
+                            <i class="ti @(IsTopicExpanded(topic.Key) ? "ti-chevron-down" : "ti-chevron-right")" style="font-size:11px;color:#64748b"></i>
+                            <span class="term-sb-topic-title">@topic.Key</span>
+                            <span class="term-sb-topic-count">@topic.Count()</span>
                         </div>
 
-                        @if (grp.Expanded)
+                        @if (IsTopicExpanded(topic.Key))
                         {
-                            @if (grp.ShowAdd)
+                            @foreach (var grp in topic)
                             {
-                                <div class="term-sb-addcmd">
-                                    <textarea class="term-sb-input term-sb-textarea" placeholder="Comando o apunte..." @bind="grp.NewCmd" rows="2"></textarea>
-                                    <div class="term-sb-newgroup-actions">
-                                        <button type="button" class="term-sb-action-btn term-sb-ok" @onclick="() => AddCmd(grp)"><i class="ti ti-check"></i></button>
-                                        <button type="button" class="term-sb-action-btn" @onclick="() => grp.ShowAdd = false"><i class="ti ti-x"></i></button>
+                                <div class="term-sb-group">
+                                    <div class="term-sb-group-header" @onclick="() => grp.Expanded = !grp.Expanded">
+                                        <i class="ti @(grp.Expanded ? "ti-folder-open" : "ti-folder")" style="color:@(grp.IsShared ? "#fbbf24" : "#4ade80");font-size:12px"></i>
+                                        <span class="term-sb-group-title">@ExtractSubtitle(grp.Title)</span>
+                                        <div class="term-sb-group-actions">
+                                            @if (grp.Commands.Count > 0)
+                                            {
+                                                <button type="button" class="term-sb-icon-btn term-sb-run @(grp.IsRunning ? "term-sb-running" : "")"
+                                                        title="Ejecutar todos" @onclick:stopPropagation="true"
+                                                        @onclick="() => RunScript(grp)"
+                                                        disabled="@grp.IsRunning">
+                                                    <i class="ti @(grp.IsRunning ? "ti-loader-2" : "ti-player-play")"></i>
+                                                </button>
+                                            }
+                                            <button type="button" class="term-sb-icon-btn" title="Añadir comando" @onclick:stopPropagation="true"
+                                                    @onclick="() => { grp.ShowAdd = !grp.ShowAdd; grp.NewCmd = string.Empty; }">
+                                                <i class="ti ti-plus"></i>
+                                            </button>
+                                            <button type="button" class="term-sb-icon-btn term-sb-del" title="Eliminar grupo" @onclick:stopPropagation="true"
+                                                    @onclick="() => DeleteGroup(grp)">
+                                                <i class="ti ti-trash"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            }
 
-                            @foreach (var item in grp.Commands)
-                            {
-                                <div class="term-sb-cmd-row">
-                                    <button type="button" class="term-sb-cmd" title="Pegar en terminal" @onclick="() => PasteCmd(item.Text)">
-                                        <pre class="term-sb-cmd-text">@item.Text</pre>
-                                    </button>
-                                    <button type="button" class="term-sb-icon-btn term-sb-del" title="Eliminar" @onclick="() => DeleteCmd(grp, item)">
-                                        <i class="ti ti-x"></i>
-                                    </button>
-                                </div>
-                            }
+                                    @if (grp.Expanded)
+                                    {
+                                        @if (grp.ShowAdd)
+                                        {
+                                            <div class="term-sb-addcmd">
+                                                <textarea class="term-sb-input term-sb-textarea" placeholder="Comando o apunte..." @bind="grp.NewCmd" rows="2"></textarea>
+                                                <div class="term-sb-newgroup-actions">
+                                                    <button type="button" class="term-sb-action-btn term-sb-ok" @onclick="() => AddCmd(grp)"><i class="ti ti-check"></i></button>
+                                                    <button type="button" class="term-sb-action-btn" @onclick="() => grp.ShowAdd = false"><i class="ti ti-x"></i></button>
+                                                </div>
+                                            </div>
+                                        }
 
-                            @if (grp.Commands.Count == 0 && !grp.ShowAdd)
-                            {
-                                <p class="term-sb-empty">Sin comandos</p>
+                                        @foreach (var item in grp.Commands)
+                                        {
+                                            <div class="term-sb-cmd-row">
+                                                <button type="button" class="term-sb-cmd" title="@item.Text" @onclick="() => PasteCmd(item.Text)">
+                                                    <span class="term-sb-cmd-text">@item.Text</span>
+                                                </button>
+                                                <button type="button" class="term-sb-icon-btn term-sb-del" title="Eliminar" @onclick="() => DeleteCmd(grp, item)">
+                                                    <i class="ti ti-x"></i>
+                                                </button>
+                                            </div>
+                                        }
+
+                                        @if (grp.Commands.Count == 0 && !grp.ShowAdd)
+                                        {
+                                            <p class="term-sb-empty">Sin comandos</p>
+                                        }
+                                    }
+                                </div>
                             }
                         }
                     </div>
                 }
 
-                @if (CmdGroups.Count == 0 && !ShowNewGroup)
+                @{ var tabEmpty = !TabGroups.Any(); }
+                @if (tabEmpty && !ShowNewGroup)
                 {
                     <div class="term-sb-hint">
                         <i class="ti ti-folder-plus"></i>
-                        <p>Crea un grupo para guardar comandos</p>
+                        <p>@(_sidebarTab == "shared" ? "Sin grupos compartidos" : "Sin grupos personales")</p>
                     </div>
                 }
             </div>
+            <div class="term-sidebar-resize-handle" id="term-sidebar-resize"></div>
         </div>
     }
 

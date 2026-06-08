@@ -32,6 +32,35 @@ public partial class Terminal : IDisposable
     bool ShowNewGroup { get; set; }
     string NewGroupTitle { get; set; } = string.Empty;
     bool NewGroupShared { get; set; } = false;
+    string _sidebarTab { get; set; } = "shared";
+    IEnumerable<CmdGroup> TabGroups => _sidebarTab == "shared"
+        ? CmdGroups.Where(g => g.IsShared)
+        : CmdGroups.Where(g => !g.IsShared);
+
+    IEnumerable<IGrouping<string, CmdGroup>> TabGroupsByTopic =>
+        TabGroups.GroupBy(g => ExtractTopic(g.Title));
+
+    static string ExtractTopic(string title)
+    {
+        var clean = System.Text.RegularExpressions.Regex.Replace(title.Trim(), @"^\P{L}+\s*", "");
+        var idx = clean.IndexOf(" — ", StringComparison.Ordinal);
+        return idx > 0 ? clean[..idx] : clean;
+    }
+
+    static string ExtractSubtitle(string title)
+    {
+        var idx = title.IndexOf(" — ", StringComparison.Ordinal);
+        return idx > 0 ? title[(idx + 3)..] : title;
+    }
+
+    HashSet<string> _expandedTopics = new();
+
+    bool IsTopicExpanded(string key) => _expandedTopics.Contains(key);
+
+    void ToggleTopic(string key)
+    {
+        if (!_expandedTopics.Remove(key)) _expandedTopics.Add(key);
+    }
 
     protected override void OnInitialized()
     {
@@ -119,26 +148,39 @@ public partial class Terminal : IDisposable
         else if (e.Key == "Escape") { ShowNewGroup = false; NewGroupTitle = string.Empty; }
     }
 
+    string _cmdGroupsError = "";
+
     async Task LoadCmdGroups()
     {
-        try
+        _cmdGroupsError = "";
+        for (int i = 0; i < 5; i++)
         {
-            await using var db = await DbFactory.CreateDbContextAsync();
-            var groups = await db.SavedCmdGroups
-                .Include(g => g.Commands.OrderBy(c => c.SortOrder))
-                .Where(g => g.Owner == "all" || g.Owner == _userEmail)
-                .OrderBy(g => g.Owner == "all" ? 0 : 1).ThenBy(g => g.SortOrder)
-                .ToListAsync();
-            CmdGroups = groups.Select(g => new CmdGroup
+            try
             {
-                DbId = g.Id,
-                Title = g.Title,
-                Owner = g.Owner,
-                Expanded = true,
-                Commands = g.Commands.Select(c => new CmdItem { DbId = c.Id, Text = c.Text }).ToList()
-            }).ToList();
+                await using var db = await DbFactory.CreateDbContextAsync();
+                var groups = await db.SavedCmdGroups
+                    .Include(g => g.Commands.OrderBy(c => c.SortOrder))
+                    .Where(g => g.Owner == "all" || g.Owner == _userEmail)
+                    .OrderBy(g => g.Owner == "all" ? 0 : 1).ThenBy(g => g.SortOrder)
+                    .ToListAsync();
+                CmdGroups = groups.Select(g => new CmdGroup
+                {
+                    DbId = g.Id,
+                    Title = g.Title,
+                    Owner = g.Owner,
+                    Expanded = false,
+                    Commands = g.Commands.Select(c => new CmdItem { DbId = c.Id, Text = c.Text }).ToList()
+                }).ToList();
+                StateHasChanged();
+                return;
+            }
+            catch (Exception ex)
+            {
+                _cmdGroupsError = ex.Message;
+                if (i < 4) await Task.Delay(2000);
+            }
         }
-        catch { }
+        StateHasChanged();
     }
 
     [JSInvokable]
@@ -154,6 +196,7 @@ public partial class Terminal : IDisposable
     {
         if (!firstRender) return;
         await RestoreLayout();
+        await JS.InvokeVoidAsync("initSidebarResize", "term-sidebar", "term-sidebar-resize");
     }
 
     async Task RestoreLayout()

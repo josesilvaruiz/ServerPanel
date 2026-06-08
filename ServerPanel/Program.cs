@@ -137,20 +137,29 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Seed after app starts so PostgresTunnelService has time to open the tunnel
+var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+lifetime.ApplicationStarted.Register(async () =>
 {
+    await Task.Delay(3000); // give PostgresTunnelService time to open tunnel
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    try
+    for (int attempt = 1; attempt <= 5; attempt++)
     {
-        db.Database.Migrate();
-        await DbSeeder.SeedSharedCommandsAsync(db);
+        try
+        {
+            db.Database.Migrate();
+            await DbSeeder.SeedSharedCommandsAsync(db);
+            break;
+        }
+        catch (Exception ex)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
+            logger.LogWarning("BD no disponible (intento {N}/5): {Msg}", attempt, ex.Message);
+            if (attempt < 5) await Task.Delay(3000);
+        }
     }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
-        logger.LogWarning("No se pudo conectar a la BD al arrancar: {Msg}. Comprueba el túnel SSH.", ex.Message);
-    }
-}
+});
 
 // VERY IMPORTANT: before authentication and HTTPS handling
 app.UseForwardedHeaders();

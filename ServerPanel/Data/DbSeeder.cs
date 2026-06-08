@@ -5,17 +5,30 @@ namespace ServerPanel.Data;
 
 public static class DbSeeder
 {
+    // Bump this version to force a full reseed of shared groups
+    const string Version = "v2";
+    const string VersionMarker = $"__seeder_version:{Version}";
+
     public static async Task SeedSharedCommandsAsync(ApplicationDbContext db)
     {
-        if (await db.SavedCmdGroups.AnyAsync(g => g.Owner == "all")) return;
+        Console.WriteLine("[Seeder] Verificando grupos compartidos...");
+
+        var hasVersion = await db.SavedCmdGroups.AnyAsync(g => g.Owner == VersionMarker);
+        if (hasVersion) { Console.WriteLine("[Seeder] Ya en versión actual."); return; }
+
+        // Remove all previous shared groups (including old version markers)
+        var old = await db.SavedCmdGroups.Where(g => g.Owner == "all" || g.Owner.StartsWith("__seeder_version")).ToListAsync();
+        if (old.Count > 0) { db.SavedCmdGroups.RemoveRange(old); await db.SaveChangesAsync(); }
+
+        Console.WriteLine("[Seeder] Insertando grupos compartidos...");
 
         var groups = new List<SavedCmdGroup>
         {
+            // ── Deploy ─────────────────────────────────────────
             new()
             {
                 Title = "🚀 Deploy — Panel",
-                Owner = "all",
-                SortOrder = 0,
+                Owner = "all", SortOrder = 0,
                 Commands =
                 [
                     new() { Text = "cd /opt/ServerPanel/ServerPanel", SortOrder = 0 },
@@ -28,24 +41,23 @@ public static class DbSeeder
             },
             new()
             {
-                Title = "🌐 Deploy — Landing",
-                Owner = "all",
-                SortOrder = 1,
+                Title = "🚀 Deploy — Landing",
+                Owner = "all", SortOrder = 1,
                 Commands =
                 [
                     new() { Text = "cd /var/www/landing", SortOrder = 0 },
                     new() { Text = "git pull origin master", SortOrder = 1 },
                     new() { Text = "npm install", SortOrder = 2 },
                     new() { Text = "npm run build", SortOrder = 3 },
-                    new() { Text = "nginx -t", SortOrder = 4 },
-                    new() { Text = "systemctl reload nginx", SortOrder = 5 },
+                    new() { Text = "nginx -t && systemctl reload nginx", SortOrder = 4 },
                 ]
             },
+
+            // ── CS2 ────────────────────────────────────────────
             new()
             {
                 Title = "🎮 CS2 — Control",
-                Owner = "all",
-                SortOrder = 2,
+                Owner = "all", SortOrder = 2,
                 Commands =
                 [
                     new() { Text = "su - steam -c 'tmux ls'", SortOrder = 0 },
@@ -58,36 +70,80 @@ public static class DbSeeder
             new()
             {
                 Title = "🎮 CS2 — Logs",
-                Owner = "all",
-                SortOrder = 3,
+                Owner = "all", SortOrder = 3,
                 Commands =
                 [
                     new() { Text = "su - steam -c 'tmux capture-pane -t cs2 -p -S -200'", SortOrder = 0 },
                     new() { Text = "tail -100 /home/steam/cs2/logs/server.txt", SortOrder = 1 },
                     new() { Text = "find /home/steam -name '*.log' -mmin -60", SortOrder = 2 },
-                    new() { Text = "ls -lah /home/steam/cs2/game/csgo/addons", SortOrder = 3 },
                 ]
             },
             new()
             {
-                Title = "📊 Sistema",
-                Owner = "all",
-                SortOrder = 4,
+                Title = "🎮 CS2 — Addons",
+                Owner = "all", SortOrder = 4,
+                Commands =
+                [
+                    new() { Text = "ls -lah /home/steam/cs2/game/csgo/addons", SortOrder = 0 },
+                    new() { Text = "du -sh /home/steam/cs2", SortOrder = 1 },
+                ]
+            },
+
+            // ── Sistema ────────────────────────────────────────
+            new()
+            {
+                Title = "📊 Sistema — Recursos",
+                Owner = "all", SortOrder = 5,
                 Commands =
                 [
                     new() { Text = "uptime", SortOrder = 0 },
                     new() { Text = "free -h", SortOrder = 1 },
                     new() { Text = "df -h", SortOrder = 2 },
                     new() { Text = "top -bn1 | head -20", SortOrder = 3 },
-                    new() { Text = "ss -tlnp", SortOrder = 4 },
-                    new() { Text = "systemctl status nginx", SortOrder = 5 },
+                    new() { Text = "cat /proc/loadavg", SortOrder = 4 },
+                    new() { Text = "ps aux | grep cs2", SortOrder = 5 },
                 ]
             },
             new()
             {
-                Title = "🔧 Nginx",
-                Owner = "all",
-                SortOrder = 5,
+                Title = "📊 Sistema — Red",
+                Owner = "all", SortOrder = 6,
+                Commands =
+                [
+                    new() { Text = "ss -tlnp", SortOrder = 0 },
+                    new() { Text = "ip a", SortOrder = 1 },
+                    new() { Text = "curl -s ifconfig.me", SortOrder = 2 },
+                    new() { Text = "netstat -s | grep -i error", SortOrder = 3 },
+                ]
+            },
+            new()
+            {
+                Title = "📊 Sistema — Ficheros",
+                Owner = "all", SortOrder = 7,
+                Commands =
+                [
+                    new() { Text = "ls -lah /home/steam", SortOrder = 0 },
+                    new() { Text = "find /home/steam -name '*.log' -mmin -60", SortOrder = 1 },
+                    new() { Text = "tail -100 /home/steam/cs2/logs/server.txt", SortOrder = 2 },
+                ]
+            },
+            new()
+            {
+                Title = "📊 Sistema — Usuarios",
+                Owner = "all", SortOrder = 8,
+                Commands =
+                [
+                    new() { Text = "who", SortOrder = 0 },
+                    new() { Text = "last | head -20", SortOrder = 1 },
+                    new() { Text = "id steam", SortOrder = 2 },
+                ]
+            },
+
+            // ── Herramientas ───────────────────────────────────
+            new()
+            {
+                Title = "🔧 Herramientas — Nginx",
+                Owner = "all", SortOrder = 9,
                 Commands =
                 [
                     new() { Text = "nginx -t", SortOrder = 0 },
@@ -97,9 +153,27 @@ public static class DbSeeder
                     new() { Text = "cat /var/log/nginx/error.log | tail -50", SortOrder = 4 },
                 ]
             },
+            new()
+            {
+                Title = "🔧 Herramientas — tmux",
+                Owner = "all", SortOrder = 10,
+                Commands =
+                [
+                    new() { Text = "tmux ls", SortOrder = 0 },
+                    new() { Text = "tmux new -s nombre", SortOrder = 1 },
+                    new() { Text = "tmux attach -t cs2", SortOrder = 2 },
+                    new() { Text = "tmux kill-session -t cs2", SortOrder = 3 },
+                    new() { Text = "tmux send-keys -t cs2 'cmd' Enter", SortOrder = 4 },
+                    new() { Text = "tmux capture-pane -t cs2 -p", SortOrder = 5 },
+                    new() { Text = "tmux rename-session -t old new", SortOrder = 6 },
+                ]
+            },
         };
 
         db.SavedCmdGroups.AddRange(groups);
+        // Version marker so we don't reseed next boot
+        db.SavedCmdGroups.Add(new SavedCmdGroup { Title = "version", Owner = VersionMarker, SortOrder = 0 });
         await db.SaveChangesAsync();
+        Console.WriteLine("[Seeder] Grupos insertados correctamente.");
     }
 }
