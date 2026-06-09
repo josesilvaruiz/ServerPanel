@@ -130,11 +130,33 @@
     to { transform: rotate(360deg); }
 }
 
-/* ── Stats grid ── */
-.pn-stats-grid {
+/* ── Stats row ── */
+.pn-stats-row {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: .75rem;
+}
+
+.pn-stats-row .pn-stat-card {
+    min-width: 0;
+    padding: .9rem 1rem;
+}
+
+.pn-stats-row .pn-stat-body {
+    min-width: 0;
+}
+
+.pn-gametracker-inline {
+    flex: 0 0 auto;
+    height: 95px;
+    display: block;
+}
+
+.pn-gametracker-inline img {
+    height: 95px;
+    width: auto;
+    border-radius: 14px;
+    display: block;
 }
 
 .pn-stat-card {
@@ -301,6 +323,17 @@
     padding: 1rem 1.25rem;
 }
 
+.pn-controls-bottom {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.pn-controls-bottom .pn-btn {
+    flex: 1;
+}
+
 /* ── Toast ── */
 .pn-toast {
     position: fixed;
@@ -325,3 +358,4 @@
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+

@@ -4,6 +4,12 @@ namespace ServerPanel.Contracts
     {
         Task<string> ExecuteAsync(string command);
 
+        /// <summary>Downloads a remote file into a MemoryStream via SFTP.</summary>
+        Task<Stream> DownloadFileAsync(string remotePath);
+
+        /// <summary>Uploads a stream to a remote path via SFTP.</summary>
+        Task UploadFileAsync(string remotePath, Stream content);
+
         /// <summary>
         /// Abre un túnel local localPort → remoteHost:remotePort.
         /// Dispose del resultado cierra el túnel y desconecta.

@@ -196,6 +196,16 @@ app.MapRazorComponents<App>()
 
 app.MapRazorPages();
 
+app.MapGet("/api/file/download", async (string path, ISshService ssh, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(path)) return Results.BadRequest("path requerido");
+    var stream   = await ssh.DownloadFileAsync(path);
+    var fileName = System.IO.Path.GetFileName(path);
+    return Results.Stream(stream, "application/octet-stream", fileName);
+})
+.RequireAuthorization()
+.DisableAntiforgery();
+
 app.MapPost("/api/analytics/visit", async (
     HttpContext ctx,
     ApplicationDbContext db,

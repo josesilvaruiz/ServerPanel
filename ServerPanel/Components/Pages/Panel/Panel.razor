@@ -66,7 +66,7 @@
     }
     else if (ServerInfo is not null)
     {
-        <div class="pn-stats-grid">
+        <div class="pn-stats-row">
             <div class="pn-stat-card">
                 <div class="pn-stat-icon pn-stat-icon-cyan">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
@@ -138,7 +138,9 @@
                     <div class="pn-stat-value">@ServerInfo.Game</div>
                 </div>
             </div>
+
         </div>
+
     }
     else
     {
@@ -150,7 +152,7 @@
         </div>
     }
 
-    <!-- ── Control buttons ── -->
+    <!-- ── Controls ── -->
     <div class="pn-controls">
         <div class="pn-controls-title">@L["Dashboard.Controls.Title"]</div>
         <div class="pn-controls-grid">
@@ -174,10 +176,15 @@
                 <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
                 @L["Dashboard.Update"]
             </button>
-            <button class="pn-btn pn-btn-ghost pn-btn-full" @onclick="() => _metricsOpen = true">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-                Ver rendimiento VPS
-            </button>
+            <div class="pn-controls-bottom">
+                <button class="pn-btn pn-btn-ghost" @onclick="() => _metricsOpen = true">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+                    Ver rendimiento VPS
+                </button>
+                <a href="https://www.gametracker.com/server_info/159.195.150.62:27015/" target="_blank" rel="noopener" class="pn-gametracker-inline">
+                    <img src="https://cache.gametracker.com/server_info/159.195.150.62:27015/b_560_95_1.png" alt="GameTracker" />
+                </a>
+            </div>
         </div>
     </div>
 

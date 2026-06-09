@@ -1,5 +1,66 @@
 window._spCharts = {};
 
+// ── Disk page: entry-level drag-and-drop upload ─────────────────────────────
+// Attaches to the .wrap container via event delegation. Each [data-drop-path]
+// element becomes an independent drop target. Files are streamed to .NET via
+// DotNet.createJSStreamReference (no base64, no size limit beyond .NET config).
+window.spSetupDisk = function (wrapEl, dotNetRef) {
+    let highlighted = null;
+
+    const isFiles = e => e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files');
+
+    const getTarget = e => e.target.closest('[data-drop-path]') || wrapEl;
+
+    const setHighlight = el => {
+        if (highlighted === el) return;
+        if (highlighted) highlighted.classList.remove('dz-entry-over');
+        highlighted = el;
+        if (el) el.classList.add('dz-entry-over');
+    };
+
+    const onDragOver = e => {
+        if (!isFiles(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        setHighlight(getTarget(e));
+    };
+
+    const onDragLeave = e => {
+        if (!wrapEl.contains(e.relatedTarget)) setHighlight(null);
+    };
+
+    let uploading = false;
+    const onDrop = async e => {
+        if (!isFiles(e)) return;
+        e.preventDefault();
+        if (uploading) return;
+        uploading = true;
+        setHighlight(null);
+        try {
+            const target = getTarget(e);
+            const targetPath = target.dataset.dropPath || wrapEl.dataset.dropPath;
+            const files = Array.from(e.dataTransfer.files);
+            if (!files.length) return;
+            await dotNetRef.invokeMethodAsync('BeginDrop', files.map(f => f.name));
+            for (const file of files) {
+                const ref = DotNet.createJSStreamReference(file);
+                await dotNetRef.invokeMethodAsync('UploadFromDrop', targetPath, file.name, ref);
+            }
+            await dotNetRef.invokeMethodAsync('OnDropComplete');
+        } catch (err) {
+            console.error('spSetupDisk drop error:', err);
+        } finally {
+            uploading = false;
+        }
+    };
+
+    wrapEl.addEventListener('dragover',  onDragOver);
+    wrapEl.addEventListener('dragleave', onDragLeave);
+    wrapEl.addEventListener('drop',      onDrop);
+
+    return { dispose: () => { wrapEl.removeEventListener('dragover', onDragOver); wrapEl.removeEventListener('dragleave', onDragLeave); wrapEl.removeEventListener('drop', onDrop); } };
+};
+
 function _spDestroyChart(id) {
     if (window._spCharts[id]) {
         window._spCharts[id].destroy();

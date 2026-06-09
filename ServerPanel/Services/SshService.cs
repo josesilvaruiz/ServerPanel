@@ -26,12 +26,30 @@ public class SshService : ISshService
         }
     }
 
+    private static SshClient BuildSshClient(SshSettings s)
+    {
+        var client = new SshClient(s.Host, s.User, s.Password)
+        {
+            ConnectionInfo = { Timeout = TimeSpan.FromSeconds(10) }
+        };
+        return client;
+    }
+
+    private static Renci.SshNet.SftpClient BuildSftpClient(SshSettings s)
+    {
+        var client = new Renci.SshNet.SftpClient(s.Host, s.User, s.Password)
+        {
+            ConnectionInfo = { Timeout = TimeSpan.FromSeconds(10) }
+        };
+        return client;
+    }
+
     public IAsyncDisposable OpenTunnel(uint localPort, string remoteHost, uint remotePort)
     {
         if (_settings == null)
             throw new InvalidOperationException("La configuración SSH no existe.");
 
-        var client = new SshClient(_settings.Host, _settings.User, _settings.Password);
+        var client = BuildSshClient(_settings);
         client.Connect();
 
         var port = new Renci.SshNet.ForwardedPortLocal("127.0.0.1", localPort, remoteHost, remotePort);
@@ -65,6 +83,37 @@ public class SshService : ISshService
             _logger.LogInformation("SSH Túnel cerrado");
             return ValueTask.CompletedTask;
         }
+    }
+
+    public async Task UploadFileAsync(string remotePath, Stream content)
+    {
+        if (_settings == null) throw new InvalidOperationException("La configuración SSH no existe.");
+        // Buffer first — the browser stream can't be read from a background thread
+        using var ms = new MemoryStream();
+        await content.CopyToAsync(ms);
+        ms.Position = 0;
+        await Task.Run(() =>
+        {
+            using var client = BuildSftpClient(_settings);
+            client.Connect();
+            client.UploadFile(ms, remotePath, true);
+            client.Disconnect();
+        });
+    }
+
+    public async Task<Stream> DownloadFileAsync(string remotePath)
+    {
+        if (_settings == null) throw new InvalidOperationException("La configuración SSH no existe.");
+        return await Task.Run(() =>
+        {
+            using var client = BuildSftpClient(_settings);
+            client.Connect();
+            var ms = new System.IO.MemoryStream();
+            client.DownloadFile(remotePath, ms);
+            client.Disconnect();
+            ms.Position = 0;
+            return (Stream)ms;
+        });
     }
 
     public async Task<string> ExecuteAsync(string command)
@@ -101,10 +150,7 @@ public class SshService : ISshService
 
             return await Task.Run(() =>
             {
-                using var client = new SshClient(
-                    _settings.Host,
-                    _settings.User,
-                    _settings.Password);
+                using var client = BuildSshClient(_settings);
 
                 client.Connect();
 
@@ -118,23 +164,18 @@ public class SshService : ISshService
                     "SSH Conectado a {Host}",
                     _settings.Host);
 
-                var result = client.RunCommand(command);
+                var cmd = client.CreateCommand(command);
+                cmd.CommandTimeout = TimeSpan.FromSeconds(60);
+                var stdout = cmd.Execute() ?? "";
+                var stderr = cmd.Error    ?? "";
 
-                _logger.LogInformation(
-                    "SSH ExitStatus: {ExitStatus}",
-                    result.ExitStatus);
+                _logger.LogInformation("SSH ExitStatus: {ExitStatus}", cmd.ExitStatus);
 
-                if (!string.IsNullOrWhiteSpace(result.Error))
-                {
-                    _logger.LogWarning(
-                        "SSH STDERR: {Error}",
-                        result.Error);
-                }
+                if (!string.IsNullOrWhiteSpace(stderr))
+                    _logger.LogWarning("SSH STDERR: {Error}", stderr);
 
                 client.Disconnect();
 
-                var stdout = result.Result ?? "";
-                var stderr = result.Error  ?? "";
                 if (string.IsNullOrEmpty(stderr)) return stdout;
                 if (string.IsNullOrEmpty(stdout)) return stderr;
                 return stdout.TrimEnd('\n') + "\n" + stderr;

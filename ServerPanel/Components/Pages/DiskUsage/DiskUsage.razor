@@ -1,0 +1,394 @@
+@namespace ServerPanel.Components.Pages
+@page "/disk"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using ServerPanel.Contracts
+@attribute [Authorize]
+
+<div class="wrap" @ref="_wrapRef" data-drop-path="@_currentPath">
+
+    @* ── Header ── *@
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-device-floppy"></i></div>
+        <div>
+            <p class="top-title">Disco VPS</p>
+            @if (!Loading && Error is null)
+            {
+                <p class="top-sub">@_currentPath</p>
+            }
+            else
+            {
+                <p class="top-sub">Gestión de archivos del servidor</p>
+            }
+        </div>
+        <div class="top-actions">
+            @if (!Loading && Error is null)
+            {
+                @* Upload button — label wraps hidden InputFile, no JS needed *@
+                <label class="btn-toolbar btn-upload-lbl" title="Subir archivos a @_currentPath">
+                    <InputFile OnChange="HandleUploadAsync" multiple class="upload-hidden" />
+                    <i class="ti ti-upload"></i>
+                    <span>Subir</span>
+                </label>
+                @if (_currentPath != "/")
+                {
+                    <button type="button" class="btn-toolbar" title="Subir un nivel"
+                            @onclick="GoUpAsync">
+                        <i class="ti ti-arrow-up"></i>
+                    </button>
+                }
+            }
+            <button type="button" class="btn-toolbar" title="Recargar"
+                    @onclick="() => ScanAsync(_currentPath)" disabled="@Loading">
+                <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
+            </button>
+        </div>
+    </div>
+
+    @* ── Disk usage card (only at root) ── *@
+    @if (Disk is not null && !Loading)
+    {
+        var pct   = Disk.UsedPct;
+        var color = pct >= 90 ? "#f87171" : pct >= 70 ? "#fbbf24" : "#4ade80";
+        <div class="disk-card">
+            <div class="disk-card-row">
+                <div class="disk-stat">
+                    <span class="disk-stat-val" style="color:@color">@Disk.Used</span>
+                    <span class="disk-stat-lbl">Usado</span>
+                </div>
+                <div class="disk-stat">
+                    <span class="disk-stat-val">@Disk.Size</span>
+                    <span class="disk-stat-lbl">Total</span>
+                </div>
+                <div class="disk-stat">
+                    <span class="disk-stat-val" style="color:#4ade80">@Disk.Avail</span>
+                    <span class="disk-stat-lbl">Libre</span>
+                </div>
+                <div class="disk-stat disk-stat-pct">
+                    <span class="disk-stat-val" style="color:@color">@(pct) %</span>
+                    <span class="disk-stat-lbl">Ocupado</span>
+                </div>
+            </div>
+            <div class="disk-bar-bg">
+                <div class="disk-bar-fill" style="width:@(pct)%; background:@color"></div>
+            </div>
+        </div>
+    }
+
+    @* ── Loading / error ── *@
+    @if (Loading)
+    {
+        <div class="state-box">
+            <div class="spinner"></div>
+            <p>Escaneando @_currentPath …</p>
+        </div>
+    }
+    else if (Error is not null)
+    {
+        <div class="state-box state-error">
+            <i class="ti ti-alert-circle"></i>
+            <p>@Error</p>
+        </div>
+    }
+    else
+    {
+        @* ── Toolbar: breadcrumb + count ── *@
+        <div class="toolbar">
+            <div class="breadcrumb">
+                @{ var parts = GetBreadcrumbParts(_currentPath); }
+                @for (int i = 0; i < parts.Count; i++)
+                {
+                    var part   = parts[i];
+                    var isLast = i == parts.Count - 1;
+                    if (!isLast)
+                    {
+                        <button class="bc-btn" @onclick="() => ScanAsync(part.Path)">@part.Label</button>
+                        <span class="bc-sep">/</span>
+                    }
+                    else { <span class="bc-current">@part.Label</span> }
+                }
+            </div>
+            @if (Entries.Count > 0)
+            {
+                <span class="entry-count">@Entries.Count elemento@(Entries.Count != 1 ? "s" : "")</span>
+            }
+        </div>
+
+        @* ── Entries ── *@
+        @if (Entries.Count == 0)
+        {
+            <div class="state-box">
+                <i class="ti ti-folder-off"></i>
+                <p>Carpeta vacía o sin permisos de lectura</p>
+                <span class="state-hint">Arrastra archivos aquí para subirlos</span>
+            </div>
+        }
+        else
+        {
+            var maxBytes = Entries[0].Bytes > 0 ? Entries[0].Bytes : 1L;
+            <div class="entries-wrap">
+                @foreach (var e in Entries)
+                {
+                    var barPct   = (int)(e.Bytes * 100 / maxBytes);
+                    var barColor = e.Bytes > 10L * 1073741824 ? "#f87171"
+                                 : e.Bytes >  2L * 1073741824 ? "#fbbf24"
+                                 : e.Bytes >  500 * 1048576   ? "#22d3ee"
+                                 : "#4ade80";
+                    var typeHint = e.IsDir
+                        ? "Carpeta"
+                        : System.IO.Path.GetExtension(e.Name) is { Length: > 0 } ext
+                            ? ext.TrimStart('.').ToUpperInvariant()
+                            : "Archivo";
+
+                    <div class="entry @(e.IsDir ? "entry-dir" : "") @(_ctxTarget == e ? "entry-selected" : "")"
+                         data-drop-path="@(e.IsDir ? e.Path : _currentPath)"
+                         @onclick="async () => { if (e.IsDir) await ScanAsync(e.Path); }"
+                         @oncontextmenu="(args) => OpenCtx(args, e)"
+                         @oncontextmenu:preventDefault
+                         title="@e.Path">
+                        <div class="entry-left">
+                            <div class="entry-icon-wrap @(e.IsDir ? "ei-dir" : "ei-file")">
+                                <i class="ti @(e.IsDir ? "ti-folder-filled" : "ti-file")"></i>
+                            </div>
+                            <div class="entry-info">
+                                <span class="entry-name">@e.Name</span>
+                                <div class="entry-meta">
+                                    <span class="entry-type">@typeHint</span>
+                                    <span class="entry-sep">·</span>
+                                    <span class="entry-size-inline">@e.SizeHuman</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <div class="entry-bar-wrap">
+                                <div class="entry-bar" style="width:@(barPct)%; background:@barColor"></div>
+                            </div>
+                            @if (e.IsDir)
+                            {
+                                <i class="ti ti-chevron-right entry-arrow"></i>
+                            }
+                            else
+                            {
+                                <i class="ti ti-dots-vertical entry-dots"></i>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <p class="count-lbl"><i class="ti ti-mouse-2"></i> Clic derecho para opciones · Arrastra archivos aquí para subir</p>
+        }
+
+        @* ── Upload progress ── *@
+        @if (_uploads.Count > 0)
+        {
+            <div class="upload-list">
+                @foreach (var u in _uploads)
+                {
+                    <div class="upload-item @(u.Error != null ? "ui-error" : u.Done ? "ui-done" : "ui-running")">
+                        <i class="ti @(u.Error != null ? "ti-x" : u.Done ? "ti-check" : "ti-loader-2 spin") ui-icon"></i>
+                        <span class="ui-name">@u.Name</span>
+                        @if (u.Error != null) { <span class="ui-status ui-err">@u.Error</span> }
+                        else if (u.Done)      { <span class="ui-status ui-ok">Subido</span> }
+                        else                  { <span class="ui-status ui-muted">Subiendo…</span> }
+                    </div>
+                }
+            </div>
+        }
+    }
+
+</div>
+
+@* ── Context menu ── *@
+@if (_ctxTarget is not null)
+{
+    <div class="ctx-overlay" @onclick="CloseCtx"></div>
+    <div class="ctx-menu" style="left:@(_ctxX)px; top:@(_ctxY)px">
+        <div class="ctx-header">
+            <i class="ti @(_ctxTarget.IsDir ? "ti-folder-filled" : "ti-file") ctx-header-icon"></i>
+            <span class="ctx-header-name" title="@_ctxTarget.Path">@_ctxTarget.Name</span>
+        </div>
+        <div class="ctx-divider"></div>
+        <button class="ctx-item" @onclick="() => OpenRename(_ctxTarget)">
+            <i class="ti ti-cursor-text"></i> Renombrar
+        </button>
+        @if (!_ctxTarget.IsDir)
+        {
+            <button class="ctx-item" @onclick="async () => await OpenEditAsync(_ctxTarget)">
+                <i class="ti ti-pencil"></i> Editar
+            </button>
+        }
+        <a class="ctx-item" href="@GetDownloadUrl(_ctxTarget.Path)" @onclick="CloseCtx" download>
+            <i class="ti ti-download"></i> Descargar
+        </a>
+        <div class="ctx-divider"></div>
+        <button class="ctx-item ctx-item-danger" @onclick="() => OpenDelete(_ctxTarget)">
+            <i class="ti ti-trash"></i> Borrar…
+        </button>
+    </div>
+}
+
+@* ── Modal: Renombrar ── *@
+@if (_renameTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="CloseModals">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <i class="ti ti-cursor-text modal-hdr-icon"></i>
+                <span>Renombrar</span>
+                <button class="modal-close" @onclick="CloseModals"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <label class="modal-lbl">Nombre actual</label>
+                <div class="modal-path">@_renameTarget.Name</div>
+
+                <div class="rename-arrow"><i class="ti ti-arrow-down"></i></div>
+
+                <label class="modal-lbl">Nuevo nombre</label>
+                <input class="modal-input" @bind="_renameNewName" @bind:event="oninput"
+                       placeholder="nuevo_nombre" autofocus />
+
+                @if (_renameDestExists)
+                {
+                    <p class="modal-warn"><i class="ti ti-alert-triangle"></i> Ya existe un elemento con ese nombre. ¿Reemplazar?</p>
+                }
+                @if (!string.IsNullOrEmpty(_actionError))
+                {
+                    <p class="modal-error">@_actionError</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModals" disabled="@_actionRunning">Cancelar</button>
+                <button class="@(_renameDestExists ? "btn-danger" : "btn-primary")"
+                        @onclick="ConfirmRenameAsync"
+                        disabled="@(_actionRunning || string.IsNullOrWhiteSpace(_renameNewName) || _renameNewName == _renameTarget.Name)">
+                    @if (_actionRunning) { <i class="ti ti-loader-2 spin"></i> }
+                    else if (_renameDestExists) { <text>Sí, reemplazar</text> }
+                    else { <text>Renombrar</text> }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Modal: Borrar ── *@
+@if (_deleteTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="CloseModals">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-header modal-header-red">
+                <i class="ti ti-trash modal-hdr-icon"></i>
+                <span>Borrar permanentemente</span>
+                <button class="modal-close" @onclick="CloseModals"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-target-row">
+                    <i class="ti @(_deleteTarget.IsDir ? "ti-folder-filled" : "ti-file") delete-target-icon"></i>
+                    <div>
+                        <p class="delete-target-name">@_deleteTarget.Name</p>
+                        <p class="delete-target-path">@_deleteTarget.Path</p>
+                    </div>
+                    <span class="delete-target-size">@_deleteTarget.SizeHuman</span>
+                </div>
+
+                <p class="modal-warn"><i class="ti ti-alert-triangle"></i> Esta acción es <strong>irreversible</strong>. No hay papelera.</p>
+
+                @if (_deleteTarget.IsDir)
+                {
+                    <p class="modal-warn">Se borrará la carpeta y <strong>todo su contenido</strong>.</p>
+                }
+
+                @if (_deleteTarget.Bytes > 1073741824)
+                {
+                    <p class="modal-warn modal-warn-big">
+                        <i class="ti ti-alert-circle"></i> Vas a liberar <strong>@_deleteTarget.SizeHuman</strong>. Confirma que no necesitas nada de ahí.
+                    </p>
+                }
+
+                @if (!string.IsNullOrEmpty(_actionError))
+                {
+                    <p class="modal-error">@_actionError</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModals" disabled="@_actionRunning">Cancelar</button>
+                @if (string.IsNullOrEmpty(_actionError) || _actionError.Contains("protegido"))
+                {
+                    @if (_deleteCooldown > 0)
+                    {
+                        <button class="btn-danger btn-cooldown" disabled>
+                            <i class="ti ti-clock"></i> Espera @(_deleteCooldown)s…
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-danger" @onclick="ConfirmDeleteAsync"
+                                disabled="@(_actionRunning || !string.IsNullOrEmpty(_actionError))">
+                            @if (_actionRunning) { <i class="ti ti-loader-2 spin"></i> }
+                            else { <text>Sí, borrar para siempre</text> }
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Modal: Editar ── *@
+@if (_editTarget is not null)
+{
+    <div class="modal-backdrop" @onclick="CloseModals">
+        <div class="modal modal-wide" @onclick:stopPropagation>
+            <div class="modal-header">
+                <i class="ti ti-pencil modal-hdr-icon"></i>
+                <div class="modal-hdr-info">
+                    <span>@_editTarget.Name</span>
+                    <span class="modal-hdr-path">@_editTarget.Path</span>
+                </div>
+                <button class="modal-close" @onclick="CloseModals"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body">
+                @if (_editLoading)
+                {
+                    <div class="state-box" style="padding:1.5rem 0">
+                        <div class="spinner"></div><p>Cargando archivo…</p>
+                    </div>
+                }
+                else
+                {
+                    <textarea class="modal-editor" @bind="_editContent"></textarea>
+                    @if (_editSaveConfirm)
+                    {
+                        <p class="modal-warn" style="margin-top:.5rem">
+                            <i class="ti ti-alert-triangle"></i> ¿Sobrescribir <strong>@_editTarget.Path</strong>? Los cambios son inmediatos.
+                        </p>
+                    }
+                    @if (!string.IsNullOrEmpty(_actionError))
+                    {
+                        <p class="modal-error">@_actionError</p>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModals" disabled="@_actionRunning">Cancelar</button>
+                @if (!_editSaveConfirm)
+                {
+                    <button class="btn-primary" @onclick="() => _editSaveConfirm = true"
+                            disabled="@(_editLoading || _actionRunning)">
+                        <i class="ti ti-device-floppy"></i> Guardar…
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-cancel" @onclick="() => _editSaveConfirm = false">
+                        <i class="ti ti-arrow-left"></i> Atrás
+                    </button>
+                    <button class="btn-danger" @onclick="ConfirmSaveAsync" disabled="@_actionRunning">
+                        @if (_actionRunning) { <i class="ti ti-loader-2 spin"></i> }
+                        else { <text>Sí, sobrescribir</text> }
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
