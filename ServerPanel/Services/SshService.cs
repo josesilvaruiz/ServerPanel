@@ -1,4 +1,5 @@
-﻿using Renci.SshNet;
+﻿using System.Text.RegularExpressions;
+using Renci.SshNet;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
 
@@ -165,9 +166,9 @@ public class SshService : ISshService
                     _settings.Host);
 
                 var cmd = client.CreateCommand(command);
-                cmd.CommandTimeout = TimeSpan.FromSeconds(60);
-                var stdout = cmd.Execute() ?? "";
-                var stderr = cmd.Error    ?? "";
+                cmd.CommandTimeout = TimeSpan.FromMinutes(10);
+                var stdout = CleanOutput(cmd.Execute() ?? "");
+                var stderr = CleanOutput(cmd.Error    ?? "");
 
                 _logger.LogInformation("SSH ExitStatus: {ExitStatus}", cmd.ExitStatus);
 
@@ -189,5 +190,23 @@ public class SshService : ISshService
 
             throw;
         }
+    }
+
+    private static readonly Regex _ansi = new(
+        @"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])",
+        RegexOptions.Compiled);
+
+    private static string CleanOutput(string raw)
+    {
+        var text = _ansi.Replace(raw, "");
+        // Simulate terminal carriage-return overwrite: keep last segment per line
+        var sb = new System.Text.StringBuilder();
+        foreach (var line in text.Split('\n'))
+        {
+            if (sb.Length > 0) sb.Append('\n');
+            var parts = line.Split('\r');
+            sb.Append(parts[^1]);
+        }
+        return sb.ToString().Trim();
     }
 }
