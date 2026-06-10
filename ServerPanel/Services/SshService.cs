@@ -199,11 +199,13 @@ public class SshService : ISshService
     private static string CleanOutput(string raw)
     {
         var text = _ansi.Replace(raw, "");
-        // Simulate terminal carriage-return overwrite: keep last segment per line
+        // Normalize CRLF before simulating CR overwrites
+        text = text.Replace("\r\n", "\n");
         var sb = new System.Text.StringBuilder();
         foreach (var line in text.Split('\n'))
         {
             if (sb.Length > 0) sb.Append('\n');
+            // Simulate terminal CR overwrite (bare \r, not \r\n)
             var parts = line.Split('\r');
             sb.Append(parts[^1]);
         }

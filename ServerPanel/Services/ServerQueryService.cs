@@ -43,8 +43,7 @@ public class ServerQueryService : IServerQueryService
                 _port);
 
             using var udp = new UdpClient();
-
-            udp.Client.ReceiveTimeout = 5000;
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             var endpoint = new IPEndPoint(
                 IPAddress.Parse(_host),
@@ -69,7 +68,7 @@ public class ServerQueryService : IServerQueryService
             _logger.LogInformation(
                 "Petición enviada");
 
-            var response = await udp.ReceiveAsync();
+            var response = await udp.ReceiveAsync(timeoutCts.Token);
 
             _logger.LogInformation(
                 "Bytes recibidos: {Length}",
@@ -125,7 +124,7 @@ public class ServerQueryService : IServerQueryService
                 _logger.LogInformation(
                     "Challenge enviado");
 
-                response = await udp.ReceiveAsync();
+                response = await udp.ReceiveAsync(timeoutCts.Token);
 
                 _logger.LogInformation(
                     "Respuesta challenge HEX: {Hex}",

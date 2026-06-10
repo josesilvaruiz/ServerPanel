@@ -251,7 +251,7 @@ public class PlayerService : IPlayerService
         {
             var trimmed = line.Trim();
 
-            var nameMatch = Regex.Match(trimmed, @"'([^']+)'");
+            var nameMatch = Regex.Match(trimmed, @"""([^""]+)""");
 
             if (!nameMatch.Success)
                 continue;

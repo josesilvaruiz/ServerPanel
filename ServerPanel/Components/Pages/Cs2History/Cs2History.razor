@@ -108,10 +108,10 @@
             </div>
         </div>
 
-        @* ── Sesiones de jugadores 24h ── *@
+        @* ── Sesiones de jugadores (últimos 100 registros) ── *@
         @if (PlayerSessions.Count > 0)
         {
-            <div class="kpi-section-lbl" style="margin-top:.25rem">Sesiones · últimas 24 h</div>
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Sesiones · últimos 100 registros</div>
             <div class="sessions-grid">
                 @foreach (var g in PlayerSessions.GroupBy(s => s.Name).OrderByDescending(g => g.Max(s => s.End)))
                 {
@@ -302,7 +302,7 @@
                 })
                 .FirstOrDefaultAsync();
 
-            // All 24h player sessions — used for KPIs, chart tooltips, and session summaries
+                // 24h player sessions — used for KPIs and chart
             var raw24h = await Db.Cs2PlayerSessions
                 .Where(s => s.TimestampUtc >= cutoff)
                 .Select(s => new { s.TimestampUtc, s.PlayerName })
@@ -311,47 +311,48 @@
 
             var uniquePlayers24h = raw24h.Select(s => s.PlayerName).Distinct().Count();
 
-            // Sessions for table column (last 100 snapshots)
+            // Last 100 snapshots for the table
             Rows = await Db.Cs2ServerSnapshots
                 .OrderByDescending(s => s.TimestampUtc)
                 .Take(100)
                 .ToListAsync();
 
+            // Player sessions from the last 100 snapshots window (consistent with the table)
             if (Rows.Count > 0)
             {
                 var oldest = Rows[^1].TimestampUtc;
-                var rawTable = await Db.Cs2PlayerSessions
+                var rawSessions = await Db.Cs2PlayerSessions
                     .Where(s => s.TimestampUtc >= oldest)
                     .Select(s => new { s.TimestampUtc, s.PlayerName })
+                    .OrderBy(s => s.TimestampUtc)
                     .ToListAsync();
 
-                SessionsByTs = rawTable
+                SessionsByTs = rawSessions
                     .GroupBy(s => s.TimestampUtc)
                     .ToDictionary(grp => grp.Key, grp => grp.Select(s => s.PlayerName).Distinct().ToList());
-            }
 
-            // Compute session windows per player (gap > 3 min = new session)
-            PlayerSessions = raw24h
-                .GroupBy(s => s.PlayerName)
-                .SelectMany(grp =>
-                {
-                    var sorted  = grp.Select(s => s.TimestampUtc).OrderBy(t => t).ToList();
-                    var windows = new List<PlayerSessionRange>();
-                    var start   = sorted[0];
-                    var end     = sorted[0];
-                    for (int i = 1; i < sorted.Count; i++)
+                PlayerSessions = rawSessions
+                    .GroupBy(s => s.PlayerName)
+                    .SelectMany(grp =>
                     {
-                        if ((sorted[i] - end).TotalMinutes > 3)
+                        var sorted  = grp.Select(s => s.TimestampUtc).OrderBy(t => t).ToList();
+                        var windows = new List<PlayerSessionRange>();
+                        var start   = sorted[0];
+                        var end     = sorted[0];
+                        for (int i = 1; i < sorted.Count; i++)
                         {
-                            windows.Add(new(grp.Key, start, end));
-                            start = sorted[i];
+                            if ((sorted[i] - end).TotalMinutes > 3)
+                            {
+                                windows.Add(new(grp.Key, start, end));
+                                start = sorted[i];
+                            }
+                            end = sorted[i];
                         }
-                        end = sorted[i];
-                    }
-                    windows.Add(new(grp.Key, start, end));
-                    return windows;
-                })
-                .ToList();
+                        windows.Add(new(grp.Key, start, end));
+                        return windows;
+                    })
+                    .ToList();
+            }
 
             // 24h chart data
             var chartRows = await Db.Cs2ServerSnapshots
