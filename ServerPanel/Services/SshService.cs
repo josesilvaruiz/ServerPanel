@@ -62,6 +62,15 @@ public class SshService : ISshService
         return new SshTunnel(client, port, _logger);
     }
 
+    public SshShellSession OpenShell(uint cols, uint rows)
+    {
+        if (_settings == null) throw new InvalidOperationException("La configuración SSH no existe.");
+        var client = BuildSshClient(_settings);
+        client.Connect();
+        var stream = client.CreateShellStream("xterm-256color", cols, rows, 0, 0, 65536);
+        return new SshShellSession(client, stream);
+    }
+
     private sealed class SshTunnel : IAsyncDisposable
     {
         private readonly SshClient _client;
@@ -210,5 +219,36 @@ public class SshService : ISshService
             sb.Append(parts[^1]);
         }
         return sb.ToString().Trim();
+    }
+}
+
+public sealed class SshShellSession : IDisposable
+{
+    private readonly Renci.SshNet.SshClient _client;
+    public Renci.SshNet.ShellStream Stream { get; }
+
+    internal SshShellSession(Renci.SshNet.SshClient client, Renci.SshNet.ShellStream stream)
+    {
+        _client = client;
+        Stream  = stream;
+    }
+
+    public void Resize(uint cols, uint rows)
+    {
+        // SSH.NET exposes resize via SendWindowChangeRequest if available
+        try
+        {
+            var m = Stream.GetType().GetMethod("SendWindowChangeRequest",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            m?.Invoke(Stream, new object[] { cols, rows, 0u, 0u });
+        }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        try { Stream.Dispose();       } catch { }
+        try { _client.Disconnect();   } catch { }
+        try { _client.Dispose();      } catch { }
     }
 }

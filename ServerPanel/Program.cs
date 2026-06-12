@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using ServerPanel.Components;
 using ServerPanel.Contracts;
 using ServerPanel.Data;
+using ServerPanel.Hubs;
 using ServerPanel.Models;
 using ServerPanel.Services;
 
@@ -13,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSignalR();
 
 builder.Services.AddAntiforgery();
 
@@ -195,6 +198,10 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapRazorPages();
+
+app.MapHub<TerminalHub>("/hubs/terminal")
+   .DisableAntiforgery()
+   .RequireAuthorization();
 
 app.MapGet("/api/file/download", async (string path, ISshService ssh, CancellationToken ct) =>
 {

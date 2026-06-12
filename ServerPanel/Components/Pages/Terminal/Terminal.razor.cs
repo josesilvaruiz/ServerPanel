@@ -10,16 +10,17 @@ using ServerPanel.Models;
 
 namespace ServerPanel.Components.Pages;
 
-public partial class Terminal : IDisposable
+public partial class Terminal : IAsyncDisposable
 {
     [Inject] ISshService Ssh { get; set; } = default!;
     [Inject] IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
     [Inject] AuthenticationStateProvider AuthState { get; set; } = default!;
-    string _userEmail = "";
     [Inject] IJSRuntime JS { get; set; } = default!;
     [Inject] IConfiguration Config { get; set; } = default!;
 
-    string HostLabel => Config["SshSettings:Host"] ?? "servidor";
+    string _userEmail = "";
+    string HostLabel => Config["SshSettings:Host"] ?? Config["Ssh:Host"] ?? "servidor";
+
     List<TerminalSession> Sessions = new();
     int _maxZ = 10;
     int _windowOffset = 0;
@@ -75,8 +76,9 @@ public partial class Terminal : IDisposable
     {
         SidebarOpen = !SidebarOpen;
         _mobSidebarOpen = SidebarOpen;
-        if (SidebarOpen) _cmdPanelJsInit = false; // allow re-init
+        if (SidebarOpen) _cmdPanelJsInit = false;
     }
+
     List<CmdGroup> CmdGroups { get; set; } = new();
     bool ShowNewGroup { get; set; }
     string NewGroupTitle { get; set; } = string.Empty;
@@ -103,9 +105,7 @@ public partial class Terminal : IDisposable
     }
 
     HashSet<string> _expandedTopics = new();
-
     bool IsTopicExpanded(string key) => _expandedTopics.Contains(key);
-
     void ToggleTopic(string key)
     {
         if (!_expandedTopics.Remove(key)) _expandedTopics.Add(key);
@@ -168,31 +168,32 @@ public partial class Terminal : IDisposable
     {
         if (grp.IsRunning || grp.Commands.Count == 0) return;
         if (_activeSession == null && Sessions.Count == 0) OpenNewTerminal();
-        await Task.Delay(100);
+        await Task.Delay(150);
         var target = _activeSession ?? Sessions.FirstOrDefault();
         if (target == null) return;
         grp.IsRunning = true;
         StateHasChanged();
         foreach (var item in grp.Commands.ToList())
         {
-            target.CurrentCommand = item.Text;
-            await SendCommand(target);
+            await JS.InvokeVoidAsync("xtermSendLine", target.Id, item.Text);
+            await Task.Delay(80);
         }
         grp.IsRunning = false;
         StateHasChanged();
     }
 
-    void PasteCmd(string cmd)
+    void PasteCmd(TerminalSession? target, string cmd)
     {
-        var target = _activeSession ?? Sessions.FirstOrDefault();
+        target ??= _activeSession ?? Sessions.FirstOrDefault();
         if (target == null) return;
-        target.CurrentCommand = cmd;
         _mobSidebarOpen = false;
-        StateHasChanged();
-        _ = JS.InvokeVoidAsync("focusElement", $"inp-{target.Id}");
+        _ = JS.InvokeVoidAsync("xtermPaste", target.Id, cmd);
     }
 
-    void HandleNewGroupKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    // Overload for sidebar button (no session ref available in razor)
+    void PasteCmd(string cmd) => PasteCmd(null, cmd);
+
+    void HandleNewGroupKey(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") AddGroup();
         else if (e.Key == "Escape") { ShowNewGroup = false; NewGroupTitle = string.Empty; }
@@ -267,12 +268,13 @@ public partial class Terminal : IDisposable
         _exportGroup = null;
     }
 
+    string _prevDockForInit = "";
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await RestoreLayout();
-            // Restore cmd panel dock state
             try
             {
                 var json = await JS.InvokeAsync<string?>("localStorage.getItem", "cmd-dock");
@@ -304,9 +306,18 @@ public partial class Terminal : IDisposable
             await Task.Delay(30);
             await InitCmdResizeHandles();
         }
-    }
 
-    string _prevDockForInit = "";
+        // Init xterm for sessions whose div is already in the DOM
+        foreach (var s in Sessions.Where(s => !s.XtermInited && !s.Minimized).ToList())
+        {
+            try
+            {
+                var ready = await JS.InvokeAsync<bool>("initXterm", s.Id, s.FontSize);
+                if (ready) s.XtermInited = true;
+            }
+            catch { /* JS error — will retry on next render */ }
+        }
+    }
 
     async Task InitCmdResizeHandles()
     {
@@ -339,7 +350,6 @@ public partial class Terminal : IDisposable
                             Left = item.Left, Top = item.Top,
                             Width = item.Width, Height = item.Height,
                             Minimized = item.Minimized, FontSize = item.FontSize,
-                            CurrentDir = item.CurrentDir, CurrentUser = item.CurrentUser,
                             ZIndex = ++_maxZ
                         };
                         Sessions.Add(s);
@@ -354,7 +364,11 @@ public partial class Terminal : IDisposable
         OpenNewTerminal();
     }
 
-    public void Dispose() => _dotNetRef?.Dispose();
+    public async ValueTask DisposeAsync()
+    {
+        _dotNetRef?.Dispose();
+        try { await JS.InvokeVoidAsync("disposeAllXterms"); } catch { }
+    }
 
     sealed class LayoutItem
     {
@@ -364,8 +378,6 @@ public partial class Terminal : IDisposable
         public double Height { get; set; }
         public bool Minimized { get; set; }
         public int FontSize { get; set; } = 15;
-        public string CurrentDir { get; set; } = "/root";
-        public string CurrentUser { get; set; } = "root";
     }
 
     void OpenNewTerminal()
@@ -384,23 +396,6 @@ public partial class Terminal : IDisposable
         Sessions.Add(session);
         StateHasChanged();
         _ = InitWindowJs(session);
-        _ = LoadMotd(session);
-    }
-
-    async Task LoadMotd(TerminalSession session)
-    {
-        try
-        {
-            var raw = await Ssh.ExecuteAsync("uname -snrmo; echo; cat /etc/motd 2>/dev/null || true");
-            var motd = StripAnsi(raw.TrimEnd());
-            if (!string.IsNullOrWhiteSpace(motd))
-            {
-                var banner = new TermEntry { Prompt = "", Command = "", Output = motd, IsBanner = true };
-                session.History.Insert(0, banner);
-                StateHasChanged();
-            }
-        }
-        catch { }
     }
 
     async Task InitWindowJs(TerminalSession session)
@@ -411,22 +406,6 @@ public partial class Terminal : IDisposable
         await JS.InvokeVoidAsync("initDragWindow", $"win-{session.Id}", $"titlebar-{session.Id}", _dotNetRef);
         foreach (var dir in new[] { "nw", "ne", "sw", "se" })
             await JS.InvokeVoidAsync("initResizeWindow", $"win-{session.Id}", $"rh-{dir}-{session.Id}", _dotNetRef, dir);
-        await JS.InvokeVoidAsync("focusElement", $"inp-{session.Id}");
-    }
-
-    async Task SyncPositions()
-    {
-        foreach (var s in Sessions)
-        {
-            try
-            {
-                var pos = await JS.InvokeAsync<double[]?>("getWindowPos", $"win-{s.Id}");
-                if (pos != null && pos.Length == 4)
-                { s.Left = pos[0]; s.Top = pos[1]; s.Width = pos[2]; s.Height = pos[3]; }
-            }
-            catch { }
-        }
-        SaveLayout();
     }
 
     void SaveLayout()
@@ -434,28 +413,56 @@ public partial class Terminal : IDisposable
         var layout = Sessions.Select(s => new LayoutItem
         {
             Left = s.Left, Top = s.Top, Width = s.Width, Height = s.Height,
-            Minimized = s.Minimized, FontSize = s.FontSize,
-            CurrentDir = s.CurrentDir, CurrentUser = s.CurrentUser
+            Minimized = s.Minimized, FontSize = s.FontSize
         }).ToList();
         _ = JS.InvokeVoidAsync("localStorage.setItem", "term-layout",
             System.Text.Json.JsonSerializer.Serialize(layout));
     }
 
-    void CloseSession(TerminalSession s)   { Sessions.Remove(s); SaveLayout(); StateHasChanged(); }
-    void ClearSession(TerminalSession s)   { s.History.Clear(); StateHasChanged(); }
-    void ToggleMinimize(TerminalSession s)
+    void CloseSession(TerminalSession s)
     {
-        if (s.Maximized) { s.Maximized = false; }
-        else { s.Minimized = !s.Minimized; }
+        _ = JS.InvokeVoidAsync("disposeXterm", s.Id);
+        Sessions.Remove(s);
         SaveLayout();
         StateHasChanged();
     }
-    void ToggleMaximize(TerminalSession s) { s.Maximized = !s.Maximized; StateHasChanged(); }
-    void BringToFront(TerminalSession s)   { s.ZIndex = ++_maxZ; _activeSession = s; StateHasChanged(); }
+
+    void ClearSession(TerminalSession s) =>
+        _ = JS.InvokeVoidAsync("xtermClear", s.Id);
+
+    void ToggleMinimize(TerminalSession s)
+    {
+        if (s.Maximized) { s.Maximized = false; }
+        else
+        {
+            s.Minimized = !s.Minimized;
+            if (!s.Minimized)
+            {
+                // Restore — fit xterm after render
+                s.XtermInited = false;
+            }
+        }
+        SaveLayout();
+        StateHasChanged();
+    }
+
+    void ToggleMaximize(TerminalSession s)
+    {
+        s.Maximized = !s.Maximized;
+        StateHasChanged();
+        _ = JS.InvokeVoidAsync("xtermFit", s.Id);
+    }
+
+    void BringToFront(TerminalSession s)
+    {
+        s.ZIndex = ++_maxZ;
+        _activeSession = s;
+        StateHasChanged();
+        _ = JS.InvokeVoidAsync("xtermFocus", s.Id);
+    }
 
     async Task ExpandSession(TerminalSession s)
     {
-        // Sync actual DOM geometry into Blazor state before changing anything
         try
         {
             var pos = await JS.InvokeAsync<double[]?>("getWindowPos", $"win-{s.Id}");
@@ -465,147 +472,39 @@ public partial class Terminal : IDisposable
 
         if (s.IsExpanded)
         {
-            s.Left   = s.PreExpandLeft;
-            s.Top    = s.PreExpandTop;
-            s.Width  = s.PreExpandWidth;
-            s.Height = s.PreExpandHeight;
+            s.Left = s.PreExpandLeft; s.Top    = s.PreExpandTop;
+            s.Width = s.PreExpandWidth; s.Height = s.PreExpandHeight;
             s.IsExpanded = false;
         }
         else
         {
-            s.PreExpandLeft   = s.Left;
-            s.PreExpandTop    = s.Top;
-            s.PreExpandWidth  = s.Width;
-            s.PreExpandHeight = s.Height;
-            s.Width  = 1200;
-            s.Height = 780;
-            s.Left   = Math.Max(0, s.Left - 250);
-            s.Top    = Math.Max(0, s.Top  - 160);
+            s.PreExpandLeft = s.Left; s.PreExpandTop    = s.Top;
+            s.PreExpandWidth = s.Width; s.PreExpandHeight = s.Height;
+            s.Width = 1200; s.Height = 780;
+            s.Left  = Math.Max(0, s.Left - 250);
+            s.Top   = Math.Max(0, s.Top  - 160);
             s.IsExpanded = true;
         }
         s.ZIndex = ++_maxZ;
         SaveLayout();
         await JS.InvokeVoidAsync("setWindowGeometry", $"win-{s.Id}", s.Left, s.Top, s.Width, s.Height);
+        await JS.InvokeVoidAsync("xtermFit", s.Id);
         StateHasChanged();
     }
 
     async void CopySession(TerminalSession s)
     {
-        var sb = new System.Text.StringBuilder();
-        foreach (var e in s.History)
-        {
-            sb.AppendLine($"{e.Prompt} {e.Command}");
-            if (!string.IsNullOrEmpty(e.Output)) sb.AppendLine(e.Output);
-            sb.AppendLine();
-        }
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", sb.ToString());
+        await JS.InvokeVoidAsync("xtermCopyAll", s.Id);
         s.Copied = true; StateHasChanged();
         await Task.Delay(2000);
         s.Copied = false; StateHasChanged();
     }
 
-    async Task HandleKey(KeyboardEventArgs e, TerminalSession s)
+    async Task OnFontSizeChange(TerminalSession s, ChangeEventArgs e)
     {
-        if (e.Key == "Enter") { await SendCommand(s); return; }
-        if (e.Key == "ArrowUp")
-        {
-            if (s.CmdHistory.Count == 0) return;
-            if (s.CmdHistoryIndex < s.CmdHistory.Count - 1) s.CmdHistoryIndex++;
-            s.CurrentCommand = s.CmdHistory[s.CmdHistory.Count - 1 - s.CmdHistoryIndex];
-            StateHasChanged(); return;
-        }
-        if (e.Key == "ArrowDown")
-        {
-            if (s.CmdHistoryIndex > 0) { s.CmdHistoryIndex--; s.CurrentCommand = s.CmdHistory[s.CmdHistory.Count - 1 - s.CmdHistoryIndex]; }
-            else { s.CmdHistoryIndex = -1; s.CurrentCommand = ""; }
-            StateHasChanged(); return;
-        }
-        if (e.Key == "l" && e.CtrlKey) ClearSession(s);
-    }
-
-    async Task SendCommand(TerminalSession s)
-    {
-        var cmd = s.CurrentCommand.Trim();
-        if (string.IsNullOrEmpty(cmd) || s.IsRunning) return;
-        s.CmdHistory.Add(cmd);
-        s.CmdHistoryIndex = -1;
-        s.CurrentCommand = "";
-        s.IsRunning = true;
-        var entry = new TermEntry { Prompt = s.Prompt, Command = cmd, IsRunning = true };
-        s.History.Add(entry);
-        StateHasChanged();
-        await ScrollOutput(s);
-        try
-        {
-            cmd = FormatLsCmd(cmd);
-            var suMatch = ParseSu(cmd);
-            var isExit = cmd is "exit" or "logout";
-            var isCd = cmd == "cd" || cmd.StartsWith("cd ") || cmd.StartsWith("cd\t");
-            if (isExit && s.CurrentUser != "root")
-            {
-                s.CurrentUser = "root"; s.CurrentDir = "/root";
-                entry.Output = ""; entry.IsRunning = false; return;
-            }
-            if (suMatch is not null)
-            {
-                var homeOut = (await Ssh.ExecuteAsync($"getent passwd {suMatch} | cut -d: -f6")).Trim();
-                if (!string.IsNullOrEmpty(homeOut) && homeOut.StartsWith("/"))
-                { s.CurrentUser = suMatch; s.CurrentDir = homeOut; entry.Output = $"→ {suMatch} ({homeOut})"; }
-                else { entry.Output = $"Usuario '{suMatch}' no encontrado"; entry.IsError = true; }
-                entry.IsRunning = false; return;
-            }
-            string sshCmd = isCd
-                ? s.WrapCmd($"{(cmd == "cd" ? "cd ~" : cmd)} && pwd")
-                : s.WrapCmd(cmd);
-            var output = StripAnsi((await Ssh.ExecuteAsync(sshCmd)).TrimEnd());
-            if (isCd)
-            {
-                var newDir = output.Split('\n').LastOrDefault(l => l.StartsWith("/"))?.Trim();
-                if (!string.IsNullOrEmpty(newDir)) { s.CurrentDir = newDir; entry.Output = ""; }
-                else { entry.Output = output; entry.IsError = !string.IsNullOrEmpty(output); }
-            }
-            else entry.Output = output;
-            entry.IsRunning = false;
-        }
-        catch (Exception ex) { entry.Output = ex.Message; entry.IsError = true; entry.IsRunning = false; }
-        finally
-        {
-            s.IsRunning = false;
-            StateHasChanged();
-            await ScrollOutput(s);
-            await JS.InvokeVoidAsync("focusElement", $"inp-{s.Id}");
-        }
-    }
-
-    void FocusInput(TerminalSession s) =>
-        _ = JS.InvokeVoidAsync("focusElement", $"inp-{s.Id}");
-
-    async Task ScrollOutput(TerminalSession s) =>
-        await JS.InvokeVoidAsync("scrollElementToBottom", $"out-{s.Id}");
-
-    static readonly System.Text.RegularExpressions.Regex _ansiRe =
-        new(@"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    static string StripAnsi(string s) => _ansiRe.Replace(s, "");
-
-    static readonly System.Text.RegularExpressions.Regex _lsRe =
-        new(@"^ls(\s+|$)", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    static string FormatLsCmd(string cmd)
-    {
-        // Pipe bare `ls` (no -l / -1) through `column` for columnar output without TTY
-        if (!_lsRe.IsMatch(cmd)) return cmd;
-        if (cmd.Contains("-l") || cmd.Contains("-1")) return cmd;
-        return cmd.TrimEnd() + " --color=never | column";
-    }
-
-    static string? ParseSu(string cmd)
-    {
-        var parts = cmd.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0 || parts[0] != "su") return null;
-        if (parts.Length == 1) return "root";
-        var last = parts[^1];
-        return last.StartsWith("-") ? "root" : last;
+        s.FontSize = int.Parse(e.Value!.ToString()!);
+        SaveLayout();
+        await JS.InvokeVoidAsync("setXtermFontSize", s.Id, s.FontSize);
     }
 
     // ── Help categories ──────────────────────────────────────
@@ -660,31 +559,10 @@ public partial class Terminal : IDisposable
 public class TerminalSession
 {
     public string Id { get; set; } = "";
-    public string CurrentDir { get; set; } = "/root";
-    public string CurrentUser { get; set; } = "root";
-    public string Prompt => $"{CurrentUser}@cs2:{ShortDir}$ ";
-    public string UserAtHost => $"{CurrentUser}@cs2:{CurrentDir}";
-    string ShortDir => CurrentDir.StartsWith("/root") && CurrentUser == "root"
-        ? "~" + CurrentDir[5..]
-        : CurrentDir.StartsWith($"/home/{CurrentUser}")
-            ? "~" + CurrentDir[(6 + CurrentUser.Length)..]
-            : CurrentDir;
-
-    public string WrapCmd(string inner)
-    {
-        var isRootHome = CurrentDir == "/root" || CurrentDir == "~";
-        var cd = (CurrentUser == "root" && isRootHome) ? "" : $"cd '{CurrentDir.Replace("'", "'\\''")}' && ";
-        var full = $"{cd}{inner}";
-        return CurrentUser == "root" ? full : $"su - {CurrentUser} -c '{full.Replace("'", "\\'")}'";
-    }
-
-    public string CurrentCommand { get; set; } = "";
-    public bool IsRunning { get; set; }
-    public bool Copied { get; set; }
+    public string Title { get; set; } = "Terminal";
     public bool ShowHelp { get; set; }
-    public List<TermEntry> History { get; set; } = new();
-    public List<string> CmdHistory { get; set; } = new();
-    public int CmdHistoryIndex { get; set; } = -1;
+    public bool Copied { get; set; }
+    public bool XtermInited { get; set; }
     public int FontSize { get; set; } = 15;
 
     public double Left { get; set; }
@@ -718,14 +596,4 @@ public class CmdItem
 {
     public long DbId { get; set; }
     public string Text { get; set; } = "";
-}
-
-public class TermEntry
-{
-    public string Prompt { get; set; } = "";
-    public string Command { get; set; } = "";
-    public string Output { get; set; } = "";
-    public bool IsRunning { get; set; }
-    public bool IsError { get; set; }
-    public bool IsBanner { get; set; }
 }

@@ -1500,3 +1500,9 @@ div[style*="padding:0 0.5rem"] .nm-layout-toggle {
 [data-theme="zelda"] .nm-tb-link.active {
     box-shadow: inset 0 -2px 0 #c8a020;
 }
+
+/* ── xterm.js global overrides (not scoped — xterm injects elements via JS) ── */
+.term-win-xterm { display: flex; flex-direction: column; }
+.term-win-xterm .xterm { flex: 1; min-height: 0; }
+.term-win-xterm .xterm-viewport { overflow-y: auto !important; }
+.term-win-xterm .xterm-screen { height: 100% !important; }

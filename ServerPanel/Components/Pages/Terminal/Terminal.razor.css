@@ -590,7 +590,19 @@
 .term-btn-ok { color: #4ade80 !important; border-color: #166534 !important; }
 
 
-/* ── Output ── */
+/* ── xterm container ── */
+.term-win-xterm {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 4px 8px;
+    background: #0f1117;
+}
+
+    .term-win-xterm .xterm { height: 100%; }
+    .term-win-xterm .xterm-viewport { overflow-y: auto !important; }
+
+/* ── Output (legacy, unused) ── */
 .term-win-output {
     flex: 1;
     overflow-y: auto;

@@ -113,6 +113,8 @@ window.initResizeWindow = function (winId, handleId, dotNet, dir) {
         if (dotNet) dotNet.invokeMethodAsync('OnWindowGeometry', winId,
             parseFloat(win.style.left) || 0, parseFloat(win.style.top) || 0,
             parseFloat(win.style.width) || 700, parseFloat(win.style.height) || 460);
+        const sid = winId.startsWith('win-') ? winId.slice(4) : winId;
+        window.xtermFit && window.xtermFit(sid);
     });
 };
 
@@ -262,6 +264,229 @@ window.downloadTextFile = function (filename, content) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+};
+
+// ── Sidebar resize ──────────────────────────────────────────────────────────
+
+// ── xterm.js + SignalR terminal ──────────────────────────────────────────────
+
+let _termConn = null;
+let _termConnPromise = null; // serializes concurrent start attempts
+const _xtermInstances = {};
+
+async function _getConnection() {
+    if (_termConn && _termConn.state === signalR.HubConnectionState.Connected)
+        return _termConn;
+
+    // If a start is already in flight, wait for it
+    if (_termConnPromise) return _termConnPromise;
+
+    _termConnPromise = (async () => {
+        const conn = new signalR.HubConnectionBuilder()
+            .withUrl('/panel/hubs/terminal')
+            .withAutomaticReconnect()
+            .build();
+
+        conn.on('Output', (sessionId, b64) => {
+            const inst = _xtermInstances[sessionId];
+            if (!inst) return;
+            const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+            inst.term.write(bytes);
+        });
+
+        conn.on('Closed', (sessionId) => {
+            const inst = _xtermInstances[sessionId];
+            if (inst) inst.term.writeln('\r\n\x1b[31m[conexión cerrada]\x1b[0m');
+        });
+
+        conn.on('Error', (sessionId, msg) => {
+            const inst = _xtermInstances[sessionId];
+            if (inst) inst.term.writeln('\r\n\x1b[31mError SSH: ' + msg + '\x1b[0m');
+        });
+
+        conn.onreconnected(() => {
+            for (const [sid, inst] of Object.entries(_xtermInstances)) {
+                inst.term.writeln('\r\n\x1b[33m[reconectando...]\x1b[0m');
+                conn.invoke('OpenTerminal', sid, inst.term.cols, inst.term.rows).catch(() => {});
+            }
+        });
+
+        await conn.start();
+
+        if (conn.state !== signalR.HubConnectionState.Connected)
+            throw new Error('SignalR no alcanzó estado Connected tras start()');
+
+        _termConn = conn;
+        _termConnPromise = null;
+        return conn;
+    })();
+
+    return _termConnPromise;
+}
+
+function _toBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+}
+
+window.initXterm = async function (sessionId, fontSize) {
+    if (_xtermInstances[sessionId]) return true;
+
+    const container = document.getElementById('xterm-' + sessionId);
+    if (!container) return false;
+
+    // ── 1. Create Terminal ───────────────────────────────────
+    let term;
+    try {
+        term = new Terminal({
+            cursorBlink: true,
+            fontFamily: '"Cascadia Code","Fira Code","Consolas",monospace',
+            fontSize: fontSize || 15,
+            cols: 80, rows: 24,        // sensible defaults if FitAddon fails
+            scrollback: 10000,
+            theme: {
+                background:'#0f1117', foreground:'#e2e8f0', cursor:'#4ade80',
+                black:'#1e293b', brightBlack:'#475569',
+                red:'#f87171',   brightRed:'#fca5a5',
+                green:'#4ade80', brightGreen:'#86efac',
+                yellow:'#fbbf24',brightYellow:'#fde68a',
+                blue:'#60a5fa',  brightBlue:'#93c5fd',
+                magenta:'#c084fc',brightMagenta:'#d8b4fe',
+                cyan:'#22d3ee',  brightCyan:'#67e8f9',
+                white:'#e2e8f0', brightWhite:'#f8fafc',
+            },
+            allowProposedApi: true,
+        });
+    } catch(e) {
+        console.error('[xterm] Terminal constructor failed:', e);
+        container.innerHTML = '<pre style="color:#f87171;padding:8px">Terminal no disponible: ' + e.message + '</pre>';
+        return false;
+    }
+
+    // ── 2. Load FitAddon (optional — handle both global name styles) ──
+    let fitAddon = null;
+    try {
+        // @xterm/addon-fit may export as FitAddon.FitAddon (UMD namespace) or just FitAddon
+        const FA = window.FitAddon;
+        const FitAddonCls = FA && typeof FA.FitAddon === 'function' ? FA.FitAddon
+                          : FA && typeof FA === 'function'          ? FA
+                          : null;
+        if (FitAddonCls) {
+            fitAddon = new FitAddonCls();
+            term.loadAddon(fitAddon);
+        } else {
+            console.warn('[xterm] FitAddon not found — using fixed 80x24');
+        }
+    } catch(e) {
+        console.warn('[xterm] FitAddon failed:', e);
+        fitAddon = null;
+    }
+
+    // ── 3. Open terminal ─────────────────────────────────────
+    try {
+        term.open(container);
+    } catch(e) {
+        console.error('[xterm] term.open() failed:', e);
+        return false;
+    }
+
+    // ── 4. Fit + focus (after layout) ───────────────────────
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    if (fitAddon) { try { fitAddon.fit(); } catch(e) {} }
+    term.focus();
+
+    _xtermInstances[sessionId] = { term, fitAddon };
+    container.addEventListener('mousedown', () => setTimeout(() => term.focus(), 0));
+
+    // ── 5. SignalR + SSH ─────────────────────────────────────
+    try {
+        const conn = await _getConnection();
+        await conn.invoke('OpenTerminal', sessionId, term.cols, term.rows);
+
+        term.onData(data => conn.invoke('Input', sessionId, _toBase64(data)).catch(() => {}));
+
+        term.onTitleChange(title => {
+            const el = document.getElementById('win-title-' + sessionId);
+            if (el) el.textContent = title;
+        });
+
+        if (fitAddon) {
+            const ro = new ResizeObserver(() => {
+                if (container.offsetParent === null) return;
+                try { fitAddon.fit(); } catch(e) {}
+                conn.invoke('Resize', sessionId, term.cols, term.rows).catch(() => {});
+            });
+            ro.observe(container);
+            _xtermInstances[sessionId].ro = ro;
+        }
+    } catch (err) {
+        console.error('[xterm] SignalR/SSH error:', err);
+        term.writeln('\r\n\x1b[31mError de conexión: ' + err.message + '\x1b[0m');
+    }
+
+    return true;
+};
+
+window.disposeXterm = function (sessionId) {
+    const inst = _xtermInstances[sessionId];
+    if (!inst) return;
+    try { inst.ro && inst.ro.disconnect(); } catch {}
+    try { inst.term.dispose(); } catch {}
+    delete _xtermInstances[sessionId];
+    if (_termConn && _termConn.state === signalR.HubConnectionState.Connected)
+        _termConn.invoke('CloseTerminal', sessionId).catch(() => {});
+};
+
+window.xtermFocus = function (sessionId) {
+    const inst = _xtermInstances[sessionId];
+    if (inst) inst.term.focus();
+};
+
+window.xtermPaste = function (sessionId, text) {
+    const inst = _xtermInstances[sessionId];
+    if (!inst) return;
+    inst.term.paste(text);
+    inst.term.focus();
+};
+
+window.xtermSendLine = function (sessionId, text) {
+    if (!_termConn || _termConn.state !== signalR.HubConnectionState.Connected) return;
+    _termConn.invoke('Input', sessionId, _toBase64(text + '\n')).catch(() => {});
+};
+
+window.xtermClear = function (sessionId) {
+    const inst = _xtermInstances[sessionId];
+    if (inst) inst.term.clear();
+};
+
+window.xtermCopyAll = function (sessionId) {
+    const inst = _xtermInstances[sessionId];
+    if (!inst) return;
+    inst.term.selectAll();
+    const text = inst.term.getSelection();
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+};
+
+window.setXtermFontSize = function (sessionId, size) {
+    const inst = _xtermInstances[sessionId];
+    if (!inst) return;
+    inst.term.options.fontSize = size;
+    inst.fitAddon.fit();
+};
+
+window.xtermFit = function (sessionId) {
+    const inst = _xtermInstances[sessionId];
+    if (!inst) return;
+    inst.fitAddon.fit();
+    if (_termConn && _termConn.state === signalR.HubConnectionState.Connected)
+        _termConn.invoke('Resize', sessionId, inst.term.cols, inst.term.rows).catch(() => {});
+};
+
+window.disposeAllXterms = function () {
+    for (const sid of Object.keys(_xtermInstances)) window.disposeXterm(sid);
+    if (_termConn) { _termConn.stop().catch(() => {}); _termConn = null; }
 };
 
 // ── Sidebar resize ──────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+using ServerPanel.Services;
+
 namespace ServerPanel.Contracts
 {
     public interface ISshService
@@ -15,5 +17,8 @@ namespace ServerPanel.Contracts
         /// Dispose del resultado cierra el túnel y desconecta.
         /// </summary>
         IAsyncDisposable OpenTunnel(uint localPort, string remoteHost, uint remotePort);
+
+        /// <summary>Abre un shell interactivo con PTY en el servidor remoto.</summary>
+        SshShellSession OpenShell(uint cols, uint rows);
     }
 }

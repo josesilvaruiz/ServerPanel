@@ -22,6 +22,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@xterm/xterm@@5/css/xterm.css" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
@@ -29,6 +30,9 @@
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@@8/dist/browser/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@xterm/xterm@@5/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@xterm/addon-fit@@0.10/lib/addon-fit.min.js"></script>
     <script src="theme.js"></script>
     <script src="terminal.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
