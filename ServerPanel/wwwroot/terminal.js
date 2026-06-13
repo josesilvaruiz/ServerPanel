@@ -392,20 +392,38 @@ window.initXterm = async function (sessionId, fontSize) {
         return false;
     }
 
-    // ── 4. Fit + focus (after layout) ───────────────────────
+    // ── 4. Guard + handlers BEFORE any await to prevent double-init race ───────
+    // Blazor can fire OnAfterRenderAsync again during the rAF below; setting the
+    // instance here ensures the guard check in initXterm returns early on the
+    // second call instead of creating a second terminal that overwrites the DOM.
+    _xtermInstances[sessionId] = { term, fitAddon };
+
+    // Send keystrokes — no state check, just try; invoke fails gracefully if disconnected
+    term.onData(data => {
+        if (_termConn)
+            _termConn.invoke('Input', sessionId, _toBase64(data)).catch(() => {});
+    });
+
+    // Focus xterm whenever the user clicks anywhere inside the terminal window
+    // (covers title bar, toolbar, and the xterm area itself)
+    const windowEl = document.getElementById('win-' + sessionId);
+    if (windowEl) {
+        windowEl.addEventListener('mousedown', (e) => {
+            if (!e.target.closest('button, input, select, textarea, a'))
+                setTimeout(() => term.focus(), 0);
+        });
+    }
+    container.addEventListener('mousedown', () => term.focus());
+
+    // ── Fit + focus (needs layout to be flushed first) ───────────────────────
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     if (fitAddon) { try { fitAddon.fit(); } catch(e) {} }
     term.focus();
-
-    _xtermInstances[sessionId] = { term, fitAddon };
-    container.addEventListener('mousedown', () => setTimeout(() => term.focus(), 0));
 
     // ── 5. SignalR + SSH ─────────────────────────────────────
     try {
         const conn = await _getConnection();
         await conn.invoke('OpenTerminal', sessionId, term.cols, term.rows);
-
-        term.onData(data => conn.invoke('Input', sessionId, _toBase64(data)).catch(() => {}));
 
         term.onTitleChange(title => {
             const el = document.getElementById('win-title-' + sessionId);
@@ -487,6 +505,13 @@ window.xtermFit = function (sessionId) {
 window.disposeAllXterms = function () {
     for (const sid of Object.keys(_xtermInstances)) window.disposeXterm(sid);
     if (_termConn) { _termConn.stop().catch(() => {}); _termConn = null; }
+};
+
+window.setZIndexAndFocus = function (winId, zIndex, sessionId) {
+    const el = document.getElementById(winId);
+    if (el) el.style.zIndex = zIndex;
+    const inst = _xtermInstances[sessionId];
+    if (inst) inst.term.focus();
 };
 
 // ── Sidebar resize ──────────────────────────────────────────────────────────

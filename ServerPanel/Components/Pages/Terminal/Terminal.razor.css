@@ -597,7 +597,12 @@
     overflow: hidden;
     padding: 4px 8px;
     background: #0f1117;
+    outline: 1px solid transparent;
+    transition: outline-color .1s;
 }
+
+    /* Green ring when xterm has focus — xterm.js adds .xterm-focus to the .xterm element */
+    .term-win-xterm:has(.xterm-focus) { outline-color: rgba(74, 222, 128, 0.25); }
 
     .term-win-xterm .xterm { height: 100%; }
     .term-win-xterm .xterm-viewport { overflow-y: auto !important; }

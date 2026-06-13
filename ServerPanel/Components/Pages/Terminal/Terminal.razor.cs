@@ -457,8 +457,10 @@ public partial class Terminal : IAsyncDisposable
     {
         s.ZIndex = ++_maxZ;
         _activeSession = s;
-        StateHasChanged();
-        _ = JS.InvokeVoidAsync("xtermFocus", s.Id);
+        // Update z-index and focus directly in JS — no StateHasChanged() to avoid
+        // a Blazor re-render that could disrupt xterm focus before xtermFocus runs.
+        // s.ZIndex is updated in C# so the next render (from any cause) outputs correctly.
+        _ = JS.InvokeVoidAsync("setZIndexAndFocus", $"win-{s.Id}", s.ZIndex, s.Id);
     }
 
     async Task ExpandSession(TerminalSession s)

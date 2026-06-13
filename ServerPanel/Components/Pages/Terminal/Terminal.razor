@@ -228,6 +228,7 @@
     @foreach (var session in Sessions)
     {
         <div id="win-@session.Id"
+             @key="session.Id"
              class="term-window @(session.Minimized ? "term-window-minimized" : "") @(session.Maximized ? "term-window-maximized" : "")"
              style="z-index:@session.ZIndex;left:@(session.Left)px;top:@(session.Top)px;width:@(session.Width)px;height:@(session.Height)px"
              @onmousedown="() => BringToFront(session)">
@@ -293,7 +294,7 @@
             @if (!session.Minimized)
             {
                 <div class="term-win-toolbar">
-                    <button type="button" class="term-btn" title="Referencia de comandos tmux y Linux" @onclick="() => session.ShowHelp = !session.ShowHelp">
+<button type="button" class="term-btn" title="Referencia de comandos tmux y Linux" @onclick="() => session.ShowHelp = !session.ShowHelp">
                         <i class="ti ti-book"></i> Referencia
                     </button>
                     <button type="button" class="term-btn" title="Limpiar pantalla" @onclick="() => ClearSession(session)">
@@ -304,7 +305,7 @@
                     </button>
                 </div>
 
-                <div id="xterm-@session.Id" class="term-win-xterm"></div>
+                <div id="xterm-@session.Id" @key="@($"xterm-{session.Id}")" class="term-win-xterm"></div>
 
                 <div class="term-rh term-rh-nw" id="rh-nw-@session.Id"></div>
                 <div class="term-rh term-rh-ne" id="rh-ne-@session.Id"></div>

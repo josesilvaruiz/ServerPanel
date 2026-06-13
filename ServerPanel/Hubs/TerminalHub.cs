@@ -38,26 +38,50 @@ public class TerminalHub : Hub
         var cts = new CancellationTokenSource();
         _sessions[key] = new TermInfo(shell, cts);
 
+        // Capture caller proxy once — the Hub instance may be recycled after this method returns.
+        var caller = Clients.Caller;
+
         _ = Task.Run(async () =>
         {
             var buf = new byte[65536];
+
+            // SSH.NET 2024+: ShellStream.Read() is non-blocking — returns 0 when the internal
+            // buffer is empty rather than blocking until data arrives. Drive reads from the
+            // DataReceived event; SemaphoreSlim(1,1) acts as a "data pending" flag.
+            var gate = new SemaphoreSlim(1, 1); // initialCount=1 flushes data already buffered
             try
             {
+                shell.Stream.DataReceived += (_, _) =>
+                {
+                    try { gate.Release(); } catch { /* gate already at max or disposed */ }
+                };
+
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    int n = await shell.Stream.ReadAsync(buf, 0, buf.Length, cts.Token);
-                    if (n == 0) break;
-                    var b64 = Convert.ToBase64String(buf, 0, n);
-                    await Clients.Caller.SendAsync("Output", sessionId, b64, cts.Token);
+                    await gate.WaitAsync(cts.Token);
+
+                    // Drain everything available right now (Read is non-blocking in SSH.NET 2024+)
+                    int n;
+                    do
+                    {
+                        n = shell.Stream.Read(buf, 0, buf.Length);
+                        if (n > 0)
+                        {
+                            var b64 = Convert.ToBase64String(buf, 0, n);
+                            await caller.SendAsync("Output", sessionId, b64, cts.Token);
+                        }
+                    }
+                    while (n > 0 && !cts.Token.IsCancellationRequested);
                 }
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { _logger.LogDebug("Terminal read ended ({Id}): {Msg}", sessionId, ex.Message); }
+            finally { gate.Dispose(); }
 
             if (_sessions.TryRemove(key, out var info))
                 info.Session.Dispose();
 
-            try { await Clients.Caller.SendAsync("Closed", sessionId); } catch { }
+            try { await caller.SendAsync("Closed", sessionId); } catch { }
         }, cts.Token);
     }
 
