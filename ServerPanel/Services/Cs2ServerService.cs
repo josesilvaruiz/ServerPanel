@@ -110,6 +110,11 @@ public class Cs2ServerService : ICs2ServerService
             Kube($"logs -n {_ns} deployment/{_dep} --tail=200 2>/dev/null"));
     }
 
+    public IAsyncEnumerable<string> StreamLiveConsoleAsync(CancellationToken ct) =>
+        _ssh.StreamCommandAsync(
+            Kube($"logs -f -n {_ns} deployment/{_dep} --tail=50 2>/dev/null"),
+            ct);
+
     public async Task<string> GetRecentConsoleAsync(int seconds = 3)
     {
         return await _ssh.ExecuteAsync(

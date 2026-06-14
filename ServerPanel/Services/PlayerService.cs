@@ -10,6 +10,7 @@ public class PlayerService : IPlayerService
 {
     private readonly ISshService _ssh;
     private readonly IRconService _rcon;
+    private readonly IServerQueryService _serverQuery;
     private readonly ILogger<PlayerService> _logger;
     private readonly string _ns;
     private readonly string _dep;
@@ -24,12 +25,14 @@ public class PlayerService : IPlayerService
     public PlayerService(
         ISshService ssh,
         IRconService rcon,
+        IServerQueryService serverQuery,
         ILogger<PlayerService> logger,
         IConfiguration configuration)
     {
-        _ssh    = ssh;
-        _rcon   = rcon;
-        _logger = logger;
+        _ssh         = ssh;
+        _rcon        = rcon;
+        _serverQuery = serverQuery;
+        _logger      = logger;
         var k8s = configuration.GetSection("Kubernetes");
         _ns               = k8s["Namespace"]        ?? "cs2";
         _dep              = k8s["Deployment"]       ?? "cs2-server";
@@ -48,6 +51,7 @@ public class PlayerService : IPlayerService
         {
             var output = await _rcon.ExecuteAsync("status");
             _logger.LogInformation("STATUS RAW:\n{Output}", output);
+            if (output.StartsWith("[RCON")) return [];
             return ParseStatusOutput(output);
         }
         catch (Exception ex)
@@ -59,46 +63,52 @@ public class PlayerService : IPlayerService
 
     public async Task<List<PlayerInfo>> GetPlayersAsync()
     {
-        var players = new List<PlayerInfo>();
-        try
+        // Try status first
+        var statusOutput = await _rcon.ExecuteAsync("status");
+        _logger.LogInformation("STATUS RAW:\n{Output}", statusOutput);
+
+        if (statusOutput.StartsWith("[RCON"))
+            throw new InvalidOperationException($"RCON no disponible: {statusOutput}");
+
+        var players = ParseStatusOutput(statusOutput);
+        _logger.LogInformation("Players parseados de status: {Count}", players.Count);
+
+        // Validation: if 0 and A2S_INFO says there are players → surface diagnostic
+        if (players.Count == 0)
         {
-            var output = await _rcon.ExecuteAsync("status");
-            _logger.LogInformation("STATUS RAW:\n{Output}", output);
-            players = ParseStatusOutput(output);
-            _logger.LogInformation("Players encontrados: {Count}", players.Count);
+            var serverInfo = await _serverQuery.GetServerInfoAsync();
+            if (serverInfo.IsOnline && serverInfo.Players > 0)
+                throw new PlayerStatusParseException(
+                    $"El servidor tiene {serverInfo.Players} jugador(es) según A2S pero RCON 'status' no los devuelve en un formato reconocible.",
+                    statusOutput);
+        }
 
-            var humanPlayers = players.Where(x => !x.IsBot).ToList();
-            if (humanPlayers.Count == 0) return players;
-
-            foreach (var player in humanPlayers)
+        // Enrichment: css_who → SteamID + clan
+        var humanPlayers = players.Where(x => !x.IsBot && x.UserId > 0).ToList();
+        foreach (var player in humanPlayers)
+        {
+            try
             {
-                try
-                {
-                    var whoOutput = await _rcon.ExecuteAsync($"css_who #{player.UserId}");
+                var whoOutput = await _rcon.ExecuteAsync($"css_who #{player.UserId}");
+                var steam64Match   = Regex.Match(whoOutput, @"SteamID64:\s*""([^""]+)""");
+                var clanMatch      = Regex.Match(whoOutput, @"Clan:\s*""([^""]*)""");
+                var groupsMatch    = Regex.Match(whoOutput, @"Groups\/Flags:\s*""([^""]*)""");
+                var communityMatch = Regex.Match(whoOutput, @"Community link:\s*""([^""]*)""");
 
-                    var steam64Match   = Regex.Match(whoOutput, @"SteamID64:\s*""([^""]+)""");
-                    var clanMatch      = Regex.Match(whoOutput, @"Clan:\s*""([^""]*)""");
-                    var groupsMatch    = Regex.Match(whoOutput, @"Groups\/Flags:\s*""([^""]*)""");
-                    var communityMatch = Regex.Match(whoOutput, @"Community link:\s*""([^""]*)""");
+                if (steam64Match.Success)   player.SteamId      = steam64Match.Groups[1].Value;
+                if (clanMatch.Success)      player.Clan         = clanMatch.Groups[1].Value;
+                if (groupsMatch.Success)    player.Groups       = groupsMatch.Groups[1].Value;
+                if (communityMatch.Success) player.CommunityUrl = communityMatch.Groups[1].Value;
 
-                    if (steam64Match.Success)   player.SteamId      = steam64Match.Groups[1].Value;
-                    if (clanMatch.Success)      player.Clan         = clanMatch.Groups[1].Value;
-                    if (groupsMatch.Success)    player.Groups       = groupsMatch.Groups[1].Value;
-                    if (communityMatch.Success) player.CommunityUrl = communityMatch.Groups[1].Value;
-
-                    _logger.LogInformation("WHO => UserId:{UserId} Name:{Name} Steam64:{Steam64}",
-                        player.UserId, player.Name, player.SteamId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Error obteniendo WHO de {Player}", player.Name);
-                }
+                _logger.LogInformation("WHO => UserId:{UserId} Name:{Name} Steam64:{Steam64}",
+                    player.UserId, player.Name, player.SteamId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "css_who falló para {Player}", player.Name);
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error obteniendo jugadores");
-        }
+
         return players;
     }
 
@@ -236,7 +246,10 @@ public class PlayerService : IPlayerService
         foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             var trimmed = line.Trim();
-            var nameMatch = Regex.Match(trimmed, @"""([^""]+)""");
+
+            // Player lines must contain a quoted name
+            // CS2 uses single quotes 'name', CS:GO uses double quotes "name"
+            var nameMatch = Regex.Match(trimmed, @"['""]([^'""]+)['""]");
             if (!nameMatch.Success) continue;
 
             var name  = nameMatch.Groups[1].Value;
@@ -245,7 +258,11 @@ public class PlayerService : IPlayerService
 
             if (!isBot)
             {
-                var m = Regex.Match(trimmed, @"^\s*(\d+)\s+\S+\s+(\d+)");
+                // Strip leading '#' (CS:GO format) so both formats parse the same way
+                // CS:GO: "#  2 "Name" ..."  →  "2 "Name" ..."
+                // CS2:   " 2  00:10  50 ..."  →  "2  00:10  50 ..."
+                var parseable = trimmed.TrimStart('#').TrimStart();
+                var m = Regex.Match(parseable, @"^(\d+)\s+\S+\s+(\d+)");
                 if (m.Success)
                 {
                     int.TryParse(m.Groups[1].Value, out userId);
@@ -264,4 +281,9 @@ public class PlayerService : IPlayerService
 
     private static string EscapeArg(string value) =>
         string.IsNullOrEmpty(value) ? "" : value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+}
+
+public sealed class PlayerStatusParseException(string message, string rawStatus) : Exception(message)
+{
+    public string RawStatus { get; } = rawStatus;
 }

@@ -6,6 +6,8 @@ namespace ServerPanel.Models
     {
         public bool Loading { get; set; } = true;
         public string StatusMessage { get; set; } = string.Empty;
+        public bool HasError { get; set; } = false;
+        public string RawStatus { get; set; } = string.Empty;
         public List<PlayerInfo> Players { get; set; } = new();
         public int CurrentPage { get; set; } = 1;
 

@@ -16,6 +16,8 @@ public interface ICs2ServerService
 
     Task<string> GetLiveConsoleAsync();
 
+    IAsyncEnumerable<string> StreamLiveConsoleAsync(CancellationToken ct);
+
     Task<string> GetRecentConsoleAsync(int seconds = 3);
 
     Task<string> GetRolloutStatusAsync();

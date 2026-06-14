@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ServerPanel.Models;
 using ServerPanel.Contracts;
+using ServerPanel.Services;
 using ServerPanel.Components.Pages.Players.Modals;
 
 namespace ServerPanel.Components.Pages.Players;
@@ -27,17 +28,31 @@ public partial class Players
 
     private async Task LoadPlayers()
     {
+        Model.Loading = true;
+        Model.HasError = false;
+        Model.StatusMessage = "";
+        Model.RawStatus = "";
+        StateHasChanged();
         try
         {
             Logger.LogInformation("Loading players...");
-            Model.Loading = true;
             Model.Players = await PlayerService.GetPlayersAsync();
             Logger.LogInformation("Players loaded: {Count}", Model.Players.Count);
             Model.CurrentPage = 1;
         }
+        catch (PlayerStatusParseException ex)
+        {
+            Logger.LogError(ex, "Status parse error");
+            Model.Players = [];
+            Model.HasError = true;
+            Model.StatusMessage = ex.Message;
+            Model.RawStatus = ex.RawStatus;
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading players");
+            Model.Players = [];
+            Model.HasError = true;
             Model.StatusMessage = ex.Message;
         }
         finally
@@ -88,13 +103,17 @@ public partial class Players
         try
         {
             await PlayerService.UnbanPlayerAsync(target);
+            Model.HasError = false;
             Model.StatusMessage = $"Ban levantado: {target}";
             UnbanTarget = "";
         }
         catch (Exception ex)
         {
-            Model.StatusMessage = ex.Message;
+            Logger.LogError(ex, "Error al desbanear {Target}", target);
+            Model.HasError = false;
+            Model.StatusMessage = $"Error al desbanear: {ex.Message}";
         }
+        StateHasChanged();
     }
 
     private async Task CopyToClipboard(string text)
@@ -181,7 +200,8 @@ public partial class Players
         catch (Exception ex)
         {
             Logger.LogError(ex, "[Confirm] Error ejecutando {Action}", SelectedAction);
-            Model.StatusMessage = ex.Message;
+            Model.HasError = false;
+            Model.StatusMessage = $"Error: {ex.Message}";
         }
         finally
         {

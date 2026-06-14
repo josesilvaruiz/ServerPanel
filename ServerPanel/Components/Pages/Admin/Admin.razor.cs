@@ -77,30 +77,20 @@ public partial class Admin : IDisposable
     }
 
     string ConsoleCommand = "";
-    string LiveConsole = "";
-    string _cmdLog = "";
+    List<string> _consoleLines = new();
+    const int MaxConsoleLines = 300;
     bool ConsoleCopied = false;
     bool ShowCmdHelp = false;
 
-    string GetConsoleDisplay()
+    void AppendConsoleLine(string line)
     {
-        var sb = new System.Text.StringBuilder();
-
-        if (!string.IsNullOrEmpty(LiveConsole))
-        {
-            var lines = LiveConsole.Split('\n');
-            sb.AppendLine(string.Join('\n', lines.TakeLast(40)).Trim());
-        }
-
-        if (!string.IsNullOrEmpty(_cmdLog))
-        {
-            if (!string.IsNullOrEmpty(LiveConsole))
-                sb.AppendLine("\n──── Comandos ───────────────────────────────");
-            sb.Append(_cmdLog);
-        }
-
-        return sb.Length == 0 ? "Conectando al servidor..." : sb.ToString();
+        _consoleLines.Add(line);
+        if (_consoleLines.Count > MaxConsoleLines)
+            _consoleLines.RemoveRange(0, _consoleLines.Count - MaxConsoleLines);
     }
+
+    string GetConsoleDisplay() =>
+        _consoleLines.Count == 0 ? "Conectando al servidor..." : string.Join('\n', _consoleLines);
 
     private record CmdEntry(string Cmd, string Desc);
     private record CmdCategory(string Name, string Icon, CmdEntry[] Commands);
@@ -219,10 +209,7 @@ public partial class Admin : IDisposable
         if (tab == "map" && WorkshopMaps.Count == 0)
             _ = LoadMaps();
         if (tab == "console")
-        {
-            _cmdLog = "";
             StartLiveConsole();
-        }
         else
             StopLiveConsole();
     }
@@ -230,26 +217,34 @@ public partial class Admin : IDisposable
     void StartLiveConsole()
     {
         StopLiveConsole();
+        _consoleLines.Clear();
         _consoleCts = new CancellationTokenSource();
-        var token = _consoleCts.Token;
-        _ = Task.Run(async () =>
+        _ = StreamLoopAsync(_consoleCts.Token);
+    }
+
+    async Task StreamLoopAsync(CancellationToken token)
+    {
+        try
         {
-            while (!token.IsCancellationRequested)
+            await foreach (var line in Cs2ServerService.StreamLiveConsoleAsync(token))
             {
-                try
+                AppendConsoleLine(line);
+                await InvokeAsync(async () =>
                 {
-                    var output = await Cs2ServerService.GetLiveConsoleAsync();
-                    LiveConsole = output;
-                    await InvokeAsync(async () =>
-                    {
-                        StateHasChanged();
-                        await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre");
-                    });
-                }
-                catch { }
-                try { await Task.Delay(2000, token); } catch { }
+                    StateHasChanged();
+                    try { await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre"); } catch { }
+                });
             }
-        }, token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                AppendConsoleLine($"[Error de conexión: {ex.Message}]");
+                StateHasChanged();
+            });
+        }
     }
 
     void StopLiveConsole()
@@ -370,8 +365,8 @@ public partial class Admin : IDisposable
 
     async void CopyConsole()
     {
-        if (string.IsNullOrEmpty(LiveConsole)) return;
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", LiveConsole);
+        if (_consoleLines.Count == 0) return;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", GetConsoleDisplay());
         ConsoleCopied = true;
         StateHasChanged();
         await Task.Delay(2000);
@@ -387,32 +382,27 @@ public partial class Admin : IDisposable
     async Task HandleConsole()
     {
         if (string.IsNullOrWhiteSpace(ConsoleCommand)) return;
-        var cmd = ConsoleCommand;
+        var cmd = ConsoleCommand.Trim();
         ConsoleCommand = "";
-        _cmdLog += $"> {cmd}\n";
+
+        AppendConsoleLine($"> {cmd}");
         await InvokeAsync(StateHasChanged);
 
-        string output;
         try
         {
-            var rconTask = Cs2ServerService.ExecuteConsoleCommandAsync(cmd);
-            await Task.Delay(1500);
-            var rconResponse = await rconTask;
-            var freshLogs = await Cs2ServerService.GetRecentConsoleAsync(seconds: 8);
-
-            if (!string.IsNullOrWhiteSpace(freshLogs))
-                output = freshLogs.Trim();
-            else if (!string.IsNullOrWhiteSpace(rconResponse))
-                output = rconResponse.Trim();
-            else
-                output = "(sin respuesta del servidor)";
+            var response = await Cs2ServerService.ExecuteConsoleCommandAsync(cmd);
+            if (!string.IsNullOrWhiteSpace(response))
+            {
+                foreach (var line in response.Split('\n'))
+                    if (!string.IsNullOrWhiteSpace(line))
+                        AppendConsoleLine($"  {line.Trim()}");
+            }
         }
         catch (Exception ex)
         {
-            output = $"[Error RCON: {ex.Message}]";
+            AppendConsoleLine($"[Error RCON: {ex.Message}]");
         }
 
-        _cmdLog += $"{output}\n\n";
         await InvokeAsync(StateHasChanged);
         await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre");
     }

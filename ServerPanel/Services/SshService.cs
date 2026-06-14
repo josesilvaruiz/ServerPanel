@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using Renci.SshNet;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
@@ -199,6 +200,51 @@ public class SshService : ISshService
 
             throw;
         }
+    }
+
+    public IAsyncEnumerable<string> StreamCommandAsync(string command, CancellationToken ct)
+    {
+        if (_settings == null) throw new InvalidOperationException("Configuración SSH no disponible");
+
+        var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(500)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleWriter = true
+        });
+
+        _ = Task.Run(() =>
+        {
+            SshClient? client = null;
+            try
+            {
+                client = BuildSshClient(_settings);
+                client.Connect();
+
+                using var reg = ct.Register(() => { try { client.Disconnect(); } catch { } });
+
+                using var cmd = client.CreateCommand(command);
+                cmd.CommandTimeout = TimeSpan.FromHours(12);
+                var ar = cmd.BeginExecute();
+
+                using var reader = new StreamReader(cmd.OutputStream);
+                string? line;
+                while ((line = reader.ReadLine()) != null && !ct.IsCancellationRequested)
+                    channel.Writer.TryWrite(CleanOutput(line));
+            }
+            catch when (ct.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en stream SSH: {Command}", command);
+                channel.Writer.TryWrite($"[Error: {ex.Message}]");
+            }
+            finally
+            {
+                channel.Writer.TryComplete();
+                try { client?.Dispose(); } catch { }
+            }
+        }, CancellationToken.None);
+
+        return channel.Reader.ReadAllAsync(ct);
     }
 
     private static readonly Regex _ansi = new(

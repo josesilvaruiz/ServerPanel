@@ -20,5 +20,8 @@ namespace ServerPanel.Contracts
 
         /// <summary>Abre un shell interactivo con PTY en el servidor remoto.</summary>
         SshShellSession OpenShell(uint cols, uint rows);
+
+        /// <summary>Ejecuta un comando SSH y devuelve su output línea a línea en tiempo real.</summary>
+        IAsyncEnumerable<string> StreamCommandAsync(string command, CancellationToken ct);
     }
 }

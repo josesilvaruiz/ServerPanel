@@ -187,6 +187,71 @@ public class ServerQueryService : IServerQueryService
         }
     }
 
+    public async Task<List<PlayerInfo>> GetPlayersAsync()
+    {
+        var players = new List<PlayerInfo>();
+        try
+        {
+            using var udp = new UdpClient();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var endpoint = new IPEndPoint(IPAddress.Parse(_host), _port);
+
+            // A2S_PLAYER: send initial request with -1 challenge to get real challenge
+            var initialReq = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x55, 0xFF, 0xFF, 0xFF, 0xFF };
+            await udp.SendAsync(initialReq, initialReq.Length, endpoint);
+            var resp1 = await udp.ReceiveAsync(cts.Token);
+
+            if (resp1.Buffer.Length < 5) return players;
+
+            // Server responded with player data directly (no challenge needed)
+            if (resp1.Buffer[4] == 0x44)
+                return ParseA2SPlayerResponse(resp1.Buffer);
+
+            // Server responded with challenge (0x41)
+            if (resp1.Buffer[4] != 0x41 || resp1.Buffer.Length < 9)
+                return players;
+
+            var challenge = resp1.Buffer.Skip(5).Take(4).ToArray();
+            var playerReq = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x55 }.Concat(challenge).ToArray();
+            await udp.SendAsync(playerReq, playerReq.Length, endpoint);
+            var resp2 = await udp.ReceiveAsync(cts.Token);
+
+            if (resp2.Buffer.Length >= 5 && resp2.Buffer[4] == 0x44)
+                return ParseA2SPlayerResponse(resp2.Buffer);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "A2S_PLAYER falló para {Host}:{Port}", _host, _port);
+        }
+        return players;
+    }
+
+    private static List<PlayerInfo> ParseA2SPlayerResponse(byte[] buffer)
+    {
+        var players = new List<PlayerInfo>();
+        try
+        {
+            using var stream = new MemoryStream(buffer);
+            using var reader = new BinaryReader(stream);
+            reader.ReadInt32(); // FF FF FF FF
+            reader.ReadByte(); // 0x44
+            var count = reader.ReadByte();
+
+            for (var i = 0; i < count; i++)
+            {
+                reader.ReadByte(); // player index
+                var name = ReadNullTerminated(reader);
+                reader.ReadInt32(); // score
+                reader.ReadSingle(); // duration
+
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                players.Add(new PlayerInfo { Name = name, IsBot = false });
+            }
+        }
+        catch { }
+        return players;
+    }
+
     private void ParseInfoResponse(
         BinaryReader reader,
         ServerInfo info)
