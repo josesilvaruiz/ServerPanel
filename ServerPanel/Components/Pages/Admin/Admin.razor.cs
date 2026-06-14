@@ -84,19 +84,22 @@ public partial class Admin : IDisposable
 
     string GetConsoleDisplay()
     {
-        if (string.IsNullOrEmpty(_cmdLog) && string.IsNullOrEmpty(LiveConsole))
-            return "Conectando al servidor...";
-
         var sb = new System.Text.StringBuilder();
-        if (!string.IsNullOrEmpty(_cmdLog))
-            sb.Append(_cmdLog);
+
         if (!string.IsNullOrEmpty(LiveConsole))
         {
-            if (!string.IsNullOrEmpty(_cmdLog))
-                sb.AppendLine("──────────────── Server Log ────────────────");
-            sb.Append(LiveConsole.Trim());
+            var lines = LiveConsole.Split('\n');
+            sb.AppendLine(string.Join('\n', lines.TakeLast(40)).Trim());
         }
-        return sb.ToString();
+
+        if (!string.IsNullOrEmpty(_cmdLog))
+        {
+            if (!string.IsNullOrEmpty(LiveConsole))
+                sb.AppendLine("\n──── Comandos ───────────────────────────────");
+            sb.Append(_cmdLog);
+        }
+
+        return sb.Length == 0 ? "Conectando al servidor..." : sb.ToString();
     }
 
     private record CmdEntry(string Cmd, string Desc);
@@ -384,37 +387,34 @@ public partial class Admin : IDisposable
     async Task HandleConsole()
     {
         if (string.IsNullOrWhiteSpace(ConsoleCommand)) return;
+        var cmd = ConsoleCommand;
+        ConsoleCommand = "";
+        _cmdLog += $"> {cmd}\n";
+        await InvokeAsync(StateHasChanged);
+
+        string output;
         try
         {
-            var cmd = ConsoleCommand;
-            ConsoleCommand = "";
-            _cmdLog += $"> {cmd}\n";
-            await InvokeAsync(StateHasChanged);
-
-            // Execute via RCON and simultaneously wait for server to process
             var rconTask = Cs2ServerService.ExecuteConsoleCommandAsync(cmd);
-            await Task.Delay(700); // let the server print its response to stdout
+            await Task.Delay(1500);
             var rconResponse = await rconTask;
-            var freshLogs = await Cs2ServerService.GetRecentConsoleAsync(seconds: 3);
+            var freshLogs = await Cs2ServerService.GetRecentConsoleAsync(seconds: 8);
 
-            // Prefer fresh kubectl logs (contains what the server actually printed),
-            // fall back to RCON response if logs are empty
-            string output;
             if (!string.IsNullOrWhiteSpace(freshLogs))
                 output = freshLogs.Trim();
             else if (!string.IsNullOrWhiteSpace(rconResponse))
                 output = rconResponse.Trim();
             else
-                output = "(sin respuesta)";
-
-            _cmdLog += $"{output}\n\n";
-            await InvokeAsync(StateHasChanged);
-            await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre");
+                output = "(sin respuesta del servidor)";
         }
         catch (Exception ex)
         {
-            ShowToast(false, ex.Message);
+            output = $"[Error RCON: {ex.Message}]";
         }
+
+        _cmdLog += $"{output}\n\n";
+        await InvokeAsync(StateHasChanged);
+        await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre");
     }
 
     async void ShowToast(bool ok, string msg)

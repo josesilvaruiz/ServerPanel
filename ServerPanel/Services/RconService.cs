@@ -1,27 +1,23 @@
-using System.Text;
+using CoreRCON;
+using System.Net;
 using ServerPanel.Contracts;
 
 namespace ServerPanel.Services;
 
 public class RconService : IRconService
 {
-    private readonly ISshService _ssh;
-    private readonly int _port;
+    private readonly string _host;
+    private readonly ushort _port;
     private readonly string _password;
     private readonly ILogger<RconService> _logger;
-    private readonly string _ns;
-    private readonly string _dep;
 
-    public RconService(ISshService ssh, IConfiguration configuration, ILogger<RconService> logger)
+    public RconService(IConfiguration configuration, ILogger<RconService> logger)
     {
-        _ssh      = ssh;
         _logger   = logger;
         var s     = configuration.GetSection("Rcon");
-        _port     = int.TryParse(s["Port"], out var p) ? p : 27015;
+        _host     = s["Host"]     ?? "127.0.0.1";
+        _port     = ushort.TryParse(s["Port"], out var p) ? p : (ushort)27015;
         _password = s["Password"] ?? "";
-        var k8s   = configuration.GetSection("Kubernetes");
-        _ns       = k8s["Namespace"]  ?? "cs2";
-        _dep      = k8s["Deployment"] ?? "cs2-server";
     }
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_password);
@@ -29,75 +25,21 @@ public class RconService : IRconService
     public async Task<string> ExecuteAsync(string command, CancellationToken ct = default)
     {
         if (!IsConfigured)
-            return "[RCON no configurado — añade Rcon:Password en appsettings.json]";
-
-        // Ejecuta el script python3 dentro del pod via kubectl exec.
-        // Dentro del contenedor, 127.0.0.1:port ES el servidor CS2.
-        var b64pwd    = Convert.ToBase64String(Encoding.UTF8.GetBytes(_password));
-        var b64cmd    = Convert.ToBase64String(Encoding.UTF8.GetBytes(command));
-        var pyScript  = BuildScript(b64pwd, b64cmd);
-        var scriptB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(pyScript));
-        var sshCmd    = $"kubectl exec -n {_ns} deployment/{_dep} -- python3 -c " +
-                        $"\"exec(__import__('base64').b64decode('{scriptB64}').decode())\"";
+            return "[RCON no configurado]";
 
         try
         {
-            var output = await _ssh.ExecuteAsync(sshCmd);
-            _logger.LogInformation("SSH-RCON '{Cmd}' => '{Out}'", command, output.Trim());
-            return output.Trim();
+            var endpoint = new IPEndPoint(IPAddress.Parse(_host), _port);
+            using var rcon = new RCON(endpoint, _password);
+            await rcon.ConnectAsync();
+            var response = await rcon.SendCommandAsync(command);
+            _logger.LogInformation("RCON '{Cmd}' => '{Out}'", command, response?.Trim());
+            return string.IsNullOrWhiteSpace(response) ? "(sin respuesta)" : response.Trim();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SSH-RCON error ejecutando '{Cmd}'", command);
+            _logger.LogError(ex, "RCON error para '{Cmd}'", command);
             return $"[RCON error: {ex.Message}]";
         }
     }
-
-    private string BuildScript(string b64pwd, string b64cmd) => $@"import socket, struct, base64
-
-pwd  = base64.b64decode('{b64pwd}').decode()
-cmd  = base64.b64decode('{b64cmd}').decode()
-port = {_port}
-TERM = bytes(2)
-
-def send(s, id, type, body):
-    d = body.encode('utf-8')
-    s.sendall(struct.pack('<iii', 4 + 4 + len(d) + 2, id, type) + d + TERM)
-
-def recv(s):
-    h = b''
-    while len(h) < 12:
-        x = s.recv(12 - len(h))
-        if not x:
-            break
-        h += x
-    if len(h) < 12:
-        return -1, -1, ''
-    sz, id, tp = struct.unpack('<iii', h)
-    r = b''
-    while len(r) < sz - 8:
-        x = s.recv(sz - 8 - len(r))
-        if not x:
-            break
-        r += x
-    return id, tp, r.rstrip(bytes(1)).decode('utf-8', 'replace')
-
-try:
-    with socket.create_connection(('127.0.0.1', port), 5) as s:
-        send(s, 1, 3, pwd)
-        pk = recv(s)
-        auth = pk if pk[1] == 2 else recv(s)
-        if auth[0] == -1:
-            print('[RCON: contrasena incorrecta]')
-        else:
-            send(s, 2, 2, cmd)
-            try:
-                out = recv(s)[2]
-                if out:
-                    print(out)
-            except Exception:
-                pass
-except Exception as e:
-    print('[RCON error: ' + str(e) + ']')
-";
 }

@@ -345,7 +345,7 @@
                 <p class="lbl"><i class="ti ti-terminal-2"></i> @L["Admin.Console.Command"]</p>
                 <div class="cmd-wrap">
                     <span class="cmd-pfx">$</span>
-                    <input class="inp cmd-inp" @bind="ConsoleCommand" @onkeydown="HandleConsoleKey" placeholder="sv_cheats 1, mp_restartgame 1..." />
+                    <input class="inp cmd-inp" @bind="ConsoleCommand" @bind:event="oninput" @onkeydown="HandleConsoleKey" placeholder="sv_cheats 1, mp_restartgame 1..." />
                 </div>
             </div>
             <div class="footer">
