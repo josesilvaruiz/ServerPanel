@@ -107,6 +107,40 @@ public partial class Panel
         }
     }
 
+    private async Task ReloadAddons()
+    {
+        try
+        {
+            ActionRunning = true;
+            StatusMessage = "Reiniciando pods para montar addons...";
+            StateHasChanged();
+            await Cs2.RestartAsync();
+
+            for (var i = 0; i < 24; i++) // máx ~2 min
+            {
+                await Task.Delay(5000);
+                var status = await Cs2.GetRolloutStatusAsync();
+                StatusMessage = status.Trim();
+                StateHasChanged();
+                if (status.Contains("successfully rolled out"))
+                    break;
+            }
+
+            await RefreshStatus();
+            if (StatusMessage.Contains("successfully rolled out"))
+                StatusMessage = "Addons cargados. Pods listos.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
+        finally
+        {
+            ActionRunning = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task UpdateServer()
     {
         try

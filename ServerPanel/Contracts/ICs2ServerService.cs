@@ -16,6 +16,10 @@ public interface ICs2ServerService
 
     Task<string> GetLiveConsoleAsync();
 
+    Task<string> GetRecentConsoleAsync(int seconds = 3);
+
+    Task<string> GetRolloutStatusAsync();
+
     Task<List<WorkshopMap>> GetWorkshopMapsAsync(string collectionId);
 
     Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps);

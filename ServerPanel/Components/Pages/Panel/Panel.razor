@@ -164,6 +164,10 @@
                 <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" /></svg>
                 @L["Dashboard.Restart"]
             </button>
+            <button class="pn-btn pn-btn-purple" @onclick="ReloadAddons" disabled="@ActionRunning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M20 6h-2.18c.07-.44.18-.86.18-1.3C18 2.1 15.9 0 13.3 0c-1.5 0-2.74.75-3.56 1.86L12 4l-2.27 2.14C9.17 6.04 8.58 6 8 6c-3.31 0-6 2.69-6 6s2.69 6 6 6h12c2.76 0 5-2.24 5-5s-2.24-5-5-5zM13 13v3h-2v-3H9l3-4 3 4h-2z"/></svg>
+                Recargar addons
+            </button>
             <button class="pn-btn pn-btn-red" @onclick="StopServer" disabled="@ActionRunning">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M6 6h12v12H6z" /></svg>
                 @L["Dashboard.Stop"]

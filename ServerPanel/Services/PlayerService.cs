@@ -11,13 +11,15 @@ public class PlayerService : IPlayerService
     private readonly ISshService _ssh;
     private readonly IRconService _rcon;
     private readonly ILogger<PlayerService> _logger;
-    private readonly string _configBasePath;
+    private readonly string _ns;
+    private readonly string _dep;
+    private readonly string _containerCssPath;
 
     private string AdminsJsonPath =>
-        $"{_configBasePath}/cssharp/configs/admins.json";
+        $"{_containerCssPath}/configs/admins.json";
 
     private string SqlitePath =>
-        $"{_configBasePath}/cssharp/plugins/CS2-SimpleAdmin/cs2-simpleadmin.sqlite";
+        $"{_containerCssPath}/plugins/CS2-SimpleAdmin/cs2-simpleadmin.sqlite";
 
     public PlayerService(
         ISshService ssh,
@@ -28,8 +30,17 @@ public class PlayerService : IPlayerService
         _ssh    = ssh;
         _rcon   = rcon;
         _logger = logger;
-        _configBasePath = configuration["Kubernetes:ConfigBasePath"] ?? "/root/cs2-config";
+        var k8s = configuration.GetSection("Kubernetes");
+        _ns               = k8s["Namespace"]        ?? "cs2";
+        _dep              = k8s["Deployment"]       ?? "cs2-server";
+        _containerCssPath = k8s["ContainerCssPath"] ?? "/home/steam/cs2/game/csgo/addons/counterstrikesharp";
     }
+
+    private string KubeExec(string shellCmd) =>
+        $"kubectl exec -n {_ns} deployment/{_dep} -- bash -c {ShellEscape(shellCmd)}";
+
+    private static string ShellEscape(string s) =>
+        "'" + s.Replace("'", "'\\''") + "'";
 
     public async Task<List<PlayerInfo>> GetPlayersBasicAsync()
     {
@@ -121,8 +132,9 @@ public class PlayerService : IPlayerService
             ? $"player_steamid = '{player}'"
             : $"player_name = '{safePlayer}'";
 
-        await _ssh.ExecuteAsync(
-            $"sqlite3 {SqlitePath} \"DELETE FROM sa_bans WHERE {whereClause};\"");
+        var sql = $"DELETE FROM sa_bans WHERE {whereClause};";
+        var sqlB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(sql));
+        await _ssh.ExecuteAsync(KubeExec($"echo {sqlB64} | base64 -d | sqlite3 {SqlitePath}"));
 
         await Task.Delay(1000);
         await _rcon.ExecuteAsync("css_plugins reload 1");
@@ -134,7 +146,7 @@ public class PlayerService : IPlayerService
 
     private async Task<Dictionary<string, PermissionEntry>> ReadAdminsAsync()
     {
-        var raw = await _ssh.ExecuteAsync($"cat {AdminsJsonPath} 2>/dev/null || echo {{}}");
+        var raw = await _ssh.ExecuteAsync(KubeExec($"cat {AdminsJsonPath} 2>/dev/null || echo {{}}"));
         var trimmed = raw.Trim();
         if (string.IsNullOrWhiteSpace(trimmed) || trimmed == "{}")
             return new Dictionary<string, PermissionEntry>();
@@ -146,7 +158,7 @@ public class PlayerService : IPlayerService
     {
         var json = JsonSerializer.Serialize(admins, JsonOpts);
         var b64  = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
-        await _ssh.ExecuteAsync($"printf '%s' '{b64}' | base64 -d > {AdminsJsonPath}");
+        await _ssh.ExecuteAsync(KubeExec($"echo {b64} | base64 -d > {AdminsJsonPath}"));
         await _rcon.ExecuteAsync("css_admins_reload");
         _logger.LogInformation("admins.json actualizado y recargado");
     }

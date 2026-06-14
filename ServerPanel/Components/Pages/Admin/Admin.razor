@@ -339,7 +339,7 @@
                         @(ConsoleCopied ? "Copiado" : "Copiar")
                     </button>
                 </div>
-                <pre id="live-console-pre" class="console-pre console-pre-live">@(string.IsNullOrEmpty(LiveConsole) ? "Conectando al servidor..." : LiveConsole)</pre>
+                <pre id="live-console-pre" class="console-pre console-pre-live">@GetConsoleDisplay()</pre>
             </div>
             <div class="field" style="margin-top:12px;margin-bottom:0">
                 <p class="lbl"><i class="ti ti-terminal-2"></i> @L["Admin.Console.Command"]</p>

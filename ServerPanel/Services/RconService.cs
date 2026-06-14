@@ -9,6 +9,8 @@ public class RconService : IRconService
     private readonly int _port;
     private readonly string _password;
     private readonly ILogger<RconService> _logger;
+    private readonly string _ns;
+    private readonly string _dep;
 
     public RconService(ISshService ssh, IConfiguration configuration, ILogger<RconService> logger)
     {
@@ -17,6 +19,9 @@ public class RconService : IRconService
         var s     = configuration.GetSection("Rcon");
         _port     = int.TryParse(s["Port"], out var p) ? p : 27015;
         _password = s["Password"] ?? "";
+        var k8s   = configuration.GetSection("Kubernetes");
+        _ns       = k8s["Namespace"]  ?? "cs2";
+        _dep      = k8s["Deployment"] ?? "cs2-server";
     }
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_password);
@@ -26,13 +31,14 @@ public class RconService : IRconService
         if (!IsConfigured)
             return "[RCON no configurado — añade Rcon:Password en appsettings.json]";
 
-        // Route RCON through SSH to the node's localhost.
-        // CS2 pod runs with hostNetwork:true, so its RCON port is directly on 127.0.0.1 of the node.
+        // Ejecuta el script python3 dentro del pod via kubectl exec.
+        // Dentro del contenedor, 127.0.0.1:port ES el servidor CS2.
         var b64pwd    = Convert.ToBase64String(Encoding.UTF8.GetBytes(_password));
         var b64cmd    = Convert.ToBase64String(Encoding.UTF8.GetBytes(command));
         var pyScript  = BuildScript(b64pwd, b64cmd);
         var scriptB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(pyScript));
-        var sshCmd    = $"python3 -c \"exec(__import__('base64').b64decode('{scriptB64}').decode())\"";
+        var sshCmd    = $"kubectl exec -n {_ns} deployment/{_dep} -- python3 -c " +
+                        $"\"exec(__import__('base64').b64decode('{scriptB64}').decode())\"";
 
         try
         {

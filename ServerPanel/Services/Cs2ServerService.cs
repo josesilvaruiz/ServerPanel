@@ -15,8 +15,15 @@ public class Cs2ServerService : ICs2ServerService
     private readonly string _ns;
     private readonly string _dep;
     private readonly string _configBasePath;
+    private readonly string _containerCssPath;
 
     private string Kube(string args) => $"kubectl {args}";
+
+    private string KubeExec(string shellCmd) =>
+        Kube($"exec -n {_ns} deployment/{_dep} -- bash -c {ShellEscape(shellCmd)}");
+
+    private static string ShellEscape(string s) =>
+        "'" + s.Replace("'", "'\\''") + "'";
 
     public Cs2ServerService(
         ISshService ssh,
@@ -31,9 +38,10 @@ public class Cs2ServerService : ICs2ServerService
         _httpClientFactory = httpClientFactory;
 
         var k8s = configuration.GetSection("Kubernetes");
-        _ns             = k8s["Namespace"]      ?? "cs2";
-        _dep            = k8s["Deployment"]     ?? "cs2-server";
-        _configBasePath = k8s["ConfigBasePath"] ?? "/root/cs2-config";
+        _ns               = k8s["Namespace"]        ?? "cs2";
+        _dep              = k8s["Deployment"]       ?? "cs2-server";
+        _configBasePath   = k8s["ConfigBasePath"]   ?? "/root/cs2-config";
+        _containerCssPath = k8s["ContainerCssPath"] ?? "/home/steam/cs2/game/csgo/addons/counterstrikesharp";
     }
 
     public async Task<bool> IsRunningAsync()
@@ -100,6 +108,18 @@ public class Cs2ServerService : ICs2ServerService
     {
         return await _ssh.ExecuteAsync(
             Kube($"logs -n {_ns} deployment/{_dep} --tail=200 2>/dev/null"));
+    }
+
+    public async Task<string> GetRecentConsoleAsync(int seconds = 3)
+    {
+        return await _ssh.ExecuteAsync(
+            Kube($"logs -n {_ns} deployment/{_dep} --since={seconds}s 2>/dev/null"));
+    }
+
+    public async Task<string> GetRolloutStatusAsync()
+    {
+        return await _ssh.ExecuteAsync(
+            Kube($"rollout status deployment/{_dep} -n {_ns} --timeout=5s 2>&1"));
     }
 
     public async Task<string> ExecuteConsoleCommandAsync(string command)
@@ -179,7 +199,7 @@ public class Cs2ServerService : ICs2ServerService
     }
 
     private string SimpleAdminConfigPath =>
-        $"{_configBasePath}/cssharp/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
+        $"{_containerCssPath}/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
 
     public async Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps)
     {
@@ -200,7 +220,8 @@ public class Cs2ServerService : ICs2ServerService
                  "open(p,'w').write(comm+json.dumps(data,indent=2));" +
                  "print('ok')";
 
-        var result = await _ssh.ExecuteAsync($"python3 -c \"{py}\"");
+        var pyB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(py));
+        var result = await _ssh.ExecuteAsync(KubeExec($"echo {pyB64} | base64 -d | python3"));
         _logger.LogInformation("Workshop update result: {Result}", result);
 
         if (!result.Contains("ok"))
