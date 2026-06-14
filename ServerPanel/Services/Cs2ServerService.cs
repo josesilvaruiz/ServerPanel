@@ -1,7 +1,5 @@
-﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using ServerPanel.Contracts;
 using ServerPanel.Models;
 
@@ -10,48 +8,48 @@ namespace ServerPanel.Services;
 public class Cs2ServerService : ICs2ServerService
 {
     private readonly ISshService _ssh;
+    private readonly IRconService _rcon;
     private readonly ILogger<Cs2ServerService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
 
+    private readonly string _ns;
+    private readonly string _dep;
+    private readonly string _configBasePath;
+
+    private string Kube(string args) => $"kubectl {args}";
+
     public Cs2ServerService(
         ISshService ssh,
+        IRconService rcon,
         ILogger<Cs2ServerService> logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration)
     {
         _ssh = ssh;
+        _rcon = rcon;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+
+        var k8s = configuration.GetSection("Kubernetes");
+        _ns             = k8s["Namespace"]      ?? "cs2";
+        _dep            = k8s["Deployment"]     ?? "cs2-server";
+        _configBasePath = k8s["ConfigBasePath"] ?? "/root/cs2-config";
     }
 
     public async Task<bool> IsRunningAsync()
     {
         try
         {
-            const string command = "pgrep -f cs2";
-
-            _logger.LogInformation(
-                "Comprobando estado del servidor CS2");
-
-            var result = await _ssh.ExecuteAsync(command);
-
-            _logger.LogInformation(
-                "Resultado recibido: '{Result}'",
-                result);
-
-            var running = !string.IsNullOrWhiteSpace(result);
-
-            _logger.LogInformation(
-                "Estado calculado: {Running}",
-                running);
-
+            var result = await _ssh.ExecuteAsync(
+                Kube($"get deployment {_dep} -n {_ns} -o jsonpath='{{.status.readyReplicas}}' 2>/dev/null || echo 0"));
+            var v = result.Trim();
+            var running = !string.IsNullOrWhiteSpace(v) && v != "0" && v != "<no value>";
+            _logger.LogInformation("CS2 K8s readyReplicas='{V}' running={R}", v, running);
             return running;
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Error comprobando estado del servidor CS2");
-
+            _logger.LogError(ex, "Error comprobando estado CS2");
             return false;
         }
     }
@@ -60,24 +58,12 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            const string command =
-                "sudo -u steam tmux new-session -d -s cs2 'cd /home/steam/cs2 && ./start.sh'";
-
-            _logger.LogInformation(
-                "Iniciando servidor CS2");
-
-            var result = await _ssh.ExecuteAsync(command);
-
-            _logger.LogInformation(
-                "Resultado Start: '{Result}'",
-                result);
+            _logger.LogInformation("Escalando {Dep} a 1 réplica", _dep);
+            await _ssh.ExecuteAsync(Kube($"scale deployment {_dep} -n {_ns} --replicas=1"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Error iniciando servidor CS2");
-
+            _logger.LogError(ex, "Error iniciando servidor CS2");
             throw;
         }
     }
@@ -86,23 +72,12 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            const string command = "sudo -u steam tmux kill-session -t cs2";
-
-            _logger.LogInformation(
-                "Deteniendo servidor CS2");
-
-            var result = await _ssh.ExecuteAsync(command);
-
-            _logger.LogInformation(
-                "Resultado Stop: '{Result}'",
-                result);
+            _logger.LogInformation("Escalando {Dep} a 0 réplicas", _dep);
+            await _ssh.ExecuteAsync(Kube($"scale deployment {_dep} -n {_ns} --replicas=0"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Error deteniendo servidor CS2");
-
+            _logger.LogError(ex, "Error deteniendo servidor CS2");
             throw;
         }
     }
@@ -111,39 +86,26 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            _logger.LogInformation(
-                "Reiniciando servidor CS2");
-
-            await StopAsync();
-
-            await Task.Delay(5000);
-
-            await StartAsync();
-
-            _logger.LogInformation(
-                "Reinicio completado");
+            _logger.LogInformation("Reiniciando deployment {Dep}", _dep);
+            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{_dep} -n {_ns}"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Error reiniciando servidor CS2");
-
+            _logger.LogError(ex, "Error reiniciando servidor CS2");
             throw;
         }
     }
 
-    public async Task<string> ExecuteConsoleCommandAsync(string command)
-    {
-        var fullCommand = $"su - steam -c \"tmux send-keys -t cs2 '{command}' Enter; sleep 1; tmux capture-pane -t cs2 -p\"";
-        _logger.LogInformation("Ejecutando comando consola: {Command}", command);
-        var output = await _ssh.ExecuteAsync(fullCommand);
-        return output;
-    }
-
     public async Task<string> GetLiveConsoleAsync()
     {
-        var output = await _ssh.ExecuteAsync("su - steam -c \"tmux capture-pane -t cs2 -p -S -200\"");
+        return await _ssh.ExecuteAsync(
+            Kube($"logs -n {_ns} deployment/{_dep} --tail=200 2>/dev/null"));
+    }
+
+    public async Task<string> ExecuteConsoleCommandAsync(string command)
+    {
+        _logger.LogInformation("Ejecutando comando consola via RCON: {Cmd}", command);
+        var output = await _rcon.ExecuteAsync(command);
         return output;
     }
 
@@ -151,86 +113,24 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            const string manifest =
-                "/home/steam/cs2/steamapps/appmanifest_730.acf";
+            _logger.LogInformation("Actualizando CS2 via SteamCMD en el pod");
 
-            var localBuild =
-                (await _ssh.ExecuteAsync(
-                    $"grep buildid {manifest} | head -1 | grep -o '[0-9]*'"))
-                .Trim();
+            var updateResult = await _ssh.ExecuteAsync(
+                Kube($"exec -n {_ns} deployment/{_dep} -- bash -c " +
+                     "\"/home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/cs2 " +
+                     "+login anonymous +app_update 730 validate +quit\" 2>/dev/null || echo 'steamcmd no disponible'"));
 
-            var remoteBuild =
-                (await _ssh.ExecuteAsync(
-                    "su - steam -c \"/home/steam/steamcmd/steamcmd.sh +login anonymous +app_info_update 1 +app_info_print 730 +quit\" | grep -m1 buildid | grep -o '[0-9]*'"))
-                .Trim();
-
-            if (string.IsNullOrWhiteSpace(localBuild))
-            {
-                return new UpdateResult
-                {
-                    Output = "No se pudo obtener la build local."
-                };
-            }
-
-            if (string.IsNullOrWhiteSpace(remoteBuild))
-            {
-                return new UpdateResult
-                {
-                    Output = "No se pudo obtener la build remota."
-                };
-            }
-
-            if (localBuild == remoteBuild)
-            {
-                return new UpdateResult
-                {
-                    AlreadyUpdated = true,
-                    LocalBuild = localBuild,
-                    RemoteBuild = remoteBuild,
-                    Output =
-                        $"Servidor actualizado. Build {localBuild}"
-                };
-            }
-
-            var pid =
-                (await _ssh.ExecuteAsync(
-                    "pgrep -f '/home/steam/cs2/game/bin/linuxsteamrt64/cs2'"))
-                .Trim();
-
-            if (!string.IsNullOrWhiteSpace(pid))
-            {
-                await _ssh.ExecuteAsync(
-                    $"kill -9 {pid}");
-
-                await Task.Delay(5000);
-            }
-
-            await _ssh.ExecuteAsync(
-                "su - steam -c 'tmux kill-session -t cs2' || true");
-
-            await Task.Delay(2000);
-
-            await _ssh.ExecuteAsync(
-                "su - steam -c '/home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/cs2 +login anonymous +app_update 730 validate +quit'");
-
-            await _ssh.ExecuteAsync(
-                "su - steam -c \"tmux new-session -d -s cs2 'cd /home/steam/cs2 && ./start.sh'\"");
+            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{_dep} -n {_ns}"));
 
             return new UpdateResult
             {
                 Updated = true,
-                LocalBuild = localBuild,
-                RemoteBuild = remoteBuild,
-                Output =
-                    $"Actualizado de {localBuild} a {remoteBuild}"
+                Output = $"Actualización completada. Reiniciando servidor...\n{updateResult}"
             };
         }
         catch (Exception ex)
         {
-            return new UpdateResult
-            {
-                Output = ex.Message
-            };
+            return new UpdateResult { Output = ex.Message };
         }
     }
 
@@ -239,7 +139,6 @@ public class Cs2ServerService : ICs2ServerService
         var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.UserAgent.ParseAdd("ServerPanel/1.0");
 
-        // Step 1: get collection children
         var collectionBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["collectioncount"] = "1",
@@ -252,18 +151,12 @@ public class Cs2ServerService : ICs2ServerService
 
         collectionResp.EnsureSuccessStatusCode();
         var collectionJson = await collectionResp.Content.ReadAsStringAsync();
-
         var collectionRoot = JsonSerializer.Deserialize<CollectionDetailsRoot>(collectionJson);
         var children = collectionRoot?.Response?.CollectionDetails?.FirstOrDefault()?.Children;
 
-        if (children is null || children.Count == 0)
-            return [];
+        if (children is null || children.Count == 0) return [];
 
-        // Step 2: get details (name + preview image) for each item
-        var fileParams = new Dictionary<string, string>
-        {
-            ["itemcount"] = children.Count.ToString()
-        };
+        var fileParams = new Dictionary<string, string> { ["itemcount"] = children.Count.ToString() };
         for (var i = 0; i < children.Count; i++)
             fileParams[$"publishedfileids[{i}]"] = children[i].PublishedFileId;
 
@@ -273,7 +166,6 @@ public class Cs2ServerService : ICs2ServerService
 
         detailsResp.EnsureSuccessStatusCode();
         var detailsJson = await detailsResp.Content.ReadAsStringAsync();
-
         var detailsRoot = JsonSerializer.Deserialize<PublishedFileDetailsRoot>(detailsJson);
 
         return detailsRoot?.Response?.PublishedFileDetails
@@ -286,8 +178,8 @@ public class Cs2ServerService : ICs2ServerService
             .ToList() ?? [];
     }
 
-    const string SimpleAdminConfigPath =
-        "/home/steam/cs2/game/csgo/addons/counterstrikesharp/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
+    private string SimpleAdminConfigPath =>
+        $"{_configBasePath}/cssharp/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
 
     public async Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps)
     {
@@ -295,8 +187,7 @@ public class Cs2ServerService : ICs2ServerService
         if (mapList.Count == 0)
             throw new InvalidOperationException("La lista de mapas está vacía");
 
-        // Serialize maps as JSON and pass as base64 argument to Python
-        var mapsJson = System.Text.Json.JsonSerializer.Serialize(
+        var mapsJson = JsonSerializer.Serialize(
             mapList.ToDictionary(m => m.Name, m => long.Parse(m.Id)));
         var mapsB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(mapsJson));
 
@@ -310,7 +201,6 @@ public class Cs2ServerService : ICs2ServerService
                  "print('ok')";
 
         var result = await _ssh.ExecuteAsync($"python3 -c \"{py}\"");
-
         _logger.LogInformation("Workshop update result: {Result}", result);
 
         if (!result.Contains("ok"))
@@ -321,49 +211,38 @@ public class Cs2ServerService : ICs2ServerService
 
     private sealed class CollectionDetailsRoot
     {
-        [JsonPropertyName("response")]
-        public CollectionResponse? Response { get; set; }
+        [JsonPropertyName("response")] public CollectionResponse? Response { get; set; }
     }
 
     private sealed class CollectionResponse
     {
-        [JsonPropertyName("collectiondetails")]
-        public List<CollectionDetail>? CollectionDetails { get; set; }
+        [JsonPropertyName("collectiondetails")] public List<CollectionDetail>? CollectionDetails { get; set; }
     }
 
     private sealed class CollectionDetail
     {
-        [JsonPropertyName("children")]
-        public List<CollectionChild>? Children { get; set; }
+        [JsonPropertyName("children")] public List<CollectionChild>? Children { get; set; }
     }
 
     private sealed class CollectionChild
     {
-        [JsonPropertyName("publishedfileid")]
-        public string PublishedFileId { get; set; } = "";
+        [JsonPropertyName("publishedfileid")] public string PublishedFileId { get; set; } = "";
     }
 
     private sealed class PublishedFileDetailsRoot
     {
-        [JsonPropertyName("response")]
-        public PublishedFileResponse? Response { get; set; }
+        [JsonPropertyName("response")] public PublishedFileResponse? Response { get; set; }
     }
 
     private sealed class PublishedFileResponse
     {
-        [JsonPropertyName("publishedfiledetails")]
-        public List<PublishedFileDetail>? PublishedFileDetails { get; set; }
+        [JsonPropertyName("publishedfiledetails")] public List<PublishedFileDetail>? PublishedFileDetails { get; set; }
     }
 
     private sealed class PublishedFileDetail
     {
-        [JsonPropertyName("publishedfileid")]
-        public string PublishedFileId { get; set; } = "";
-
-        [JsonPropertyName("title")]
-        public string Title { get; set; } = "";
-
-        [JsonPropertyName("preview_url")]
-        public string PreviewUrl { get; set; } = "";
+        [JsonPropertyName("publishedfileid")] public string PublishedFileId { get; set; } = "";
+        [JsonPropertyName("title")]           public string Title           { get; set; } = "";
+        [JsonPropertyName("preview_url")]     public string PreviewUrl      { get; set; } = "";
     }
 }

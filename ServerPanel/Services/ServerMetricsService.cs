@@ -7,8 +7,15 @@ namespace ServerPanel.Services;
 public class ServerMetricsService : IServerMetricsService
 {
     private readonly ISshService _ssh;
+    private readonly string _ns;
+    private readonly string _dep;
 
-    public ServerMetricsService(ISshService ssh) => _ssh = ssh;
+    public ServerMetricsService(ISshService ssh, IConfiguration configuration)
+    {
+        _ssh = ssh;
+        _ns  = configuration["Kubernetes:Namespace"]  ?? "cs2";
+        _dep = configuration["Kubernetes:Deployment"] ?? "cs2-server";
+    }
 
     public async Task<ServerMetrics> GetMetricsAsync()
     {
@@ -22,50 +29,61 @@ public class ServerMetricsService : IServerMetricsService
         ParseDf(dfOut, metrics);
         ParseUptime(uptimeOut, metrics);
 
-        // Find the CS2 process with the highest RSS (= the game server, not helpers).
-        // [c]s2 avoids matching the grep itself.
-        var cs2Out = await _ssh.ExecuteAsync(
-            "ps aux | grep -E '[c]s2' | sort -k6 -rn | awk 'NR==1{print $2,$6}'");
+        // CS2 pod resource usage via kubectl top
+        var topOut = await _ssh.ExecuteAsync(
+            $"kubectl top pod -n {_ns} -l app=cs2 --no-headers 2>/dev/null | head -1");
 
-        var cs2Line = cs2Out.Trim();
-        int? cs2Pid = null;
-        if (!string.IsNullOrEmpty(cs2Line))
-        {
-            var parts = cs2Line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 2
-                && int.TryParse(parts[0], out var pid)
-                && long.TryParse(parts[1], out var rssKb))
-            {
-                cs2Pid = pid;
-                metrics.Cs2Running  = true;
-                metrics.Cs2MemoryMb = rssKb / 1024;
-            }
-        }
+        if (!string.IsNullOrWhiteSpace(topOut))
+            ParseKubectlTop(topOut.Trim(), metrics);
 
-        // Two /proc/stat snapshots 1 s apart — measures both system CPU and CS2 CPU in one round-trip pair.
-        var procStat1 = await _ssh.ExecuteAsync(
-            cs2Pid.HasValue ? $"cat /proc/stat /proc/{cs2Pid}/stat" : "cat /proc/stat");
+        // CPU usage for the node
+        var stat1 = await _ssh.ExecuteAsync("cat /proc/stat");
         await Task.Delay(1000);
-        var procStat2 = await _ssh.ExecuteAsync(
-            cs2Pid.HasValue ? $"cat /proc/stat /proc/{cs2Pid}/stat" : "cat /proc/stat");
-
-        metrics.CpuUsagePercent = ComputeSystemCpu(procStat1, procStat2);
-        if (cs2Pid.HasValue)
-            metrics.Cs2CpuPercent = ComputeProcessCpu(procStat1, procStat2);
+        var stat2 = await _ssh.ExecuteAsync("cat /proc/stat");
+        metrics.CpuUsagePercent = ComputeSystemCpu(stat1, stat2);
 
         return metrics;
     }
 
-    // Parses the aggregate "cpu " line from /proc/stat and returns (idle, total) ticks.
+    private static void ParseKubectlTop(string line, ServerMetrics m)
+    {
+        // Format: "cs2-server-xxx   500m   1200Mi"
+        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 3) return;
+
+        var cpuStr = parts[1];
+        var memStr = parts[2];
+
+        // Memory: "1200Mi" → MB
+        if (memStr.EndsWith("Mi", StringComparison.OrdinalIgnoreCase)
+            && long.TryParse(memStr[..^2], out var memMi))
+        {
+            m.Cs2MemoryMb = memMi;
+            m.Cs2Running  = true;
+        }
+        else if (memStr.EndsWith("Gi", StringComparison.OrdinalIgnoreCase)
+            && double.TryParse(memStr[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var memGi))
+        {
+            m.Cs2MemoryMb = (long)(memGi * 1024);
+            m.Cs2Running  = true;
+        }
+
+        // CPU: "500m" → millicores → approximate % (500m = 0.5 core ≈ 50% on 1 core)
+        if (cpuStr.EndsWith('m') && double.TryParse(cpuStr[..^1],
+            NumberStyles.Float, CultureInfo.InvariantCulture, out var milli))
+        {
+            m.Cs2CpuPercent = Math.Round(milli / 10.0, 1); // rough: 1000m = 100%
+        }
+    }
+
     private static bool TryParseSystemTicks(string snapshot, out long idle, out long total)
     {
         idle  = 0;
         total = 0;
         var cpuLine = snapshot.Split('\n')
-                              .FirstOrDefault(l => l.StartsWith("cpu ", StringComparison.Ordinal));
+            .FirstOrDefault(l => l.StartsWith("cpu ", StringComparison.Ordinal));
         if (cpuLine is null) return false;
         var parts = cpuLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        // cpu user nice system idle iowait irq softirq steal guest guest_nice
         if (parts.Length < 5) return false;
         total = parts.Skip(1).Sum(p => long.TryParse(p, out var v) ? v : 0);
         long.TryParse(parts[4], out idle);
@@ -82,40 +100,10 @@ public class ServerMetricsService : IServerMetricsService
         return Math.Round(100.0 * (totalDelta - idleDelta) / totalDelta, 1);
     }
 
-    // Parses /proc/{pid}/stat (last line of the snapshot) for process ticks.
-    private static double ComputeProcessCpu(string snap1, string snap2)
-    {
-        static bool TryParseProcPidStat(string snapshot, out long procTicks, out long totalTicks)
-        {
-            procTicks  = 0;
-            totalTicks = 0;
-            var lines = snapshot.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
-            // Last non-empty line is /proc/{pid}/stat (we concatenated /proc/stat first then /proc/{pid}/stat)
-            var pidLine = lines.LastOrDefault();
-            if (pidLine is null) return false;
-            var pidParts = pidLine.Trim().Split(' ');
-            if (pidParts.Length < 17) return false;
-            if (!long.TryParse(pidParts[13], out var utime)  ||
-                !long.TryParse(pidParts[14], out var stime)  ||
-                !long.TryParse(pidParts[15], out var cutime) ||
-                !long.TryParse(pidParts[16], out var cstime))
-                return false;
-            procTicks = utime + stime + cutime + cstime;
-            return TryParseSystemTicks(snapshot, out _, out totalTicks);
-        }
-
-        if (!TryParseProcPidStat(snap1, out var proc1, out var total1)) return 0;
-        if (!TryParseProcPidStat(snap2, out var proc2, out var total2)) return 0;
-        var totalDelta = total2 - total1;
-        var procDelta  = proc2  - proc1;
-        if (totalDelta <= 0) return 0;
-        return Math.Round(100.0 * procDelta / totalDelta, 1);
-    }
-
     private static void ParseFree(string output, ServerMetrics m)
     {
         var line = output.Split('\n')
-                         .FirstOrDefault(l => l.StartsWith("Mem:", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(l => l.StartsWith("Mem:", StringComparison.OrdinalIgnoreCase));
         if (line is null) return;
         var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 3
@@ -132,7 +120,7 @@ public class ServerMetricsService : IServerMetricsService
         var line = output.Split('\n').Skip(1).FirstOrDefault(l => !string.IsNullOrWhiteSpace(l));
         if (line is null) return;
         var pct = line.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                      .FirstOrDefault(p => p.EndsWith('%'));
+            .FirstOrDefault(p => p.EndsWith('%'));
         if (pct is not null
             && double.TryParse(pct.TrimEnd('%'), NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
             m.DiskUsagePercent = val;

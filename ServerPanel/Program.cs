@@ -26,6 +26,7 @@ builder.Services.AddLocalization();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
+builder.Services.AddSingleton<IRconService, RconService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
 builder.Services.AddSingleton<IServerMetricsService, ServerMetricsService>();
 
