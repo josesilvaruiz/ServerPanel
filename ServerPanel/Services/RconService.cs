@@ -6,31 +6,28 @@ namespace ServerPanel.Services;
 
 public class RconService : IRconService
 {
-    private readonly string _host;
-    private readonly ushort _port;
-    private readonly string _password;
+    private readonly IActiveServerService _activeServer;
     private readonly ILogger<RconService> _logger;
 
-    public RconService(IConfiguration configuration, ILogger<RconService> logger)
+    public RconService(IActiveServerService activeServer, ILogger<RconService> logger)
     {
-        _logger   = logger;
-        var s     = configuration.GetSection("Rcon");
-        _host     = s["Host"]     ?? "127.0.0.1";
-        _port     = ushort.TryParse(s["Port"], out var p) ? p : (ushort)27015;
-        _password = s["Password"] ?? "";
+        _activeServer = activeServer;
+        _logger       = logger;
     }
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(_password);
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(_activeServer.Active.RconPassword);
 
     public async Task<string> ExecuteAsync(string command, CancellationToken ct = default)
     {
         if (!IsConfigured)
             return "[RCON no configurado]";
 
+        var server = _activeServer.Active;
+
         try
         {
-            var endpoint = new IPEndPoint(IPAddress.Parse(_host), _port);
-            using var rcon = new RCON(endpoint, _password);
+            var endpoint = new IPEndPoint(IPAddress.Parse(server.Host), server.Port);
+            using var rcon = new RCON(endpoint, server.RconPassword);
             await rcon.ConnectAsync();
             var response = await rcon.SendCommandAsync(command);
             _logger.LogInformation("RCON '{Cmd}' => '{Out}'", command, response?.Trim());

@@ -24,6 +24,7 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddLocalization();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IActiveServerService, ActiveServerService>();
 builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<IRconService, RconService>();

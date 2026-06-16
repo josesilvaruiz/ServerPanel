@@ -1439,6 +1439,39 @@ html[data-layout="topbar"] main   { flex: 1 1 auto; padding: 1.5rem 2rem; overfl
     border-color: rgba(239,68,68,.2) !important;
 }
 
+/* ServerPicker */
+.nm-server-picker {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 0.25rem;
+    color: #64748b;
+}
+.nm-server-picker select {
+    background: var(--th-accent-bg, rgba(255,255,255,.05));
+    border: 1px solid var(--th-accent-bd, rgba(255,255,255,.1));
+    border-radius: 7px;
+    color: var(--th-accent, #94a3b8);
+    font-family: inherit;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+}
+.nm-server-picker select:hover { border-color: var(--th-accent, #94a3b8); }
+
+/* ServerPicker inside sidebar — full width, no icon */
+.nm-nav .nm-server-picker {
+    display: block;
+    padding: 0 0.5rem 0.25rem;
+}
+.nm-nav .nm-server-picker svg { display: none; }
+.nm-nav .nm-server-picker select { width: 100%; }
+
 /* ThemePicker inside topbar — compact */
 .nm-tb-right .tp-wrap {
     padding: 0 0.25rem;

@@ -1,0 +1,30 @@
+@rendermode InteractiveServer
+@inject IActiveServerService ActiveServer
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="nm-server-picker">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style="opacity:.5;flex-shrink:0;">
+        <path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>
+    </svg>
+    <select @onchange="OnChange">
+        @foreach (var s in ActiveServer.Servers)
+        {
+            <option value="@s.Name" selected="@(s.Name == ActiveServer.Active.Name)">@s.Name</option>
+        }
+    </select>
+</div>
+
+@code {
+    protected override void OnInitialized()
+        => ActiveServer.OnChanged += StateHasChanged;
+
+    private void OnChange(ChangeEventArgs e)
+    {
+        ActiveServer.SetActive(e.Value?.ToString() ?? "");
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+
+    public void Dispose()
+        => ActiveServer.OnChanged -= StateHasChanged;
+}

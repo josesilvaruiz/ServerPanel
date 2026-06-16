@@ -8,46 +8,39 @@ namespace ServerPanel.Services;
 
 public class ServerQueryService : IServerQueryService
 {
-    private readonly string _host;
-    private readonly int _port;
+    private readonly IActiveServerService _activeServer;
     private readonly ILogger<ServerQueryService> _logger;
 
     public ServerQueryService(
-        IConfiguration config,
+        IActiveServerService activeServer,
         ILogger<ServerQueryService> logger)
     {
-        _logger = logger;
-
-        _host = config["ServerQuery:Host"] ?? "127.0.0.1";
-
-        _port = int.TryParse(
-            config["ServerQuery:Port"],
-            out var p)
-            ? p
-            : 27015;
+        _activeServer = activeServer;
+        _logger       = logger;
     }
 
     public async Task<ServerInfo> GetServerInfoAsync()
     {
+        var server = _activeServer.Active;
         var info = new ServerInfo
         {
-            Ip = _host,
-            Port = _port
+            Ip = server.Host,
+            Port = server.Port
         };
 
         try
         {
             _logger.LogInformation(
                 "Consultando servidor A2S {Host}:{Port}",
-                _host,
-                _port);
+                server.Host,
+                server.Port);
 
             using var udp = new UdpClient();
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             var endpoint = new IPEndPoint(
-                IPAddress.Parse(_host),
-                _port);
+                IPAddress.Parse(server.Host),
+                server.Port);
 
             var query =
                 new byte[]
@@ -192,9 +185,10 @@ public class ServerQueryService : IServerQueryService
         var players = new List<PlayerInfo>();
         try
         {
+            var server = _activeServer.Active;
             using var udp = new UdpClient();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var endpoint = new IPEndPoint(IPAddress.Parse(_host), _port);
+            var endpoint = new IPEndPoint(IPAddress.Parse(server.Host), server.Port);
 
             // A2S_PLAYER: send initial request with -1 challenge to get real challenge
             var initialReq = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x55, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -221,7 +215,7 @@ public class ServerQueryService : IServerQueryService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "A2S_PLAYER falló para {Host}:{Port}", _host, _port);
+            _logger.LogWarning(ex, "A2S_PLAYER falló para {Host}:{Port}", _activeServer.Active.Host, _activeServer.Active.Port);
         }
         return players;
     }
