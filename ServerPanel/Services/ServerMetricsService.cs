@@ -7,14 +7,12 @@ namespace ServerPanel.Services;
 public class ServerMetricsService : IServerMetricsService
 {
     private readonly ISshService _ssh;
-    private readonly string _ns;
-    private readonly string _dep;
+    private readonly IActiveServerService _activeServer;
 
-    public ServerMetricsService(ISshService ssh, IConfiguration configuration)
+    public ServerMetricsService(ISshService ssh, IActiveServerService activeServer)
     {
-        _ssh = ssh;
-        _ns  = configuration["Kubernetes:Namespace"]  ?? "cs2";
-        _dep = configuration["Kubernetes:Deployment"] ?? "cs2-server";
+        _ssh          = ssh;
+        _activeServer = activeServer;
     }
 
     public async Task<ServerMetrics> GetMetricsAsync()
@@ -31,7 +29,7 @@ public class ServerMetricsService : IServerMetricsService
 
         // CS2 pod resource usage via kubectl top
         var topOut = await _ssh.ExecuteAsync(
-            $"kubectl top pod -n {_ns} -l app=cs2 --no-headers 2>/dev/null | head -1");
+            $"kubectl top pod -n {_activeServer.Active.KubeNamespace} -l app=cs2 --no-headers 2>/dev/null | head -1");
 
         if (!string.IsNullOrWhiteSpace(topOut))
             ParseKubectlTop(topOut.Trim(), metrics);

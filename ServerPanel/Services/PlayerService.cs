@@ -11,36 +11,35 @@ public class PlayerService : IPlayerService
     private readonly ISshService _ssh;
     private readonly IRconService _rcon;
     private readonly IServerQueryService _serverQuery;
+    private readonly IActiveServerService _activeServer;
     private readonly ILogger<PlayerService> _logger;
-    private readonly string _ns;
-    private readonly string _dep;
-    private readonly string _containerCssPath;
+
+    private string Ns              => _activeServer.Active.KubeNamespace;
+    private string Dep             => _activeServer.Active.KubeDeployment;
+    private string ContainerCssPath => _activeServer.Active.KubeContainerCssPath;
 
     private string AdminsJsonPath =>
-        $"{_containerCssPath}/configs/admins.json";
+        $"{ContainerCssPath}/configs/admins.json";
 
     private string SqlitePath =>
-        $"{_containerCssPath}/plugins/CS2-SimpleAdmin/cs2-simpleadmin.sqlite";
+        $"{ContainerCssPath}/plugins/CS2-SimpleAdmin/cs2-simpleadmin.sqlite";
 
     public PlayerService(
         ISshService ssh,
         IRconService rcon,
         IServerQueryService serverQuery,
-        ILogger<PlayerService> logger,
-        IConfiguration configuration)
+        IActiveServerService activeServer,
+        ILogger<PlayerService> logger)
     {
-        _ssh         = ssh;
-        _rcon        = rcon;
-        _serverQuery = serverQuery;
-        _logger      = logger;
-        var k8s = configuration.GetSection("Kubernetes");
-        _ns               = k8s["Namespace"]        ?? "cs2";
-        _dep              = k8s["Deployment"]       ?? "cs2-server";
-        _containerCssPath = k8s["ContainerCssPath"] ?? "/home/steam/cs2/game/csgo/addons/counterstrikesharp";
+        _ssh          = ssh;
+        _rcon         = rcon;
+        _serverQuery  = serverQuery;
+        _activeServer = activeServer;
+        _logger       = logger;
     }
 
     private string KubeExec(string shellCmd) =>
-        $"kubectl exec -n {_ns} deployment/{_dep} -- bash -c {ShellEscape(shellCmd)}";
+        $"kubectl exec -n {Ns} deployment/{Dep} -- bash -c {ShellEscape(shellCmd)}";
 
     private static string ShellEscape(string s) =>
         "'" + s.Replace("'", "'\\''") + "'";

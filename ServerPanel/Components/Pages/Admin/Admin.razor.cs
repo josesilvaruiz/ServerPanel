@@ -13,6 +13,7 @@ public partial class Admin : IDisposable
 
     string ActiveSection = "map";
     CancellationTokenSource? _consoleCts;
+    private readonly CancellationTokenSource _cts = new();
 
     string PermSub = "get";
     Dictionary<string, PermissionEntry> AllAdmins = new();
@@ -171,7 +172,7 @@ public partial class Admin : IDisposable
         {
             var info = await ServerQueryService.GetServerInfoAsync();
             CurrentMap = info.Map;
-            await InvokeAsync(StateHasChanged);
+            try { await InvokeAsync(StateHasChanged); } catch { }
         }
         catch
         {
@@ -229,21 +230,29 @@ public partial class Admin : IDisposable
             await foreach (var line in Cs2ServerService.StreamLiveConsoleAsync(token))
             {
                 AppendConsoleLine(line);
-                await InvokeAsync(async () =>
+                try
                 {
-                    StateHasChanged();
-                    try { await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre"); } catch { }
-                });
+                    await InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        try { await JS.InvokeVoidAsync("scrollConsoleToBottom", "live-console-pre"); } catch { }
+                    });
+                }
+                catch { break; }
             }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            await InvokeAsync(() =>
+            try
             {
-                AppendConsoleLine($"[Error de conexión: {ex.Message}]");
-                StateHasChanged();
-            });
+                await InvokeAsync(() =>
+                {
+                    AppendConsoleLine($"[Error de conexión: {ex.Message}]");
+                    StateHasChanged();
+                });
+            }
+            catch { }
         }
     }
 
@@ -254,7 +263,12 @@ public partial class Admin : IDisposable
         _consoleCts = null;
     }
 
-    public void Dispose() => StopLiveConsole();
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+        StopLiveConsole();
+    }
 
     async Task HandleLoadAllAdmins()
     {
@@ -329,7 +343,7 @@ public partial class Admin : IDisposable
     {
         MapLoading = true;
         MapError = null;
-        await InvokeAsync(StateHasChanged);
+        try { await InvokeAsync(StateHasChanged); } catch { return; }
         try
         {
             WorkshopMaps = await Cs2ServerService.GetWorkshopMapsAsync(WorkshopCollectionId);
@@ -341,7 +355,7 @@ public partial class Admin : IDisposable
         finally
         {
             MapLoading = false;
-            await InvokeAsync(StateHasChanged);
+            try { await InvokeAsync(StateHasChanged); } catch { }
         }
     }
 
@@ -366,10 +380,12 @@ public partial class Admin : IDisposable
     async void CopyConsole()
     {
         if (_consoleLines.Count == 0) return;
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", GetConsoleDisplay());
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", GetConsoleDisplay()); }
+        catch { return; }
+        if (_cts.IsCancellationRequested) return;
         ConsoleCopied = true;
         StateHasChanged();
-        await Task.Delay(2000);
+        try { await Task.Delay(2000, _cts.Token); } catch (OperationCanceledException) { return; }
         ConsoleCopied = false;
         StateHasChanged();
     }
@@ -413,7 +429,7 @@ public partial class Admin : IDisposable
         ToastOk = ok;
         ToastMessage = msg;
         StateHasChanged();
-        await Task.Delay(3000);
+        try { await Task.Delay(3000, _cts.Token); } catch (OperationCanceledException) { return; }
         ToastVisible = false;
         StateHasChanged();
     }

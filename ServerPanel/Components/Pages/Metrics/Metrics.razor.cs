@@ -34,7 +34,7 @@ public partial class Metrics
     {
         Loading = true;
         Error = null;
-        await InvokeAsync(StateHasChanged);
+        try { await InvokeAsync(StateHasChanged); } catch { return; }
         try
         {
             Data = await MetricsService.GetMetricsAsync();
@@ -46,7 +46,7 @@ public partial class Metrics
         finally
         {
             Loading = false;
-            await InvokeAsync(StateHasChanged);
+            try { await InvokeAsync(StateHasChanged); } catch { }
         }
     }
 }

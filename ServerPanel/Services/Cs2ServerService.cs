@@ -9,18 +9,19 @@ public class Cs2ServerService : ICs2ServerService
 {
     private readonly ISshService _ssh;
     private readonly IRconService _rcon;
+    private readonly IActiveServerService _activeServer;
     private readonly ILogger<Cs2ServerService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    private readonly string _ns;
-    private readonly string _dep;
-    private readonly string _configBasePath;
-    private readonly string _containerCssPath;
+    private string Ns  => _activeServer.Active.KubeNamespace;
+    private string Dep => _activeServer.Active.KubeDeployment;
+    private string ConfigBasePath   => _activeServer.Active.KubeConfigBasePath;
+    private string ContainerCssPath => _activeServer.Active.KubeContainerCssPath;
 
     private string Kube(string args) => $"kubectl {args}";
 
     private string KubeExec(string shellCmd) =>
-        Kube($"exec -n {_ns} deployment/{_dep} -- bash -c {ShellEscape(shellCmd)}");
+        Kube($"exec -n {Ns} deployment/{Dep} -- bash -c {ShellEscape(shellCmd)}");
 
     private static string ShellEscape(string s) =>
         "'" + s.Replace("'", "'\\''") + "'";
@@ -28,20 +29,15 @@ public class Cs2ServerService : ICs2ServerService
     public Cs2ServerService(
         ISshService ssh,
         IRconService rcon,
+        IActiveServerService activeServer,
         ILogger<Cs2ServerService> logger,
-        IHttpClientFactory httpClientFactory,
-        IConfiguration configuration)
+        IHttpClientFactory httpClientFactory)
     {
-        _ssh = ssh;
-        _rcon = rcon;
-        _logger = logger;
+        _ssh           = ssh;
+        _rcon          = rcon;
+        _activeServer  = activeServer;
+        _logger        = logger;
         _httpClientFactory = httpClientFactory;
-
-        var k8s = configuration.GetSection("Kubernetes");
-        _ns               = k8s["Namespace"]        ?? "cs2";
-        _dep              = k8s["Deployment"]       ?? "cs2-server";
-        _configBasePath   = k8s["ConfigBasePath"]   ?? "/root/cs2-config";
-        _containerCssPath = k8s["ContainerCssPath"] ?? "/home/steam/cs2/game/csgo/addons/counterstrikesharp";
     }
 
     public async Task<bool> IsRunningAsync()
@@ -49,7 +45,7 @@ public class Cs2ServerService : ICs2ServerService
         try
         {
             var result = await _ssh.ExecuteAsync(
-                Kube($"get deployment {_dep} -n {_ns} -o jsonpath='{{.status.readyReplicas}}' 2>/dev/null || echo 0"));
+                Kube($"get deployment {Dep} -n {Ns} -o jsonpath='{{.status.readyReplicas}}' 2>/dev/null || echo 0"));
             var v = result.Trim();
             var running = !string.IsNullOrWhiteSpace(v) && v != "0" && v != "<no value>";
             _logger.LogInformation("CS2 K8s readyReplicas='{V}' running={R}", v, running);
@@ -66,8 +62,8 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            _logger.LogInformation("Escalando {Dep} a 1 réplica", _dep);
-            await _ssh.ExecuteAsync(Kube($"scale deployment {_dep} -n {_ns} --replicas=1"));
+            _logger.LogInformation("Escalando {Dep} a 1 réplica", Dep);
+            await _ssh.ExecuteAsync(Kube($"scale deployment {Dep} -n {Ns} --replicas=1"));
         }
         catch (Exception ex)
         {
@@ -80,8 +76,8 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            _logger.LogInformation("Escalando {Dep} a 0 réplicas", _dep);
-            await _ssh.ExecuteAsync(Kube($"scale deployment {_dep} -n {_ns} --replicas=0"));
+            _logger.LogInformation("Escalando {Dep} a 0 réplicas", Dep);
+            await _ssh.ExecuteAsync(Kube($"scale deployment {Dep} -n {Ns} --replicas=0"));
         }
         catch (Exception ex)
         {
@@ -94,8 +90,8 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            _logger.LogInformation("Reiniciando deployment {Dep}", _dep);
-            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{_dep} -n {_ns}"));
+            _logger.LogInformation("Reiniciando deployment {Dep}", Dep);
+            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{Dep} -n {Ns}"));
         }
         catch (Exception ex)
         {
@@ -107,24 +103,24 @@ public class Cs2ServerService : ICs2ServerService
     public async Task<string> GetLiveConsoleAsync()
     {
         return await _ssh.ExecuteAsync(
-            Kube($"logs -n {_ns} deployment/{_dep} --tail=200 2>/dev/null"));
+            Kube($"logs -n {Ns} deployment/{Dep} --tail=200 2>/dev/null"));
     }
 
     public IAsyncEnumerable<string> StreamLiveConsoleAsync(CancellationToken ct) =>
         _ssh.StreamCommandAsync(
-            Kube($"logs -f -n {_ns} deployment/{_dep} --tail=50 2>/dev/null"),
+            Kube($"logs -f -n {Ns} deployment/{Dep} --tail=50 2>/dev/null"),
             ct);
 
     public async Task<string> GetRecentConsoleAsync(int seconds = 3)
     {
         return await _ssh.ExecuteAsync(
-            Kube($"logs -n {_ns} deployment/{_dep} --since={seconds}s 2>/dev/null"));
+            Kube($"logs -n {Ns} deployment/{Dep} --since={seconds}s 2>/dev/null"));
     }
 
     public async Task<string> GetRolloutStatusAsync()
     {
         return await _ssh.ExecuteAsync(
-            Kube($"rollout status deployment/{_dep} -n {_ns} --timeout=5s 2>&1"));
+            Kube($"rollout status deployment/{Dep} -n {Ns} --timeout=5s 2>&1"));
     }
 
     public async Task<string> ExecuteConsoleCommandAsync(string command)
@@ -141,11 +137,11 @@ public class Cs2ServerService : ICs2ServerService
             _logger.LogInformation("Actualizando CS2 via SteamCMD en el pod");
 
             var updateResult = await _ssh.ExecuteAsync(
-                Kube($"exec -n {_ns} deployment/{_dep} -- bash -c " +
+                Kube($"exec -n {Ns} deployment/{Dep} -- bash -c " +
                      "\"/home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/cs2 " +
                      "+login anonymous +app_update 730 validate +quit\" 2>/dev/null || echo 'steamcmd no disponible'"));
 
-            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{_dep} -n {_ns}"));
+            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{Dep} -n {Ns}"));
 
             return new UpdateResult
             {
@@ -204,7 +200,7 @@ public class Cs2ServerService : ICs2ServerService
     }
 
     private string SimpleAdminConfigPath =>
-        $"{_containerCssPath}/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
+        $"{ContainerCssPath}/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
 
     public async Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps)
     {
