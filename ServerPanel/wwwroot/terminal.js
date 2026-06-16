@@ -357,6 +357,7 @@ window.initXterm = async function (sessionId, fontSize) {
                 cyan:'#22d3ee',  brightCyan:'#67e8f9',
                 white:'#e2e8f0', brightWhite:'#f8fafc',
             },
+            copyOnSelect: true,
             allowProposedApi: true,
         });
     } catch(e) {
@@ -414,6 +415,14 @@ window.initXterm = async function (sessionId, fontSize) {
         });
     }
     container.addEventListener('mousedown', () => term.focus());
+
+    container.addEventListener('contextmenu', async (e) => {
+        e.preventDefault();
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) { term.paste(text); term.focus(); }
+        } catch {}
+    });
 
     // ── Fit + focus (needs layout to be flushed first) ───────────────────────
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -482,9 +491,25 @@ window.xtermClear = function (sessionId) {
 window.xtermCopyAll = function (sessionId) {
     const inst = _xtermInstances[sessionId];
     if (!inst) return;
-    inst.term.selectAll();
-    const text = inst.term.getSelection();
-    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+    const buffer = inst.term.buffer.active;
+    const lines = [];
+    for (let i = 0; i < buffer.length; i++) {
+        const line = buffer.getLine(i);
+        if (line) lines.push(line.translateToString(true));
+    }
+    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+    const text = lines.join('\n');
+    if (navigator.clipboard && text) navigator.clipboard.writeText(text).catch(() => {});
+};
+
+window.xtermPasteFromClipboard = async function (sessionId) {
+    const inst = _xtermInstances[sessionId];
+    if (!inst) return false;
+    try {
+        const text = await navigator.clipboard.readText();
+        if (text) { inst.term.paste(text); inst.term.focus(); return true; }
+    } catch(e) { console.warn('[xterm] clipboard paste failed:', e); }
+    return false;
 };
 
 window.setXtermFontSize = function (sessionId, size) {

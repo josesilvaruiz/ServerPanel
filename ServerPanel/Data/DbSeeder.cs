@@ -6,7 +6,7 @@ namespace ServerPanel.Data;
 public static class DbSeeder
 {
     // Bump this version to force a full reseed of shared groups
-    const string Version = "v2";
+    const string Version = "v3";
     const string VersionMarker = $"__seeder_version:{Version}";
 
     public static async Task SeedSharedCommandsAsync(ApplicationDbContext db)
@@ -53,18 +53,18 @@ public static class DbSeeder
                 ]
             },
 
-            // ── CS2 ────────────────────────────────────────────
+            // ── CS2 Kubernetes ─────────────────────────────────
             new()
             {
-                Title = "🎮 CS2 — Control",
+                Title = "🎮 CS2 — Pods",
                 Owner = "all", SortOrder = 2,
                 Commands =
                 [
-                    new() { Text = "su - steam -c 'tmux ls'", SortOrder = 0 },
-                    new() { Text = "su - steam -c 'tmux attach -t cs2'", SortOrder = 1 },
-                    new() { Text = "tmux send-keys -t cs2 'quit' Enter", SortOrder = 2 },
-                    new() { Text = "pgrep -a cs2", SortOrder = 3 },
-                    new() { Text = "kill -9 $(pgrep -f cs2)", SortOrder = 4 },
+                    new() { Text = "kubectl get pods -n cs2", SortOrder = 0 },
+                    new() { Text = "kubectl get pods -n cs2 -o wide", SortOrder = 1 },
+                    new() { Text = "kubectl get pods -A", SortOrder = 2 },
+                    new() { Text = "kubectl describe pod -n cs2", SortOrder = 3 },
+                    new() { Text = "kubectl get events -n cs2 --sort-by=.lastTimestamp", SortOrder = 4 },
                 ]
             },
             new()
@@ -73,19 +73,34 @@ public static class DbSeeder
                 Owner = "all", SortOrder = 3,
                 Commands =
                 [
-                    new() { Text = "su - steam -c 'tmux capture-pane -t cs2 -p -S -200'", SortOrder = 0 },
-                    new() { Text = "tail -100 /home/steam/cs2/logs/server.txt", SortOrder = 1 },
-                    new() { Text = "find /home/steam -name '*.log' -mmin -60", SortOrder = 2 },
+                    new() { Text = "kubectl logs -f deployment/cs2-server -n cs2", SortOrder = 0 },
+                    new() { Text = "kubectl logs -n cs2 deployment/cs2-server --tail=100", SortOrder = 1 },
+                    new() { Text = "kubectl logs -f job/update-manual -n cs2", SortOrder = 2 },
                 ]
             },
             new()
             {
-                Title = "🎮 CS2 — Addons",
+                Title = "🎮 CS2 — Control",
                 Owner = "all", SortOrder = 4,
                 Commands =
                 [
-                    new() { Text = "ls -lah /home/steam/cs2/game/csgo/addons", SortOrder = 0 },
-                    new() { Text = "du -sh /home/steam/cs2", SortOrder = 1 },
+                    new() { Text = "kubectl rollout restart deployment/cs2-server -n cs2", SortOrder = 0 },
+                    new() { Text = "kubectl rollout status deployment/cs2-server -n cs2", SortOrder = 1 },
+                    new() { Text = "kubectl scale deployment cs2-server -n cs2 --replicas=0", SortOrder = 2 },
+                    new() { Text = "kubectl scale deployment cs2-server -n cs2 --replicas=1", SortOrder = 3 },
+                    new() { Text = "kubectl exec -it -n cs2 deployment/cs2-server -c cs2 -- bash", SortOrder = 4 },
+                    new() { Text = "kubectl top pods -n cs2", SortOrder = 5 },
+                ]
+            },
+            new()
+            {
+                Title = "🎮 CS2 — Update",
+                Owner = "all", SortOrder = 5,
+                Commands =
+                [
+                    new() { Text = "kubectl get cronjob -n cs2", SortOrder = 0 },
+                    new() { Text = "kubectl create job update-manual --from=cronjob/cs2-auto-update -n cs2", SortOrder = 1 },
+                    new() { Text = "kubectl logs -f job/update-manual -n cs2", SortOrder = 2 },
                 ]
             },
 
@@ -93,7 +108,7 @@ public static class DbSeeder
             new()
             {
                 Title = "📊 Sistema — Recursos",
-                Owner = "all", SortOrder = 5,
+                Owner = "all", SortOrder = 6,
                 Commands =
                 [
                     new() { Text = "uptime", SortOrder = 0 },
@@ -107,7 +122,7 @@ public static class DbSeeder
             new()
             {
                 Title = "📊 Sistema — Red",
-                Owner = "all", SortOrder = 6,
+                Owner = "all", SortOrder = 7,
                 Commands =
                 [
                     new() { Text = "ss -tlnp", SortOrder = 0 },
@@ -119,7 +134,7 @@ public static class DbSeeder
             new()
             {
                 Title = "📊 Sistema — Ficheros",
-                Owner = "all", SortOrder = 7,
+                Owner = "all", SortOrder = 8,
                 Commands =
                 [
                     new() { Text = "ls -lah /home/steam", SortOrder = 0 },
@@ -130,7 +145,7 @@ public static class DbSeeder
             new()
             {
                 Title = "📊 Sistema — Usuarios",
-                Owner = "all", SortOrder = 8,
+                Owner = "all", SortOrder = 9,
                 Commands =
                 [
                     new() { Text = "who", SortOrder = 0 },
@@ -143,7 +158,7 @@ public static class DbSeeder
             new()
             {
                 Title = "🔧 Herramientas — Nginx",
-                Owner = "all", SortOrder = 9,
+                Owner = "all", SortOrder = 10,
                 Commands =
                 [
                     new() { Text = "nginx -t", SortOrder = 0 },
@@ -156,7 +171,7 @@ public static class DbSeeder
             new()
             {
                 Title = "🔧 Herramientas — tmux",
-                Owner = "all", SortOrder = 10,
+                Owner = "all", SortOrder = 11,
                 Commands =
                 [
                     new() { Text = "tmux ls", SortOrder = 0 },

@@ -502,6 +502,9 @@ public partial class Terminal : IAsyncDisposable
         s.Copied = false; StateHasChanged();
     }
 
+    void PasteSession(TerminalSession s) =>
+        _ = JS.InvokeAsync<bool>("xtermPasteFromClipboard", s.Id);
+
     async Task OnFontSizeChange(TerminalSession s, ChangeEventArgs e)
     {
         s.FontSize = int.Parse(e.Value!.ToString()!);

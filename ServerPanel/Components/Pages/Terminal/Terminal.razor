@@ -303,6 +303,9 @@
                     <button type="button" class="term-btn @(session.Copied ? "term-btn-ok" : "")" title="Copiar todo al portapapeles" @onclick="() => CopySession(session)">
                         <i class="ti @(session.Copied ? "ti-check" : "ti-copy")"></i> @(session.Copied ? "Copiado" : "Copiar")
                     </button>
+                    <button type="button" class="term-btn" title="Pegar desde portapapeles (también clic derecho)" @onclick="() => PasteSession(session)">
+                        <i class="ti ti-clipboard"></i> Pegar
+                    </button>
                 </div>
 
                 <div id="xterm-@session.Id" @key="@($"xterm-{session.Id}")" class="term-win-xterm"></div>
