@@ -18,8 +18,13 @@ public class PlayerService : IPlayerService
     private string Dep             => _activeServer.Active.KubeDeployment;
     private string ContainerCssPath => _activeServer.Active.KubeContainerCssPath;
 
+    // Container path — used for reads via kubectl exec (pod can read)
     private string AdminsJsonPath =>
         $"{ContainerCssPath}/configs/admins.json";
+
+    // Host path — used for writes via direct SSH (kubectl exec has no write permission)
+    private string HostAdminsJsonPath =>
+        $"{_activeServer.Active.KubeHostCssPath}/configs/admins.json";
 
     private string SqlitePath =>
         $"{ContainerCssPath}/plugins/CS2-SimpleAdmin/cs2-simpleadmin.sqlite";
@@ -167,9 +172,18 @@ public class PlayerService : IPlayerService
     {
         var json = JsonSerializer.Serialize(admins, JsonOpts);
         var b64  = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
-        await _ssh.ExecuteAsync(KubeExec($"echo {b64} | base64 -d > {AdminsJsonPath}"));
-        await _rcon.ExecuteAsync("css_admins_reload");
-        _logger.LogInformation("admins.json actualizado y recargado");
+
+        // Write directly on the SSH host (KubeConfigBasePath is the hostPath volume mount).
+        // Using kubectl exec would fail: the container user has no write permission on the mounted files.
+        var result = await _ssh.ExecuteAsync(
+            $"echo {b64} | base64 -d > {HostAdminsJsonPath} && echo ok");
+
+        if (!result.Contains("ok"))
+            throw new InvalidOperationException(
+                $"Error escribiendo admins.json: {result.Trim()}");
+
+        var rconResult = await _rcon.ExecuteAsync("css_admins_reload");
+        _logger.LogInformation("admins.json actualizado. RCON: {R}", rconResult);
     }
 
     public async Task SetPermissionsAsync(string playerName, string steamId, string permission)
@@ -224,10 +238,7 @@ public class PlayerService : IPlayerService
             kv.Value.Identity.Equals(player, StringComparison.OrdinalIgnoreCase));
 
         if (existing.Key is null)
-        {
-            _logger.LogWarning("RemovePermission: jugador '{Player}' no encontrado", player);
-            return;
-        }
+            throw new InvalidOperationException($"Jugador '{player}' no encontrado en admins.json");
 
         existing.Value.Flags.Remove(flag);
         if (existing.Value.Flags.Count == 0)

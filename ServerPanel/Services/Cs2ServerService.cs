@@ -200,7 +200,7 @@ public class Cs2ServerService : ICs2ServerService
     }
 
     private string SimpleAdminConfigPath =>
-        $"{ContainerCssPath}/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
+        $"{_activeServer.Active.KubeHostCssPath}/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
 
     public async Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps)
     {
@@ -222,7 +222,9 @@ public class Cs2ServerService : ICs2ServerService
                  "print('ok')";
 
         var pyB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(py));
-        var result = await _ssh.ExecuteAsync(KubeExec($"echo {pyB64} | base64 -d | python3"));
+        // Run on the SSH host directly — SimpleAdminConfigPath is now the host-side path
+        // (the container user has no write permission via kubectl exec)
+        var result = await _ssh.ExecuteAsync($"echo {pyB64} | base64 -d | python3");
         _logger.LogInformation("Workshop update result: {Result}", result);
 
         if (!result.Contains("ok"))

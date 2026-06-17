@@ -12,4 +12,5 @@ public class ServerConfig
     public string KubeDeployment     { get; set; } = "cs2-server";
     public string KubeConfigBasePath { get; set; } = "/root/cs2-config";
     public string KubeContainerCssPath { get; set; } = "/home/steam/cs2/game/csgo/addons/counterstrikesharp";
+    public string KubeHostCssPath { get; set; } = "/root/cs2-config/addons/counterstrikesharp";
 }

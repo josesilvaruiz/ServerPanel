@@ -310,7 +310,9 @@ public partial class Admin : IDisposable
 
     async Task HandleSetPerms()
     {
-        if (string.IsNullOrWhiteSpace(PermPlayerName)) return;
+        if (string.IsNullOrWhiteSpace(PermPlayerName)) { ShowToast(false, "Introduce el nombre del jugador"); return; }
+        if (string.IsNullOrWhiteSpace(SharedSteamId))  { ShowToast(false, "Introduce el SteamID del jugador"); return; }
+        if (SelectedPerms.Count == 0)                   { ShowToast(false, "Selecciona al menos un permiso"); return; }
         try
         {
             await PlayerService.SetPermissionsAsync(PermPlayerName, SharedSteamId, string.Join(";", SelectedPerms));
