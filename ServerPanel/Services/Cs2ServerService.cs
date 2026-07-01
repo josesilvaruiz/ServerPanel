@@ -134,24 +134,70 @@ public class Cs2ServerService : ICs2ServerService
     {
         try
         {
-            _logger.LogInformation("Actualizando CS2 via SteamCMD en el pod");
+            // Buildid actual publicado en Steam y el que hay instalado en el PV.
+            var remoteBuild = await GetRemoteBuildIdAsync();
+            var localBuild  = (await _ssh.ExecuteAsync(
+                KubeExec("cat /home/steam/cs2/.buildid 2>/dev/null || echo none"))).Trim();
 
-            var updateResult = await _ssh.ExecuteAsync(
-                Kube($"exec -n {Ns} deployment/{Dep} -- bash -c " +
-                     "\"/home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/cs2 " +
-                     "+login anonymous +app_update 730 validate +quit\" 2>/dev/null || echo 'steamcmd no disponible'"));
+            _logger.LogInformation("CS2 update: local={Local} remote={Remote}", localBuild, remoteBuild);
 
+            // Ya está al día: no tocar nada.
+            if (!string.IsNullOrWhiteSpace(remoteBuild) && remoteBuild == localBuild)
+            {
+                return new UpdateResult
+                {
+                    AlreadyUpdated = true,
+                    LocalBuild     = localBuild,
+                    RemoteBuild    = remoteBuild,
+                    Output         = $"El servidor ya está en el build {localBuild}."
+                };
+            }
+
+            // Actualizar SteamCMD sobre el PV (persiste reinicios). Sin tragar errores.
+            _logger.LogInformation("Actualizando CS2 via SteamCMD sobre el PV");
+            var updateOutput = await _ssh.ExecuteAsync(KubeExec(
+                "/home/steam/steamcmd/steamcmd.sh +force_install_dir /home/steam/cs2 " +
+                "+login anonymous +app_update 730 +quit"));
+
+            // Fijar el buildid en .buildid para que panel y cronjob queden sincronizados.
+            if (!string.IsNullOrWhiteSpace(remoteBuild))
+                await _ssh.ExecuteAsync(KubeExec($"echo {remoteBuild} > /home/steam/cs2/.buildid"));
+
+            // Reinicio limpio (rápido, ~7s, persiste desde el PV).
             await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{Dep} -n {Ns}"));
 
             return new UpdateResult
             {
-                Updated = true,
-                Output = $"Actualización completada. Reiniciando servidor...\n{updateResult}"
+                Updated     = true,
+                LocalBuild  = string.IsNullOrWhiteSpace(localBuild) ? "desconocido" : localBuild,
+                RemoteBuild = string.IsNullOrWhiteSpace(remoteBuild) ? "actual" : remoteBuild,
+                Output      = $"Actualización aplicada, reiniciando servidor...\n{updateOutput}"
             };
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error actualizando CS2");
             return new UpdateResult { Output = ex.Message };
+        }
+    }
+
+    private async Task<string> GetRemoteBuildIdAsync()
+    {
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("ServerPanel/1.0");
+            var json = await client.GetStringAsync("https://api.steamcmd.net/v1/info/730");
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement
+                .GetProperty("data").GetProperty("730")
+                .GetProperty("depots").GetProperty("branches")
+                .GetProperty("public").GetProperty("buildid").GetString() ?? "";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo obtener el buildid remoto de Steam");
+            return "";
         }
     }
 
