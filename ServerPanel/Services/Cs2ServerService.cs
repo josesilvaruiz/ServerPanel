@@ -10,6 +10,7 @@ public class Cs2ServerService : ICs2ServerService
     private readonly ISshService _ssh;
     private readonly IRconService _rcon;
     private readonly IActiveServerService _activeServer;
+    private readonly IManualActionTracker _manualActionTracker;
     private readonly ILogger<Cs2ServerService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -30,12 +31,14 @@ public class Cs2ServerService : ICs2ServerService
         ISshService ssh,
         IRconService rcon,
         IActiveServerService activeServer,
+        IManualActionTracker manualActionTracker,
         ILogger<Cs2ServerService> logger,
         IHttpClientFactory httpClientFactory)
     {
         _ssh           = ssh;
         _rcon          = rcon;
         _activeServer  = activeServer;
+        _manualActionTracker = manualActionTracker;
         _logger        = logger;
         _httpClientFactory = httpClientFactory;
     }
@@ -74,6 +77,9 @@ public class Cs2ServerService : ICs2ServerService
 
     public async Task StopAsync()
     {
+        // Antes de ejecutar: si falla el kubectl, mejor pecar de no alertar en un stop fallido
+        // que dejar una ventana sin marcar en la que un poll pille el servidor cayendo.
+        _manualActionTracker.MarkAction(_activeServer.Active.Name);
         try
         {
             _logger.LogInformation("Escalando {Dep} a 0 réplicas", Dep);
@@ -88,6 +94,7 @@ public class Cs2ServerService : ICs2ServerService
 
     public async Task RestartAsync()
     {
+        _manualActionTracker.MarkAction(_activeServer.Active.Name);
         try
         {
             _logger.LogInformation("Reiniciando deployment {Dep}", Dep);

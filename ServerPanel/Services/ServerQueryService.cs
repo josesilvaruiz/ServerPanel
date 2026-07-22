@@ -19,9 +19,10 @@ public class ServerQueryService : IServerQueryService
         _logger       = logger;
     }
 
-    public async Task<ServerInfo> GetServerInfoAsync()
+    public Task<ServerInfo> GetServerInfoAsync() => GetServerInfoAsync(_activeServer.Active);
+
+    public async Task<ServerInfo> GetServerInfoAsync(ServerConfig server)
     {
-        var server = _activeServer.Active;
         var info = new ServerInfo
         {
             Ip = server.Host,

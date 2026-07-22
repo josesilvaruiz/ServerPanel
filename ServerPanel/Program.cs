@@ -30,6 +30,7 @@ builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddSingleton<IRconService, RconService>();
 builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
 builder.Services.AddSingleton<IServerMetricsService, ServerMetricsService>();
+builder.Services.AddSingleton<IManualActionTracker, ManualActionTracker>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -38,6 +39,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 
 builder.Services.AddHostedService<MetricsCollectorBackgroundService>();
 builder.Services.AddHostedService<Cs2MetricsCollectorBackgroundService>();
+builder.Services.AddHostedService<ProductionDownAlertBackgroundService>();
 
 if (builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<PostgresTunnelService>();

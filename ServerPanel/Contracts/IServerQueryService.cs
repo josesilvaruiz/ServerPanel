@@ -6,5 +6,7 @@ public interface IServerQueryService
 {
     Task<ServerInfo> GetServerInfoAsync();
 
+    Task<ServerInfo> GetServerInfoAsync(ServerConfig server);
+
     Task<List<PlayerInfo>> GetPlayersAsync();
 }
