@@ -20,4 +20,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<PageVisit> PageVisits => Set<PageVisit>();
     public DbSet<SavedCmdGroup> SavedCmdGroups => Set<SavedCmdGroup>();
     public DbSet<SavedCmd> SavedCmds => Set<SavedCmd>();
+    public DbSet<CrashedMapRecord> CrashedMapRecords => Set<CrashedMapRecord>();
 }

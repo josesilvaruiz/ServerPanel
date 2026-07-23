@@ -1,5 +1,8 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using ServerPanel.Contracts;
+using ServerPanel.Data;
 using ServerPanel.Models;
 
 namespace ServerPanel.Services;
@@ -22,6 +25,7 @@ public class ProductionDownAlertBackgroundService : BackgroundService
     private readonly IManualActionTracker _manualActionTracker;
     private readonly ISshService _ssh;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _config;
     private readonly ILogger<ProductionDownAlertBackgroundService> _logger;
 
@@ -34,6 +38,7 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         IManualActionTracker manualActionTracker,
         ISshService ssh,
         IHttpClientFactory httpClientFactory,
+        IServiceScopeFactory scopeFactory,
         IConfiguration config,
         ILogger<ProductionDownAlertBackgroundService> logger)
     {
@@ -42,6 +47,7 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         _manualActionTracker = manualActionTracker;
         _ssh = ssh;
         _httpClientFactory = httpClientFactory;
+        _scopeFactory = scopeFactory;
         _config = config;
         _logger = logger;
     }
@@ -107,7 +113,10 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         }
 
         var crashedAtUtc = DateTime.UtcNow;
-        var diagnostics = await GetCrashDiagnosticsAsync(production);
+        var (diagnostics, logs) = await GetCrashDiagnosticsAsync(production);
+
+        if (!string.IsNullOrWhiteSpace(logs))
+            await TryRecordCrashedMapAsync(logs, production, crashedAtUtc);
 
         try
         {
@@ -132,11 +141,90 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         }
     }
 
+    // El crash conocido (mapas con física/colisión rota) siempre deja la misma firma:
+    // "Created physics for <mapa>" justo antes de que el watchdog del propio motor
+    // mate el proceso. Si aparece, se guarda el mapa (+ su Workshop ID si se puede
+    // resolver) en una lista para poder sacarlo luego de la rotación/RTV.
+    private static readonly Regex WatchdogTimeoutPattern = new(
+        "Watchdog timeout exceeded", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex CreatedPhysicsPattern = new(
+        @"Created physics for (\S+)", RegexOptions.Compiled);
+
+    private async Task TryRecordCrashedMapAsync(string logs, ServerConfig production, DateTime crashedAtUtc)
+    {
+        try
+        {
+            if (!WatchdogTimeoutPattern.IsMatch(logs))
+                return;
+
+            var matches = CreatedPhysicsPattern.Matches(logs);
+            if (matches.Count == 0)
+                return;
+
+            // El último "Created physics for X" antes del timeout es el mapa que colgó el motor.
+            var mapName = matches[^1].Groups[1].Value;
+
+            var workshopId = await TryResolveWorkshopIdAsync(mapName, production);
+
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.CrashedMapRecords.Add(new CrashedMapRecord
+            {
+                CrashedAtUtc = crashedAtUtc,
+                MapName = mapName,
+                WorkshopId = workshopId,
+                ServerName = production.Name,
+            });
+            await db.SaveChangesAsync();
+
+            _logger.LogWarning(
+                "ProductionDownAlert: registrado crash por mapa '{Map}' (workshop {WorkshopId})",
+                mapName, workshopId ?? "desconocido");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ProductionDownAlert: error registrando el mapa que crasheó");
+        }
+    }
+
+    // Busca el ID de Workshop del mapa en la config viva de CS2-SimpleAdmin (mismo
+    // fichero que usa el picker de mapas del panel) — el JSON trae un comentario en
+    // la primera línea, hay que saltarlo antes de parsear.
+    private async Task<string?> TryResolveWorkshopIdAsync(string mapName, ServerConfig production)
+    {
+        try
+        {
+            var path = $"{production.KubeHostCssPath}/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json";
+            var raw = await _ssh.ExecuteAsync($"cat {path} 2>/dev/null");
+            var start = raw.IndexOf('{');
+            if (start < 0)
+                return null;
+
+            using var doc = JsonDocument.Parse(raw[start..]);
+            if (!doc.RootElement.TryGetProperty("WorkshopMaps", out var workshopMaps))
+                return null;
+
+            foreach (var prop in workshopMaps.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, mapName, StringComparison.OrdinalIgnoreCase))
+                    return prop.Value.ToString();
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ProductionDownAlert: error resolviendo workshop id de '{Map}'", mapName);
+            return null;
+        }
+    }
+
     // Diagnóstico best-effort: último estado conocido del pod (para pillar OOMKilled,
     // Error, exit code) + las últimas líneas de log del contenedor que se cayó
     // (--previous, porque si K8s ya reinició el pod, "kubectl logs" a secas
     // devolvería los logs de la instancia NUEVA, no la que crasheó).
-    private async Task<string> GetCrashDiagnosticsAsync(ServerConfig production)
+    private async Task<(string Diagnostics, string? Logs)> GetCrashDiagnosticsAsync(ServerConfig production)
     {
         try
         {
@@ -148,7 +236,7 @@ public class ProductionDownAlertBackgroundService : BackgroundService
                 "-o jsonpath='{.spec.selector.matchLabels.app}'")).Trim();
 
             if (string.IsNullOrWhiteSpace(selector))
-                return $"No se pudo leer el selector del deployment '{production.KubeDeployment}' (¿existe en el namespace '{production.KubeNamespace}'?).";
+                return ($"No se pudo leer el selector del deployment '{production.KubeDeployment}' (¿existe en el namespace '{production.KubeNamespace}'?).", null);
 
             var podNameRaw = (await _ssh.ExecuteAsync(
                 $"kubectl get pods -n {production.KubeNamespace} -l app={selector} " +
@@ -162,8 +250,8 @@ public class ProductionDownAlertBackgroundService : BackgroundService
 
             if (!looksValid)
             {
-                return $"No se pudo localizar el pod (selector 'app={selector}' en namespace '{production.KubeNamespace}').\n" +
-                       $"Salida de kubectl: {(string.IsNullOrWhiteSpace(podNameRaw) ? "(vacía)" : podNameRaw)}";
+                return ($"No se pudo localizar el pod (selector 'app={selector}' en namespace '{production.KubeNamespace}').\n" +
+                       $"Salida de kubectl: {(string.IsNullOrWhiteSpace(podNameRaw) ? "(vacía)" : podNameRaw)}", null);
             }
 
             var stateInfo = (await _ssh.ExecuteAsync(
@@ -179,15 +267,17 @@ public class ProductionDownAlertBackgroundService : BackgroundService
                     $"kubectl logs {podName} -n {production.KubeNamespace} --tail=40 2>/dev/null")).Trim();
             }
 
-            return
+            var diagnostics =
                 $"Pod: {podName}\n\n" +
                 $"Estado del pod:\n{(string.IsNullOrWhiteSpace(stateInfo) ? "(sin datos)" : stateInfo)}\n\n" +
                 $"Últimas líneas de log:\n{(string.IsNullOrWhiteSpace(logs) ? "(sin logs disponibles)" : logs)}";
+
+            return (diagnostics, logs);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "ProductionDownAlert: error obteniendo diagnóstico de la caída");
-            return $"No se pudo obtener el diagnóstico de la caída (error consultando kubectl): {ex.Message}";
+            return ($"No se pudo obtener el diagnóstico de la caída (error consultando kubectl): {ex.Message}", null);
         }
     }
 }
