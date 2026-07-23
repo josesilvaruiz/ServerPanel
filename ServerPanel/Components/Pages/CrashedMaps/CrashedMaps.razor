@@ -1,0 +1,214 @@
+@namespace ServerPanel.Components.Pages
+@page "/crashed-maps"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using ServerPanel.Data
+@using ServerPanel.Contracts
+@using ServerPanel.Models
+@attribute [Authorize]
+@inject ApplicationDbContext Db
+@inject ICs2ServerService Cs2
+
+<div class="wrap">
+
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-bug"></i></div>
+        <div>
+            <p class="top-title">Mapas que han crasheado</p>
+            <p class="top-sub">Registrados automáticamente cuando el crash conocido de física/colisión rota tumba el servidor</p>
+        </div>
+        <button type="button" class="btn-refresh" @onclick="LoadAsync" disabled="@Loading">
+            <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
+        </button>
+    </div>
+
+    @if (Loading)
+    {
+        <div class="state-box">
+            <div class="spinner"></div>
+            <p>Cargando...</p>
+        </div>
+    }
+    else if (Error is not null)
+    {
+        <div class="state-box state-error">
+            <i class="ti ti-alert-circle"></i>
+            <p>@Error</p>
+        </div>
+    }
+    else if (Rows.Count == 0)
+    {
+        <div class="state-box">
+            <i class="ti ti-mood-smile"></i>
+            <p>Ningún crash de este tipo registrado todavía.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Mapa</th>
+                        <th>Workshop ID</th>
+                        <th class="num">Crashes</th>
+                        <th>Último crash</th>
+                        <th>Última act. Workshop</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Rows)
+                    {
+                        <tr>
+                            <td class="map-cell">@r.MapName</td>
+                            <td class="mono">
+                                @if (!string.IsNullOrWhiteSpace(r.WorkshopId))
+                                {
+                                    <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=@r.WorkshopId" target="_blank" rel="noopener">@r.WorkshopId</a>
+                                }
+                                else
+                                {
+                                    <span class="muted">—</span>
+                                }
+                            </td>
+                            <td class="num">@r.CrashCount</td>
+                            <td class="mono">@ToMadrid(r.LastCrashUtc)</td>
+                            <td class="mono">
+                                @if (r.WorkshopLastUpdatedUtc is { } updated)
+                                {
+                                    @ToMadrid(updated)
+                                }
+                                else if (r.WorkshopChecked && !r.WorkshopFound)
+                                {
+                                    <span class="muted">borrado / privado</span>
+                                }
+                                else
+                                {
+                                    <span class="muted">—</span>
+                                }
+                            </td>
+                            <td>@StatusBadge(r)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="count-lbl">@Rows.Count mapa(s) con crash registrado</p>
+    }
+
+</div>
+
+@code {
+    class Row
+    {
+        public string  MapName               = "";
+        public string? WorkshopId;
+        public int     CrashCount;
+        public DateTime LastCrashUtc;
+        public bool    WorkshopChecked;
+        public bool    WorkshopFound;
+        public DateTime? WorkshopLastUpdatedUtc;
+    }
+
+    List<Row> Rows = new();
+    bool      Loading = true;
+    string?   Error;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    async Task LoadAsync()
+    {
+        Loading = true;
+        Error   = null;
+        StateHasChanged();
+        try
+        {
+            var grouped = await Db.CrashedMapRecords
+                .GroupBy(c => new { c.MapName, c.WorkshopId })
+                .Select(g => new
+                {
+                    g.Key.MapName,
+                    g.Key.WorkshopId,
+                    CrashCount = g.Count(),
+                    LastCrashUtc = g.Max(c => c.CrashedAtUtc)
+                })
+                .OrderByDescending(g => g.LastCrashUtc)
+                .ToListAsync();
+
+            var rows = grouped.Select(g => new Row
+            {
+                MapName = g.MapName,
+                WorkshopId = g.WorkshopId,
+                CrashCount = g.CrashCount,
+                LastCrashUtc = g.LastCrashUtc
+            }).ToList();
+
+            // Consulta Steam para cada mapa con Workshop ID conocido, en paralelo.
+            var lookups = rows.Where(r => !string.IsNullOrWhiteSpace(r.WorkshopId)).Select(async r =>
+            {
+                try
+                {
+                    var info = await Cs2.GetWorkshopItemInfoAsync(r.WorkshopId!);
+                    r.WorkshopChecked = true;
+                    r.WorkshopFound = info?.Found ?? false;
+                    r.WorkshopLastUpdatedUtc = info?.LastUpdatedUtc;
+                }
+                catch
+                {
+                    r.WorkshopChecked = false;
+                }
+            });
+            await Task.WhenAll(lookups);
+
+            Rows = rows;
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+            StateHasChanged();
+        }
+    }
+
+    RenderFragment StatusBadge(Row r) => builder =>
+    {
+        string cls, text;
+        if (!string.IsNullOrWhiteSpace(r.WorkshopId) && r.WorkshopChecked && !r.WorkshopFound)
+        {
+            cls = "badge-off";
+            text = "Ítem eliminado";
+        }
+        else if (r.WorkshopLastUpdatedUtc is { } updated && updated > r.LastCrashUtc)
+        {
+            cls = "badge-on";
+            text = "Actualizado desde el crash — podría probarse";
+        }
+        else if (string.IsNullOrWhiteSpace(r.WorkshopId))
+        {
+            cls = "badge-idle";
+            text = "Sin Workshop ID";
+        }
+        else
+        {
+            cls = "badge-idle";
+            text = "Sin cambios desde el crash";
+        }
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", $"badge {cls}");
+        builder.AddContent(2, text);
+        builder.CloseElement();
+    };
+
+    static readonly TimeZoneInfo _madrid =
+        TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Romance Standard Time" : "Europe/Madrid");
+
+    static string ToMadrid(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("dd/MM HH:mm");
+}

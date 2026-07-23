@@ -319,7 +319,44 @@ public class Cs2ServerService : ICs2ServerService
     private sealed class PublishedFileDetail
     {
         [JsonPropertyName("publishedfileid")] public string PublishedFileId { get; set; } = "";
+        [JsonPropertyName("result")]           public int    Result          { get; set; }
         [JsonPropertyName("title")]           public string Title           { get; set; } = "";
         [JsonPropertyName("preview_url")]     public string PreviewUrl      { get; set; } = "";
+        [JsonPropertyName("time_updated")]    public long   TimeUpdated     { get; set; }
+    }
+
+    // result == 1 significa "ok" en la API de Steam Workshop; cualquier otro valor
+    // (9 = no encontrado, 15 = acceso denegado, etc.) significa que el item no es usable.
+    private const int SteamWorkshopResultOk = 1;
+
+    public async Task<WorkshopItemInfo?> GetWorkshopItemInfoAsync(string workshopId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("ServerPanel/1.0");
+
+        var resp = await client.PostAsync(
+            "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["itemcount"] = "1",
+                ["publishedfileids[0]"] = workshopId
+            }));
+
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadAsStringAsync();
+        var root = JsonSerializer.Deserialize<PublishedFileDetailsRoot>(json);
+        var detail = root?.Response?.PublishedFileDetails?.FirstOrDefault();
+
+        if (detail is null)
+            return null;
+
+        return new WorkshopItemInfo
+        {
+            Found = detail.Result == SteamWorkshopResultOk,
+            Title = detail.Title,
+            LastUpdatedUtc = detail.TimeUpdated > 0
+                ? DateTimeOffset.FromUnixTimeSeconds(detail.TimeUpdated).UtcDateTime
+                : null
+        };
     }
 }

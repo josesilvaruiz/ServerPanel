@@ -25,4 +25,6 @@ public interface ICs2ServerService
     Task<List<WorkshopMap>> GetWorkshopMapsAsync(string collectionId);
 
     Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps);
+
+    Task<WorkshopItemInfo?> GetWorkshopItemInfoAsync(string workshopId);
 }
