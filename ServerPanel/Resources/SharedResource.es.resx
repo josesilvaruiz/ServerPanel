@@ -129,4 +129,20 @@
   <data name="Admin.Cmd.Smoke" xml:space="preserve"><value>Dar granada de humo</value></data>
   <data name="Admin.Cmd.Molotov" xml:space="preserve"><value>Dar molotov</value></data>
   <data name="Admin.Cmd.BuyAnywhere" xml:space="preserve"><value>Comprar en cualquier lugar</value></data>
+  <data name="Nav.CrashedMaps" xml:space="preserve"><value>Mapas con errores</value></data>
+  <data name="CrashedMaps.Title" xml:space="preserve"><value>Mapas con errores</value></data>
+  <data name="CrashedMaps.Subtitle" xml:space="preserve"><value>Registrados automáticamente cuando el crash conocido de física/colisión rota tumba el servidor</value></data>
+  <data name="CrashedMaps.Col.Map" xml:space="preserve"><value>Mapa</value></data>
+  <data name="CrashedMaps.Col.WorkshopId" xml:space="preserve"><value>Workshop ID</value></data>
+  <data name="CrashedMaps.Col.Crashes" xml:space="preserve"><value>Crashes</value></data>
+  <data name="CrashedMaps.Col.LastCrash" xml:space="preserve"><value>Último crash</value></data>
+  <data name="CrashedMaps.Col.WorkshopUpdated" xml:space="preserve"><value>Última act. Workshop</value></data>
+  <data name="CrashedMaps.Col.Status" xml:space="preserve"><value>Estado</value></data>
+  <data name="CrashedMaps.Empty" xml:space="preserve"><value>Ningún crash de este tipo registrado todavía.</value></data>
+  <data name="CrashedMaps.Count" xml:space="preserve"><value>mapa(s) con crash registrado</value></data>
+  <data name="CrashedMaps.DeletedOrPrivate" xml:space="preserve"><value>borrado / privado</value></data>
+  <data name="CrashedMaps.Status.Deleted" xml:space="preserve"><value>Ítem eliminado</value></data>
+  <data name="CrashedMaps.Status.CanRetry" xml:space="preserve"><value>Actualizado desde el crash — podría probarse</value></data>
+  <data name="CrashedMaps.Status.NoWorkshopId" xml:space="preserve"><value>Sin Workshop ID</value></data>
+  <data name="CrashedMaps.Status.Unchanged" xml:space="preserve"><value>Sin cambios desde el crash</value></data>
 </root>

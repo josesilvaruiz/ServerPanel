@@ -3,20 +3,23 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Localization
 @using ServerPanel.Data
 @using ServerPanel.Contracts
 @using ServerPanel.Models
+@using ServerPanel.Resources
 @attribute [Authorize]
 @inject ApplicationDbContext Db
 @inject ICs2ServerService Cs2
+@inject IStringLocalizer<SharedResource> L
 
 <div class="wrap">
 
     <div class="top">
         <div class="top-icon"><i class="ti ti-bug"></i></div>
         <div>
-            <p class="top-title">Mapas que han crasheado</p>
-            <p class="top-sub">Registrados automáticamente cuando el crash conocido de física/colisión rota tumba el servidor</p>
+            <p class="top-title">@L["CrashedMaps.Title"]</p>
+            <p class="top-sub">@L["CrashedMaps.Subtitle"]</p>
         </div>
         <button type="button" class="btn-refresh" @onclick="LoadAsync" disabled="@Loading">
             <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
@@ -27,7 +30,7 @@
     {
         <div class="state-box">
             <div class="spinner"></div>
-            <p>Cargando...</p>
+            <p>@L["Dashboard.Loading"]</p>
         </div>
     }
     else if (Error is not null)
@@ -41,7 +44,7 @@
     {
         <div class="state-box">
             <i class="ti ti-mood-smile"></i>
-            <p>Ningún crash de este tipo registrado todavía.</p>
+            <p>@L["CrashedMaps.Empty"]</p>
         </div>
     }
     else
@@ -50,12 +53,12 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>Mapa</th>
-                        <th>Workshop ID</th>
-                        <th class="num">Crashes</th>
-                        <th>Último crash</th>
-                        <th>Última act. Workshop</th>
-                        <th>Estado</th>
+                        <th>@L["CrashedMaps.Col.Map"]</th>
+                        <th>@L["CrashedMaps.Col.WorkshopId"]</th>
+                        <th class="num">@L["CrashedMaps.Col.Crashes"]</th>
+                        <th>@L["CrashedMaps.Col.LastCrash"]</th>
+                        <th>@L["CrashedMaps.Col.WorkshopUpdated"]</th>
+                        <th>@L["CrashedMaps.Col.Status"]</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,7 +85,7 @@
                                 }
                                 else if (r.WorkshopChecked && !r.WorkshopFound)
                                 {
-                                    <span class="muted">borrado / privado</span>
+                                    <span class="muted">@L["CrashedMaps.DeletedOrPrivate"]</span>
                                 }
                                 else
                                 {
@@ -95,7 +98,7 @@
                 </tbody>
             </table>
         </div>
-        <p class="count-lbl">@Rows.Count mapa(s) con crash registrado</p>
+        <p class="count-lbl">@Rows.Count @L["CrashedMaps.Count"]</p>
     }
 
 </div>
@@ -181,22 +184,22 @@
         if (!string.IsNullOrWhiteSpace(r.WorkshopId) && r.WorkshopChecked && !r.WorkshopFound)
         {
             cls = "badge-off";
-            text = "Ítem eliminado";
+            text = L["CrashedMaps.Status.Deleted"];
         }
         else if (r.WorkshopLastUpdatedUtc is { } updated && updated > r.LastCrashUtc)
         {
             cls = "badge-on";
-            text = "Actualizado desde el crash — podría probarse";
+            text = L["CrashedMaps.Status.CanRetry"];
         }
         else if (string.IsNullOrWhiteSpace(r.WorkshopId))
         {
             cls = "badge-idle";
-            text = "Sin Workshop ID";
+            text = L["CrashedMaps.Status.NoWorkshopId"];
         }
         else
         {
             cls = "badge-idle";
-            text = "Sin cambios desde el crash";
+            text = L["CrashedMaps.Status.Unchanged"];
         }
 
         builder.OpenElement(0, "span");
