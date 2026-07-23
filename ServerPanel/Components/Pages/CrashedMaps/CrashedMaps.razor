@@ -213,5 +213,5 @@
             OperatingSystem.IsWindows() ? "Romance Standard Time" : "Europe/Madrid");
 
     static string ToMadrid(DateTime utc) =>
-        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("dd/MM HH:mm");
+        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("dd/MM/yyyy HH:mm");
 }
