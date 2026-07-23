@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using ServerPanel.Contracts;
 using ServerPanel.Data;
 using ServerPanel.Models;
@@ -141,29 +140,15 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         }
     }
 
-    // El crash conocido (mapas con física/colisión rota) siempre deja la misma firma:
-    // "Created physics for <mapa>" justo antes de que el watchdog del propio motor
-    // mate el proceso. Si aparece, se guarda el mapa (+ su Workshop ID si se puede
+    // Si el log coincide con la firma conocida (mapas con física/colisión rota,
+    // ver CrashLogParser), se guarda el mapa (+ su Workshop ID si se puede
     // resolver) en una lista para poder sacarlo luego de la rotación/RTV.
-    private static readonly Regex WatchdogTimeoutPattern = new(
-        "Watchdog timeout exceeded", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex CreatedPhysicsPattern = new(
-        @"Created physics for (\S+)", RegexOptions.Compiled);
-
     private async Task TryRecordCrashedMapAsync(string logs, ServerConfig production, DateTime crashedAtUtc)
     {
         try
         {
-            if (!WatchdogTimeoutPattern.IsMatch(logs))
+            if (!CrashLogParser.TryExtractCrashedMap(logs, out var mapName))
                 return;
-
-            var matches = CreatedPhysicsPattern.Matches(logs);
-            if (matches.Count == 0)
-                return;
-
-            // El último "Created physics for X" antes del timeout es el mapa que colgó el motor.
-            var mapName = matches[^1].Groups[1].Value;
 
             var workshopId = await TryResolveWorkshopIdAsync(mapName, production);
 
@@ -258,19 +243,26 @@ public class ProductionDownAlertBackgroundService : BackgroundService
                 $"kubectl describe pod {podName} -n {production.KubeNamespace} " +
                 "| grep -E 'State:|Reason:|Exit Code:|Message:' | head -10")).Trim();
 
+            // 200 líneas para el análisis del crash (el patrón "Created physics for X"
+            // puede quedar a 30-40 líneas del "Watchdog timeout" si hay ruido de
+            // conexiones de clientes de por medio — con --tail=40 se ha visto cortarse).
             var logs = (await _ssh.ExecuteAsync(
-                $"kubectl logs {podName} -n {production.KubeNamespace} --previous --tail=40 2>/dev/null")).Trim();
+                $"kubectl logs {podName} -n {production.KubeNamespace} --previous --tail=200 2>/dev/null")).Trim();
 
             if (string.IsNullOrWhiteSpace(logs))
             {
                 logs = (await _ssh.ExecuteAsync(
-                    $"kubectl logs {podName} -n {production.KubeNamespace} --tail=40 2>/dev/null")).Trim();
+                    $"kubectl logs {podName} -n {production.KubeNamespace} --tail=200 2>/dev/null")).Trim();
             }
+
+            // El email se queda con las últimas 40 líneas para no ser un ladrillo;
+            // el análisis del crash usa las 200 completas (ver logs más arriba).
+            var logsTailForEmail = string.Join('\n', logs.Split('\n').TakeLast(40));
 
             var diagnostics =
                 $"Pod: {podName}\n\n" +
                 $"Estado del pod:\n{(string.IsNullOrWhiteSpace(stateInfo) ? "(sin datos)" : stateInfo)}\n\n" +
-                $"Últimas líneas de log:\n{(string.IsNullOrWhiteSpace(logs) ? "(sin logs disponibles)" : logs)}";
+                $"Últimas líneas de log:\n{(string.IsNullOrWhiteSpace(logsTailForEmail) ? "(sin logs disponibles)" : logsTailForEmail)}";
 
             return (diagnostics, logs);
         }
