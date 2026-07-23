@@ -140,12 +140,31 @@ public class ProductionDownAlertBackgroundService : BackgroundService
     {
         try
         {
-            var podName = (await _ssh.ExecuteAsync(
-                $"kubectl get pods -n {production.KubeNamespace} -l app={production.KubeDeployment} " +
-                "-o jsonpath='{.items[0].metadata.name}'")).Trim();
+            // El selector del pod NO es necesariamente "app=<KubeDeployment>" (p.ej.
+            // producción usa app=cs2, no app=cs2-server) — hay que leerlo del propio
+            // deployment en vez de asumirlo, o el filtro no encuentra nada.
+            var selector = (await _ssh.ExecuteAsync(
+                $"kubectl get deployment {production.KubeDeployment} -n {production.KubeNamespace} " +
+                "-o jsonpath='{.spec.selector.matchLabels.app}'")).Trim();
 
-            if (string.IsNullOrWhiteSpace(podName))
-                return "No se pudo localizar el pod para diagnosticar la caída.";
+            if (string.IsNullOrWhiteSpace(selector))
+                return $"No se pudo leer el selector del deployment '{production.KubeDeployment}' (¿existe en el namespace '{production.KubeNamespace}'?).";
+
+            var podNameRaw = (await _ssh.ExecuteAsync(
+                $"kubectl get pods -n {production.KubeNamespace} -l app={selector} " +
+                "--sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}'")).Trim();
+
+            // Validación defensiva: si kubectl falló, esto trae su mensaje de error
+            // multilínea en vez de un nombre de pod. No lo pases nunca a otro comando
+            // shell tal cual — se ejecutaría línea a línea como si fueran órdenes.
+            var podName = podNameRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+            var looksValid = podName.Length > 0 && !podName.Contains(' ') && podNameRaw.Count(c => c == '\n') == 0;
+
+            if (!looksValid)
+            {
+                return $"No se pudo localizar el pod (selector 'app={selector}' en namespace '{production.KubeNamespace}').\n" +
+                       $"Salida de kubectl: {(string.IsNullOrWhiteSpace(podNameRaw) ? "(vacía)" : podNameRaw)}";
+            }
 
             var stateInfo = (await _ssh.ExecuteAsync(
                 $"kubectl describe pod {podName} -n {production.KubeNamespace} " +
@@ -157,17 +176,18 @@ public class ProductionDownAlertBackgroundService : BackgroundService
             if (string.IsNullOrWhiteSpace(logs))
             {
                 logs = (await _ssh.ExecuteAsync(
-                    $"kubectl logs deployment/{production.KubeDeployment} -n {production.KubeNamespace} --tail=40 2>/dev/null")).Trim();
+                    $"kubectl logs {podName} -n {production.KubeNamespace} --tail=40 2>/dev/null")).Trim();
             }
 
             return
+                $"Pod: {podName}\n\n" +
                 $"Estado del pod:\n{(string.IsNullOrWhiteSpace(stateInfo) ? "(sin datos)" : stateInfo)}\n\n" +
                 $"Últimas líneas de log:\n{(string.IsNullOrWhiteSpace(logs) ? "(sin logs disponibles)" : logs)}";
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "ProductionDownAlert: error obteniendo diagnóstico de la caída");
-            return "No se pudo obtener el diagnóstico de la caída (error consultando kubectl).";
+            return $"No se pudo obtener el diagnóstico de la caída (error consultando kubectl): {ex.Message}";
         }
     }
 }
