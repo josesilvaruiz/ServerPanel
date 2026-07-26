@@ -12,7 +12,11 @@ namespace ServerPanel.Services;
 // altera las estadísticas que se guardan para lo que esté activo en el panel.
 public class ProductionDownAlertBackgroundService : BackgroundService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
+    // Un ciclo caída-y-reinicio-manual puede completarse en pocos segundos (alguien
+    // nota que no puede conectar y reinicia al momento) — con un poll de 1 minuto
+    // esa ventana "offline" a veces no llega a observarse nunca. 15s reduce el punto
+    // ciego sin apenas coste (solo A2S + un par de comandos kubectl de lectura).
+    private static readonly TimeSpan Interval = TimeSpan.FromSeconds(15);
 
     // Cubre el tiempo entre disparar un stop/restart y que el próximo poll (cada 1 min)
     // vea el servidor caído; si el manual action tracker lo marcó dentro de esta ventana,
@@ -84,25 +88,35 @@ public class ProductionDownAlertBackgroundService : BackgroundService
             isOnline = false;
         }
 
-        // Solo alerta en la transición Online -> Offline: evita un email por cada
+        // Solo actúa en la transición Online -> Offline: evita reprocesar en cada
         // poll mientras el servidor sigue caído.
         if (_lastKnownOnline == true && !isOnline)
         {
+            var crashedAtUtc = DateTime.UtcNow;
+            var (diagnostics, logs) = await GetCrashDiagnosticsAsync(production);
+
+            // El registro del mapa roto NO depende de si se avisa por email: si
+            // alguien reinicia a mano nada más notar que no se puede conectar (lo
+            // más normal), el email se suprime pero el crash fue igual de real y
+            // debe quedar registrado igual.
+            if (!string.IsNullOrWhiteSpace(logs))
+                await TryRecordCrashedMapAsync(logs, production, crashedAtUtc);
+
             if (_manualActionTracker.WasRecentlyActedOn(production.Name, ManualActionGracePeriod))
             {
-                _logger.LogInformation("ProductionDownAlert: {Name} caído tras una acción manual reciente, no se avisa", production.Name);
+                _logger.LogInformation("ProductionDownAlert: {Name} caído tras una acción manual reciente, no se avisa por email", production.Name);
             }
             else
             {
                 _logger.LogWarning("ProductionDownAlert: {Name} ({Host}:{Port}) ha dejado de responder", production.Name, production.Host, production.Port);
-                await SendAlertAsync(production, ct);
+                await SendAlertEmailAsync(production, diagnostics, crashedAtUtc, ct);
             }
         }
 
         _lastKnownOnline = isOnline;
     }
 
-    private async Task SendAlertAsync(ServerConfig production, CancellationToken ct)
+    private async Task SendAlertEmailAsync(ServerConfig production, string diagnostics, DateTime crashedAtUtc, CancellationToken ct)
     {
         var baseUrl = _config["Notifications:BaseUrl"];
         if (string.IsNullOrWhiteSpace(baseUrl))
@@ -110,12 +124,6 @@ public class ProductionDownAlertBackgroundService : BackgroundService
             _logger.LogWarning("ProductionDownAlert: Notifications:BaseUrl no configurado, no se envía el email");
             return;
         }
-
-        var crashedAtUtc = DateTime.UtcNow;
-        var (diagnostics, logs) = await GetCrashDiagnosticsAsync(production);
-
-        if (!string.IsNullOrWhiteSpace(logs))
-            await TryRecordCrashedMapAsync(logs, production, crashedAtUtc);
 
         try
         {
