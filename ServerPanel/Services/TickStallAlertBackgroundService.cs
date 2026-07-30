@@ -23,6 +23,11 @@ public class TickStallAlertBackgroundService : BackgroundService
     private static readonly Regex LongFramePattern = new(
         @"UNEXPECTED LONG FRAME DETECTED:\s*([\d.]+)ms elapsed", RegexOptions.Compiled);
 
+    // El motor imprime esta misma línea para micro-parones normales de unos pocos ms
+    // (su propio sistema de tolerancia relativa) — solo nos interesan los congelamientos
+    // graves de verdad (los vistos en vivo eran de 1.3-2.5 SEGUNDOS), no ese ruido de fondo.
+    private const double MinElapsedMs = 500;
+
     private readonly IActiveServerService _activeServer;
     private readonly ISshService _ssh;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -77,7 +82,10 @@ public class TickStallAlertBackgroundService : BackgroundService
 
             var elapsedMs = matches
                 .Select(m => double.TryParse(m.Groups[1].Value, out var v) ? v : 0)
+                .Where(v => v >= MinElapsedMs)
                 .ToList();
+            if (elapsedMs.Count == 0) return;
+
             var worst = elapsedMs.Max();
 
             _logger.LogWarning(
