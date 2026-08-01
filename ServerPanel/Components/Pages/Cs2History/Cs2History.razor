@@ -108,10 +108,10 @@
             </div>
         </div>
 
-        @* ── Sesiones de jugadores (últimos 100 registros) ── *@
+        @* ── Sesiones de jugadores (eventos exactos de conexión/desconexión, últimas 24h) ── *@
         @if (PlayerSessions.Count > 0)
         {
-            <div class="kpi-section-lbl" style="margin-top:.25rem">Sesiones · últimos 100 registros</div>
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Sesiones · últimas 24h (hora exacta, incluye visitas cortas)</div>
             <div class="sessions-grid">
                 @foreach (var g in PlayerSessions.GroupBy(s => s.Name).OrderByDescending(g => g.Max(s => s.End)))
                 {
@@ -128,15 +128,20 @@
                                         <i class="ti ti-clock-play"></i>
                                         @ToMadridTime(s.Start)
                                         <span class="range-arrow">→</span>
-                                        @ToMadridTime(s.End)
+                                        @(s.Ongoing ? "ahora" : ToMadridTime(s.End))
                                     </span>
-                                    <span class="range-dur">@FormatDuration(s.Duration)</span>
+                                    <span class="range-dur @(s.Ongoing ? "range-dur-live" : "")">@FormatDuration(s.Duration)</span>
                                 </div>
                             }
                         </div>
                     </div>
                 }
             </div>
+        }
+        else if (!Loading)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Sesiones · últimas 24h</div>
+            <p class="muted" style="font-size:12px;padding:4px 2px;">Sin conexiones registradas en las últimas 24h.</p>
         }
 
         @* ── Gráficas 24h ── *@
@@ -252,9 +257,9 @@
 
     record ChartData(string[] Labels, double[] Players, double[] Online, string[][] PlayerNames);
 
-    record PlayerSessionRange(string Name, DateTime Start, DateTime End)
+    record PlayerSessionRange(string Name, DateTime Start, DateTime End, bool Ongoing)
     {
-        public TimeSpan Duration => End - Start + TimeSpan.FromSeconds(60);
+        public TimeSpan Duration => End - Start;
     }
 
     KpiData?                              Kpi;
@@ -317,7 +322,8 @@
                 .Take(100)
                 .ToListAsync();
 
-            // Player sessions from the last 100 snapshots window (consistent with the table)
+            // "Conectados" por fila de la tabla de snapshots — sigue basado en Cs2PlayerSessions
+            // porque está atado 1:1 al timestamp de cada snapshot.
             if (Rows.Count > 0)
             {
                 var oldest = Rows[^1].TimestampUtc;
@@ -330,29 +336,53 @@
                 SessionsByTs = rawSessions
                     .GroupBy(s => s.TimestampUtc)
                     .ToDictionary(grp => grp.Key, grp => grp.Select(s => s.PlayerName).Distinct().ToList());
-
-                PlayerSessions = rawSessions
-                    .GroupBy(s => s.PlayerName)
-                    .SelectMany(grp =>
-                    {
-                        var sorted  = grp.Select(s => s.TimestampUtc).OrderBy(t => t).ToList();
-                        var windows = new List<PlayerSessionRange>();
-                        var start   = sorted[0];
-                        var end     = sorted[0];
-                        for (int i = 1; i < sorted.Count; i++)
-                        {
-                            if ((sorted[i] - end).TotalMinutes > 3)
-                            {
-                                windows.Add(new(grp.Key, start, end));
-                                start = sorted[i];
-                            }
-                            end = sorted[i];
-                        }
-                        windows.Add(new(grp.Key, start, end));
-                        return windows;
-                    })
-                    .ToList();
             }
+
+            // Sesiones exactas de conexión/desconexión (últimas 24h) — a diferencia de arriba,
+            // esto viene de los eventos reales del log del servidor, no de un sondeo cada
+            // minuto, así que capta también visitas de pocos segundos.
+            var connectionEvents = await Db.Cs2PlayerConnectionEvents
+                .Where(e => e.TimestampUtc >= cutoff)
+                .OrderBy(e => e.TimestampUtc)
+                .Select(e => new { e.TimestampUtc, e.PlayerName, e.EventType })
+                .ToListAsync();
+
+            var nowUtc = DateTime.UtcNow;
+            PlayerSessions = connectionEvents
+                .GroupBy(e => e.PlayerName)
+                .SelectMany(grp =>
+                {
+                    var sessions = new List<PlayerSessionRange>();
+                    DateTime? openStart = null;
+
+                    foreach (var e in grp)
+                    {
+                        if (e.EventType == Cs2ConnectionEventType.Connect)
+                        {
+                            // Conexión sin desconexión previa vista (hueco de log, reconexión
+                            // rápida...) — cerramos la anterior en su propio instante en vez
+                            // de perderla.
+                            if (openStart is { } prevStart)
+                                sessions.Add(new(grp.Key, prevStart, prevStart, Ongoing: false));
+                            openStart = e.TimestampUtc;
+                        }
+                        else if (openStart is { } start)
+                        {
+                            sessions.Add(new(grp.Key, start, e.TimestampUtc, Ongoing: false));
+                            openStart = null;
+                        }
+                        // Desconexión sin conexión previa vista (empieza a mitad de sesión,
+                        // fuera de la ventana de 24h) — se ignora, no hay Start fiable.
+                    }
+
+                    if (openStart is { } stillOpen)
+                        sessions.Add(new(grp.Key, stillOpen, nowUtc, Ongoing: true));
+
+                    return sessions;
+                })
+                .OrderByDescending(s => s.End)
+                .Take(60)
+                .ToList();
 
             // 24h chart data
             var chartRows = await Db.Cs2ServerSnapshots

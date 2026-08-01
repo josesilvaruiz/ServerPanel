@@ -361,3 +361,8 @@
     font-size: 11px; color: #374151;
     text-align: right; padding-right: 4px;
 }
+
+.range-dur-live {
+    background: #1a2e1a;
+    color: #4ade80;
+}
