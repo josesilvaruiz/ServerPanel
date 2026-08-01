@@ -41,7 +41,7 @@ builder.Services.AddHostedService<MetricsCollectorBackgroundService>();
 builder.Services.AddHostedService<Cs2MetricsCollectorBackgroundService>();
 builder.Services.AddHostedService<ProductionDownAlertBackgroundService>();
 builder.Services.AddHostedService<TickStallAlertBackgroundService>();
-builder.Services.AddHostedService<Cs2PlayerConnectionTrackerBackgroundService>();
+builder.Services.AddHostedService<Cs2EventConsumerBackgroundService>();
 
 if (builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<PostgresTunnelService>();
