@@ -115,10 +115,18 @@
             <div class="sessions-grid">
                 @foreach (var g in PlayerSessions.GroupBy(s => s.Name).OrderByDescending(g => g.Max(s => s.End)))
                 {
+                    var total = TimeSpan.FromTicks(g.Sum(s => s.Duration.Ticks));
+                    var first = g.Min(s => s.Start);
+                    var last = g.Max(s => s.End);
+                    var anyOngoing = g.Any(s => s.Ongoing);
                     <div class="session-card">
                         <div class="session-name">
                             <i class="ti ti-user"></i>
                             <span>@g.Key</span>
+                        </div>
+                        <div class="session-total">
+                            <span class="total-badge @(anyOngoing ? "range-dur-live" : "")">Total: @FormatDuration(total)</span>
+                            <span class="total-range">@ToMadridTime(first) → @(anyOngoing ? "ahora" : ToMadridTime(last))</span>
                         </div>
                         <div class="session-ranges">
                             @foreach (var s in g.OrderByDescending(s => s.End))
@@ -348,6 +356,18 @@
                 .ToListAsync();
 
             var nowUtc = DateTime.UtcNow;
+
+            // Si el server se cae, el evento de desconexión nunca llega a publicarse — sin esto,
+            // esa conexión se queda "abierta" para siempre y su duración crece cada vez que se
+            // recarga la página. Usamos el snapshot más reciente (Rows[0], ya viene ordenado
+            // descendente) como "última vez que sabemos con certeza que el server estaba vivo":
+            // si el jugador ya no aparece ahí, cerramos su sesión ahí en vez de dejarla "ahora".
+            var latestSnapshot = Rows.Count > 0 ? Rows[0] : null;
+            var currentlyConnected = latestSnapshot is not null && SessionsByTs.TryGetValue(latestSnapshot.TimestampUtc, out var liveNames)
+                ? new HashSet<string>(liveNames, StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>();
+            var lastKnownGoodUtc = latestSnapshot?.TimestampUtc ?? nowUtc;
+
             PlayerSessions = connectionEvents
                 .GroupBy(e => e.PlayerName)
                 .SelectMany(grp =>
@@ -376,7 +396,10 @@
                     }
 
                     if (openStart is { } stillOpen)
-                        sessions.Add(new(grp.Key, stillOpen, nowUtc, Ongoing: true));
+                    {
+                        bool reallyOnline = currentlyConnected.Contains(grp.Key);
+                        sessions.Add(new(grp.Key, stillOpen, reallyOnline ? nowUtc : lastKnownGoodUtc, Ongoing: reallyOnline));
+                    }
 
                     return sessions;
                 })
