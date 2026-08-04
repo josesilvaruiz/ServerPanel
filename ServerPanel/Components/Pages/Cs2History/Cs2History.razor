@@ -359,14 +359,17 @@
 
             // Si el server se cae, el evento de desconexión nunca llega a publicarse — sin esto,
             // esa conexión se queda "abierta" para siempre y su duración crece cada vez que se
-            // recarga la página. Usamos el snapshot más reciente (Rows[0], ya viene ordenado
-            // descendente) como "última vez que sabemos con certeza que el server estaba vivo":
-            // si el jugador ya no aparece ahí, cerramos su sesión ahí en vez de dejarla "ahora".
+            // recarga la página. Para cerrarla usamos la ÚLTIMA VEZ QUE ESE JUGADOR CONCRETO
+            // apareció en un snapshot (no "el snapshot más reciente en general" — si el server
+            // estuvo caído horas, el snapshot más reciente es de mucho después de que el
+            // jugador se fuera de verdad, y daría una hora de corte engañosa).
             var latestSnapshot = Rows.Count > 0 ? Rows[0] : null;
             var currentlyConnected = latestSnapshot is not null && SessionsByTs.TryGetValue(latestSnapshot.TimestampUtc, out var liveNames)
                 ? new HashSet<string>(liveNames, StringComparer.OrdinalIgnoreCase)
                 : new HashSet<string>();
-            var lastKnownGoodUtc = latestSnapshot?.TimestampUtc ?? nowUtc;
+            var lastSeenByPlayer = raw24h
+                .GroupBy(s => s.PlayerName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Max(s => s.TimestampUtc), StringComparer.OrdinalIgnoreCase);
 
             PlayerSessions = connectionEvents
                 .GroupBy(e => e.PlayerName)
@@ -398,7 +401,14 @@
                     if (openStart is { } stillOpen)
                     {
                         bool reallyOnline = currentlyConnected.Contains(grp.Key);
-                        sessions.Add(new(grp.Key, stillOpen, reallyOnline ? nowUtc : lastKnownGoodUtc, Ongoing: reallyOnline));
+                        DateTime closeAt;
+                        if (reallyOnline)
+                            closeAt = nowUtc;
+                        else if (lastSeenByPlayer.TryGetValue(grp.Key, out var lastSeen) && lastSeen > stillOpen)
+                            closeAt = lastSeen; // último snapshot en el que ESTE jugador salió conectado
+                        else
+                            closeAt = stillOpen; // ni un snapshot lo pilló — mejor duración ~0 que inventar una hora
+                        sessions.Add(new(grp.Key, stillOpen, closeAt, Ongoing: reallyOnline));
                     }
 
                     return sessions;
