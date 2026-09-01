@@ -283,6 +283,91 @@
 
 .fst { font-style: italic; font-size: 11px; }
 
+/* ── Mapas favoritos ── */
+.maprank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.maprank-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--bg-surface);
+    border: 0.5px solid var(--bd);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.maprank-pos {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: #0c2030;
+    color: #22d3ee;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+}
+
+.maprank-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.maprank-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.maprank-name {
+    font-family: monospace;
+    font-size: 13px;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.maprank-hours {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #22d3ee;
+    white-space: nowrap;
+}
+
+.maprank-bar-bg {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--bg-hover);
+    overflow: hidden;
+}
+
+.maprank-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #164e63, #22d3ee);
+}
+
+.maprank-meta {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.maprank-meta i { margin-right: 3px; }
+
 /* ── Player sessions ── */
 .sessions-grid {
     display: grid;

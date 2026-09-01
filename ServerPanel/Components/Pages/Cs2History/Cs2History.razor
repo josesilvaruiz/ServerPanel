@@ -152,6 +152,33 @@
             <p class="muted" style="font-size:12px;padding:4px 2px;">Sin conexiones registradas en las últimas 24h.</p>
         }
 
+        @* ── Mapas favoritos (histórico completo, por tiempo de juego) ── *@
+        @if (MapStats.Count > 0)
+        {
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Mapas favoritos · histórico completo</div>
+            <div class="maprank-list">
+                @foreach (var (m, i) in MapStats.Select((m, i) => (m, i)))
+                {
+                    var pct = maxMapHours <= 0 ? 0 : (m.PlayerHours / maxMapHours * 100);
+                    <div class="maprank-item">
+                        <span class="maprank-pos">@(i + 1)</span>
+                        <div class="maprank-body">
+                            <div class="maprank-top">
+                                <span class="maprank-name">@m.Map</span>
+                                <span class="maprank-hours">@($"{m.PlayerHours:0.#} h·jugador")</span>
+                            </div>
+                            <div class="maprank-bar-bg"><div class="maprank-bar-fill" style="width:@(pct.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></div></div>
+                            <div class="maprank-meta">
+                                <span><i class="ti ti-repeat"></i> @m.TimesPlayed @(m.TimesPlayed == 1 ? "vez" : "veces")</span>
+                                <span><i class="ti ti-users"></i> pico @m.PeakPlayers</span>
+                                <span><i class="ti ti-chart-line"></i> media @($"{m.AvgPlayers:0.#}")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
         @* ── Gráficas 24h ── *@
         @if (Chart is not null)
         {
@@ -270,11 +297,15 @@
         public TimeSpan Duration => End - Start;
     }
 
+    record MapStat(string Map, double PlayerHours, int TimesPlayed, int PeakPlayers, double AvgPlayers);
+
     KpiData?                              Kpi;
     ChartData?                            Chart;
     List<Cs2ServerSnapshot>               Rows           = new();
     Dictionary<DateTime, List<string>>    SessionsByTs   = new();
     List<PlayerSessionRange>              PlayerSessions = new();
+    List<MapStat>                         MapStats       = new();
+    double                                maxMapHours    = 0;
     bool                                  Loading        = true;
     bool                                  HideEmpty      = true;
     string?                               Error;
@@ -416,6 +447,52 @@
                 .OrderByDescending(s => s.End)
                 .Take(60)
                 .ToList();
+
+            // Mapas favoritos — histórico completo. PlayerHours sale de sumar CurrentPlayers
+            // en cada snapshot (uno cada ~60s) y pasarlo a horas; es la mejor medida de
+            // "favorito" que da esta tabla: pondera tiempo jugado Y cuánta gente había.
+            var mapAgg = await Db.Cs2ServerSnapshots
+                .Where(s => s.IsOnline && s.Map != null)
+                .GroupBy(s => s.Map)
+                .Select(g => new {
+                    Map         = g.Key!,
+                    TotalPlayerMinutes = g.Sum(s => s.CurrentPlayers),
+                    PeakPlayers = g.Max(s => s.CurrentPlayers),
+                    AvgPlayers  = g.Average(s => (double)s.CurrentPlayers)
+                })
+                .ToListAsync();
+
+            // "Veces jugado" no se puede sacar con un GROUP BY (hace falta ver el orden y
+            // detectar cambios de mapa consecutivos) — pasada ligera en memoria, solo 2 columnas.
+            var mapTimeline = await Db.Cs2ServerSnapshots
+                .Where(s => s.IsOnline && s.Map != null)
+                .OrderBy(s => s.TimestampUtc)
+                .Select(s => s.Map!)
+                .ToListAsync();
+
+            var timesPlayed = new Dictionary<string, int>();
+            string? prevMap = null;
+            foreach (var map in mapTimeline)
+            {
+                if (map != prevMap)
+                {
+                    timesPlayed[map] = timesPlayed.GetValueOrDefault(map) + 1;
+                    prevMap = map;
+                }
+            }
+
+            MapStats = mapAgg
+                .Select(a => new MapStat(
+                    Map:         a.Map,
+                    PlayerHours: a.TotalPlayerMinutes / 60.0,
+                    TimesPlayed: timesPlayed.GetValueOrDefault(a.Map, 1),
+                    PeakPlayers: a.PeakPlayers,
+                    AvgPlayers:  a.AvgPlayers))
+                .OrderByDescending(m => m.PlayerHours)
+                .Take(12)
+                .ToList();
+
+            maxMapHours = MapStats.Count > 0 ? MapStats.Max(m => m.PlayerHours) : 0;
 
             // 24h chart data
             var chartRows = await Db.Cs2ServerSnapshots
