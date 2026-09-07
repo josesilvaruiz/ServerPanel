@@ -284,6 +284,29 @@ public class Cs2ServerService : ICs2ServerService
             throw new InvalidOperationException($"Error: {result.Trim()}");
     }
 
+    private string RtvMapsConfigPath =>
+        $"{_activeServer.Active.KubeHostCssPath}/configs/plugins/SimpleRTV/cfg/rtv_maps.json";
+
+    public async Task UpdateRtvMapsAsync(IEnumerable<WorkshopMap> maps)
+    {
+        var mapList = maps.ToList();
+        if (mapList.Count == 0)
+            throw new InvalidOperationException("La lista de mapas está vacía");
+
+        // A diferencia de CS2-SimpleAdmin.json, rtv_maps.json no tiene comentarios ni
+        // otras claves que preservar — se sobreescribe entero. SimpleRTV lo relee en
+        // OnMapStart (cada cambio de mapa), así que no hace falta recargar el plugin.
+        var dict = mapList.ToDictionary(
+            m => m.Name,
+            m => new { ws = true, display = m.Name, mapid = m.Id });
+        var json = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+        await _ssh.UploadFileAsync(RtvMapsConfigPath, stream);
+
+        _logger.LogInformation("rtv_maps.json actualizado con {Count} mapas", mapList.Count);
+    }
+
     // ── Steam API DTOs ────────────────────────────────────────────────────────
 
     private sealed class CollectionDetailsRoot

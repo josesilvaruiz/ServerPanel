@@ -194,7 +194,8 @@ public partial class Admin : IDisposable
         try
         {
             await Cs2ServerService.UpdateSimpleAdminWorkshopMapsAsync(WorkshopMaps);
-            ShowToast(true, "WorkshopMaps actualizado en el servidor");
+            await Cs2ServerService.UpdateRtvMapsAsync(WorkshopMaps);
+            ShowToast(true, "Mapas sincronizados: !map de admin y RTV/nominate actualizados");
         }
         catch (Exception ex)
         {

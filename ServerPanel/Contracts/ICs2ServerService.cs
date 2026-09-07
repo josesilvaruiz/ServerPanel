@@ -26,5 +26,10 @@ public interface ICs2ServerService
 
     Task UpdateSimpleAdminWorkshopMapsAsync(IEnumerable<WorkshopMap> maps);
 
+    /// <summary>Reescribe rtv_maps.json con la colección actual — SimpleRTV lo relee en
+    /// cada cambio de mapa, así que los mapas nuevos aparecen en RTV/nominate solos,
+    /// sin recargar el plugin.</summary>
+    Task UpdateRtvMapsAsync(IEnumerable<WorkshopMap> maps);
+
     Task<WorkshopItemInfo?> GetWorkshopItemInfoAsync(string workshopId);
 }
