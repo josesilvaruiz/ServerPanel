@@ -12,6 +12,7 @@
 @inject ApplicationDbContext Db
 @inject ICs2ServerService Cs2
 @inject IStringLocalizer<SharedResource> L
+@inject IJSRuntime JS
 
 <div class="wrap">
 
@@ -59,6 +60,7 @@
                         <th>@L["CrashedMaps.Col.LastCrash"]</th>
                         <th>@L["CrashedMaps.Col.WorkshopUpdated"]</th>
                         <th>@L["CrashedMaps.Col.Status"]</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,6 +95,11 @@
                                 }
                             </td>
                             <td>@StatusBadge(r)</td>
+                            <td>
+                                <button type="button" class="btn-del" title="@L["CrashedMaps.Delete"]" @onclick="() => DeleteAsync(r)">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -175,6 +182,22 @@
         {
             Loading = false;
             StateHasChanged();
+        }
+    }
+
+    async Task DeleteAsync(Row r)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"{L["CrashedMaps.DeleteConfirm"]} {r.MapName}?")) return;
+        try
+        {
+            await Db.CrashedMapRecords
+                .Where(c => c.MapName == r.MapName && c.WorkshopId == r.WorkshopId)
+                .ExecuteDeleteAsync();
+            Rows.Remove(r);
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
         }
     }
 

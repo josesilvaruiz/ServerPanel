@@ -43,6 +43,13 @@
 .btn-refresh:hover:not(:disabled) { color: #94a3b8; background: var(--bg-hover2); }
 .btn-refresh:disabled { opacity: .4; cursor: not-allowed; }
 
+.btn-del {
+    border: none; background: none;
+    color: #64748b; font-size: 16px;
+    cursor: pointer; padding: 4px; border-radius: 6px;
+}
+.btn-del:hover { color: #f87171; background: #2e1a1a; }
+
 /* ── States ── */
 .state-box {
     display: flex; flex-direction: column;

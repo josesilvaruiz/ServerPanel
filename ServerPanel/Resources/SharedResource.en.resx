@@ -145,4 +145,6 @@
   <data name="CrashedMaps.Status.CanRetry" xml:space="preserve"><value>Updated since the crash — worth retrying</value></data>
   <data name="CrashedMaps.Status.NoWorkshopId" xml:space="preserve"><value>No Workshop ID</value></data>
   <data name="CrashedMaps.Status.Unchanged" xml:space="preserve"><value>Unchanged since the crash</value></data>
+  <data name="CrashedMaps.Delete" xml:space="preserve"><value>Delete (map already updated)</value></data>
+  <data name="CrashedMaps.DeleteConfirm" xml:space="preserve"><value>Delete crash records for</value></data>
 </root>
