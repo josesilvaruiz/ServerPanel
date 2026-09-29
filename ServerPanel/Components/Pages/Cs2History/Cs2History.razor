@@ -280,6 +280,13 @@
 </div>
 
 @code {
+    // Si un Disconnect llega más de esto después de su Connect, casi seguro no es una sesión
+    // real — el server se cayó a medio partido (o dejó un cliente fantasma) y este Disconnect
+    // es la limpieza tardía, no el momento real en que se fue. Se contrasta contra los
+    // snapshots (sondeo cada ~60s) para saber de verdad hasta cuándo estuvo, en vez de fiarnos
+    // ciegamente del evento.
+    const double MaxPlausibleSessionHours = 9;
+
     record KpiData(
         long     TotalSnapshots,
         DateTime FirstSnapshot,
@@ -402,6 +409,25 @@
                 .GroupBy(s => s.PlayerName, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.Max(s => s.TimestampUtc), StringComparer.OrdinalIgnoreCase);
 
+            // raw24h ya viene ordenado por TimestampUtc — GroupBy conserva ese orden, así que
+            // cada lista queda ascendente sin tener que volver a ordenar.
+            var snapshotTimesByPlayer = raw24h
+                .GroupBy(s => s.PlayerName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Select(s => s.TimestampUtc).ToList(), StringComparer.OrdinalIgnoreCase);
+
+            DateTime? LastSnapshotBetween(string player, DateTime after, DateTime before)
+            {
+                if (!snapshotTimesByPlayer.TryGetValue(player, out var times)) return null;
+                DateTime? last = null;
+                foreach (var t in times)
+                {
+                    if (t <= after) continue;
+                    if (t >= before) break;
+                    last = t;
+                }
+                return last;
+            }
+
             PlayerSessions = connectionEvents
                 .GroupBy(e => e.PlayerName)
                 .SelectMany(grp =>
@@ -422,7 +448,10 @@
                         }
                         else if (openStart is { } start)
                         {
-                            sessions.Add(new(grp.Key, start, e.TimestampUtc, Ongoing: false));
+                            var end = e.TimestampUtc;
+                            if ((end - start).TotalHours >= MaxPlausibleSessionHours)
+                                end = LastSnapshotBetween(grp.Key, start, end) ?? start;
+                            sessions.Add(new(grp.Key, start, end, Ongoing: false));
                             openStart = null;
                         }
                         // Desconexión sin conexión previa vista (empieza a mitad de sesión,
