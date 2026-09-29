@@ -287,6 +287,10 @@
     // ciegamente del evento.
     const double MaxPlausibleSessionHours = 9;
 
+    // Dos tramos del mismo jugador separados por menos de esto se muestran como uno solo — un
+    // hueco tan corto es una reconexión (cambio de mapa, un reinicio nuestro), no que se fuera.
+    const double MergeGapMinutes = 5;
+
     record KpiData(
         long     TotalSnapshots,
         DateTime FirstSnapshot,
@@ -471,7 +475,21 @@
                         sessions.Add(new(grp.Key, stillOpen, closeAt, Ongoing: reallyOnline));
                     }
 
-                    return sessions;
+                    // Reconexiones casi pegadas (cambio de mapa, un reinicio nuestro del
+                    // servidor...) son tiempo jugado seguido para el jugador, no visitas
+                    // distintas — se fusionan en un solo bloque en vez de llenar la lista de
+                    // filas de "< 2 min".
+                    var merged = new List<PlayerSessionRange>();
+                    foreach (var s in sessions)
+                    {
+                        if (merged.Count > 0 && !merged[^1].Ongoing &&
+                            (s.Start - merged[^1].End).TotalMinutes <= MergeGapMinutes)
+                            merged[^1] = merged[^1] with { End = s.End, Ongoing = s.Ongoing };
+                        else
+                            merged.Add(s);
+                    }
+
+                    return merged;
                 })
                 .OrderByDescending(s => s.End)
                 .Take(60)
