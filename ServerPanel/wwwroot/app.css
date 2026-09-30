@@ -26,6 +26,7 @@
     width: 100%;
     max-width: 680px;
     max-height: 90vh;
+    max-height: 90dvh;
     overflow-y: auto;
     box-shadow: 0 24px 60px rgba(0,0,0,.5);
 }
@@ -181,6 +182,7 @@ html {
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     background: var(--bg-page);
     -webkit-text-size-adjust: 100%;
@@ -194,6 +196,7 @@ html, body {
 .page {
     display: flex;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -656,7 +659,11 @@ article.content:has(.term-desktop) {
         left: 0;
         top: 0;
         height: 100vh;
-        width: 260px;
+        height: 100dvh;
+        width: min(260px, 85vw);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: env(safe-area-inset-bottom);
         transform: translateX(-100%);
         transition: transform .28s cubic-bezier(.4,0,.2,1);
         z-index: 300;
@@ -1330,7 +1337,7 @@ html[data-layout="topbar"] .nm-topbar-wrap {
     position: relative;
     z-index: 100;
 }
-html[data-layout="topbar"] .page  { flex-direction: column !important; height: 100vh; }
+html[data-layout="topbar"] .page  { flex-direction: column !important; height: 100vh; height: 100dvh; }
 html[data-layout="topbar"] main   { flex: 1 1 auto; padding: 1.5rem 2rem; overflow-y: auto; min-height: 0; }
 
 /* ── Inner ── */
@@ -1539,3 +1546,118 @@ div[style*="padding:0 0.5rem"] .nm-layout-toggle {
 .term-win-xterm .xterm { flex: 1; min-height: 0; }
 .term-win-xterm .xterm-viewport { overflow-y: auto !important; }
 .term-win-xterm .xterm-screen { height: 100% !important; }
+
+/* =================================================
+   RESPONSIVE — todos los dispositivos
+   Breakpoints: ≤1024 tablet · ≤768 móvil · ≤480 móvil pequeño
+================================================= */
+
+/* Herramientas del menú móvil de la topbar (ocultas en escritorio) */
+.nm-tb-mobile-tools { display: none; }
+
+/* Nunca permitir scroll horizontal de la página */
+img, video { max-width: 100%; }
+.content { min-width: 0; }
+main { min-width: 0; }
+
+/* ── Tablet ≤1024px ── */
+@media (max-width: 1024px) {
+    html[data-layout="topbar"] main { padding: 1.25rem 1.25rem; }
+    main { padding: 1.25rem; }
+    .nm-tb-links .nm-tb-link span { display: none; }   /* solo iconos si no caben */
+}
+
+/* ── Móvil ≤768px ── */
+@media (max-width: 768px) {
+
+    /* Topbar: la barra solo lleva logo + hamburguesa */
+    html[data-layout="topbar"] .nm-tb-right { display: none; }
+    html[data-layout="topbar"] .nm-topbar-wrap {
+        height: calc(58px + env(safe-area-inset-top));
+        padding-top: env(safe-area-inset-top);
+    }
+    html[data-layout="topbar"] .nm-tb-inner {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+    html[data-layout="topbar"] .nm-tb-hamburger { width: 44px !important; height: 44px !important; }
+
+    /* Menú desplegable: scrolleable si no cabe (p.ej. móvil en horizontal) */
+    body.tb-open .nm-tb-mobile-menu {
+        top: calc(58px + env(safe-area-inset-top));
+        max-height: calc(100dvh - 58px - env(safe-area-inset-top));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .nm-tb-mobile-link { min-height: 44px; display: flex; align-items: center; gap: .6rem; }
+
+    .nm-tb-mobile-tools {
+        display: flex;
+        flex-direction: column;
+        gap: .4rem;
+        margin-top: .35rem;
+        padding-top: .6rem;
+        border-top: 1px solid var(--bd);
+    }
+    .nm-tb-mobile-tool .nm-server-picker { padding: 0; }
+    .nm-tb-mobile-tool .nm-server-picker select { width: 100%; padding: 8px 10px; }
+    .nm-tb-mobile-tool > div { padding-left: 0 !important; padding-right: 0 !important; }
+    .nm-tb-mobile-tool-row { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+
+    /* Hamburguesa del modo sidebar respeta el notch */
+    html:not([data-layout="topbar"]) .nm-hamburger {
+        top: calc(.6rem + env(safe-area-inset-top));
+        left: calc(.6rem + env(safe-area-inset-left));
+    }
+    html:not([data-layout="topbar"]) main { padding-top: calc(4rem + env(safe-area-inset-top)) !important; }
+
+    /* Menos padding: Bootstrap px-4 + padding propio de cada página sumaban demasiado */
+    main { padding-left: max(.5rem, env(safe-area-inset-left)) !important; padding-right: max(.5rem, env(safe-area-inset-right)) !important; padding-bottom: max(.5rem, env(safe-area-inset-bottom)) !important; }
+    .content.px-4 { padding-left: .25rem !important; padding-right: .25rem !important; }
+
+    /* iOS hace zoom al enfocar inputs con fuente < 16px */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea { font-size: 16px !important; }
+
+    /* Objetivos táctiles mínimos */
+    .btn, button.pn-btn, .pl-refresh-btn { min-height: 40px; }
+
+    /* Modal genérico a casi pantalla completa */
+    .pn-modal-backdrop { padding: .5rem; align-items: flex-end; }
+    .pn-modal { max-height: 92dvh; border-radius: 16px 16px 12px 12px; }
+    .pn-modal-header, .pn-modal-body { padding-left: 1rem; padding-right: 1rem; }
+
+    /* Tablas: scroll horizontal dentro de su contenedor, nunca de la página */
+    .table-wrap, .admins-table-wrap, .pl-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+    .table-wrap table, .admins-table-wrap table { min-width: 560px; }
+
+    /* Bootstrap modal (perfil de jugador) */
+    .modal-dialog { margin: .5rem; max-width: calc(100vw - 1rem); }
+
+    /* Toasts / banner de error de Blazor */
+    #blazor-error-ui { font-size: .85rem; }
+}
+
+/* ── Móvil pequeño ≤480px ── */
+@media (max-width: 480px) {
+    html { font-size: 14px; }
+    .nm-tb-logo-sub { display: none; }
+}
+
+/* ── Móvil en horizontal (poca altura) ── */
+@media (max-height: 480px) and (orientation: landscape) {
+    .pn-modal { max-height: 96dvh; }
+    .nm-nav { padding-top: .5rem; padding-bottom: .5rem; }
+    .nm-logo { padding-bottom: .5rem; }
+}
+
+/* ── Dispositivos táctiles: sin hover pegajoso, más área de toque ── */
+@media (hover: none) and (pointer: coarse) {
+    .nm-link, .nm-tb-link, .nm-group-toggle { min-height: 44px; }
+    select { min-height: 40px; }
+}

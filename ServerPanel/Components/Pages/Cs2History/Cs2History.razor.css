@@ -476,3 +476,10 @@
     background: #1a2e1a;
     color: #4ade80;
 }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .top { flex-wrap: wrap; }
+    .wrap { padding: .5rem .25rem; }
+}

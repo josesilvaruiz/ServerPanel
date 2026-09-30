@@ -462,3 +462,16 @@
     cursor: not-allowed !important;
     font-weight: 400 !important;
 }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .top { flex-wrap: wrap; }
+    .top-actions { margin-left: 0; width: 100%; flex-wrap: wrap; }
+    .disk-card-row { flex-wrap: wrap; gap: 14px; }
+    .toolbar { flex-wrap: wrap; }
+    .bc-current { max-width: 140px; }
+    .entry-right { width: 70px; }
+    .modal-backdrop { padding: .5rem; }
+    .modal, .modal-wide { width: 100%; max-width: 100%; max-height: 92dvh; }
+    .wrap { padding: .5rem .25rem; }
+}
