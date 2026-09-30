@@ -189,3 +189,12 @@
 }
 
 .metric-row-off .metric-val { color: #4b5563; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 600px) {
+    .metric-row { flex-wrap: wrap; gap: .4rem; }
+    .metric-bar-wrap { flex: 1 1 100%; min-width: 0; }
+}
+@media (max-width: 768px) {
+    .wrap { padding: .5rem .25rem; }
+}

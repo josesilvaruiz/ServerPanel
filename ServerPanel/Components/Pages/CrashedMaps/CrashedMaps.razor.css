@@ -135,3 +135,10 @@
     font-size: 11px; color: #374151;
     text-align: right; padding-right: 4px;
 }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .top { flex-wrap: wrap; }
+    .wrap { padding: .5rem .25rem; }
+}

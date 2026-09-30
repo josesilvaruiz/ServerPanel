@@ -216,3 +216,10 @@
     position: relative;
     height: 180px;
 }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .top { flex-wrap: wrap; }
+    .wrap { padding: .5rem .25rem; }
+}

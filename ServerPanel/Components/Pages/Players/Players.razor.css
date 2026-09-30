@@ -529,3 +529,12 @@
     .pl-action-unban:hover {
         background: rgba(34,197,94,.2);
     }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .pl-page { padding: .75rem .5rem; min-height: 0; }
+    .pl-header { flex-wrap: wrap; padding: 1rem; }
+    .pl-header-left { min-width: 0; flex: 1 1 200px; }
+    .pl-td-player { min-width: 0; }
+    .pl-td-actions { white-space: normal; }
+}

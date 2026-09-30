@@ -87,7 +87,7 @@
 </div>
 
 @* ── Menú mobile desplegable ── *@
-<div class="nm-tb-mobile-menu" onclick="navManager.tbClose()">
+<div class="nm-tb-mobile-menu" onclick="if (!event.target.closest('.nm-tb-mobile-tools')) navManager.tbClose()">
     <NavLink class="nm-tb-link nm-tb-mobile-link" href="panel" Match="NavLinkMatch.All">
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         <span>@L["Nav.Dashboard"]</span>
@@ -100,6 +100,45 @@
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>
         <span>@L["Nav.Admin"]</span>
     </NavLink>
+    <NavLink class="nm-tb-link nm-tb-mobile-link" href="terminal">
+        <i class="ti ti-terminal-2" style="font-size:16px"></i>
+        <span>Terminal SSH</span>
+    </NavLink>
+    <NavLink class="nm-tb-link nm-tb-mobile-link" href="metrics-history">
+        <i class="ti ti-chart-dots" style="font-size:16px"></i>
+        <span>Historial VPS</span>
+    </NavLink>
+    <NavLink class="nm-tb-link nm-tb-mobile-link" href="cs2-history">
+        <i class="ti ti-chart-dots" style="font-size:16px"></i>
+        <span>Historial CS2</span>
+    </NavLink>
+    <NavLink class="nm-tb-link nm-tb-mobile-link" href="crashed-maps">
+        <i class="ti ti-chart-dots" style="font-size:16px"></i>
+        <span>@L["Nav.CrashedMaps"]</span>
+    </NavLink>
+    <NavLink class="nm-tb-link nm-tb-mobile-link" href="landing-analytics">
+        <i class="ti ti-chart-dots" style="font-size:16px"></i>
+        <span>Landing Analytics</span>
+    </NavLink>
+    <NavLink class="nm-tb-link nm-tb-mobile-link" href="disk">
+        <i class="ti ti-chart-dots" style="font-size:16px"></i>
+        <span>Disco VPS</span>
+    </NavLink>
+
+    @* Herramientas (en móvil la barra no tiene sitio para ellas). El menú no se cierra al usarlas (ver onclick del contenedor) *@
+    <div class="nm-tb-mobile-tools">
+        <div class="nm-tb-mobile-tool"><ServerPicker /></div>
+        <div class="nm-tb-mobile-tool"><ThemePicker /></div>
+        <div class="nm-tb-mobile-tool nm-tb-mobile-tool-row">
+            <div class="nm-tb-lang">
+                <a href="/SetCulture?culture=es&returnUrl=@Uri.EscapeDataString(currentPath)" class="nm-lang-btn @(isEs ? "nm-lang-active" : "")" data-enhance-nav="false">ES</a>
+                <span class="nm-lang-sep">|</span>
+                <a href="/SetCulture?culture=en&returnUrl=@Uri.EscapeDataString(currentPath)" class="nm-lang-btn @(!isEs ? "nm-lang-active" : "")" data-enhance-nav="false">EN</a>
+            </div>
+            <LayoutToggle />
+        </div>
+    </div>
+
     <AuthorizeView>
         <Authorized>
             <a class="nm-tb-link nm-tb-mobile-link" href="Logout">
