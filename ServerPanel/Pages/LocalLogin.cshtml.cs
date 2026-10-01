@@ -22,7 +22,7 @@ public class LocalLoginModel : PageModel
         if (string.IsNullOrEmpty(expectedUser) || string.IsNullOrEmpty(expectedPass) ||
             username != expectedUser || password != expectedPass)
         {
-            return Redirect("/Login?error=local");
+            return Redirect("/panel/Login?error=local");
         }
 
         var claims = new List<Claim>
