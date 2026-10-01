@@ -247,6 +247,7 @@
     <div class="divider">o</div>
 
     <form method="post" action="/LocalLogin" class="local-login-form">
+        @Html.AntiForgeryToken()
         <input type="text" name="username" placeholder="Usuario" autocomplete="username" required />
         <input type="password" name="password" placeholder="Contraseña" autocomplete="current-password" required />
         <button type="submit" class="btn-local">Entrar</button>
