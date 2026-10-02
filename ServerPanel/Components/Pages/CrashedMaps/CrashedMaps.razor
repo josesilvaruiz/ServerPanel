@@ -11,6 +11,7 @@
 @attribute [Authorize]
 @inject ApplicationDbContext Db
 @inject ICs2ServerService Cs2
+@inject IActiveServerService ActiveServer
 @inject IStringLocalizer<SharedResource> L
 @inject IJSRuntime JS
 
@@ -135,7 +136,9 @@
         StateHasChanged();
         try
         {
+            var serverKey = ActiveServer.Active.Name;
             var grouped = await Db.CrashedMapRecords
+                .Where(c => c.ServerName == serverKey)
                 .GroupBy(c => new { c.MapName, c.WorkshopId })
                 .Select(g => new
                 {

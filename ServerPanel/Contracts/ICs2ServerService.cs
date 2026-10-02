@@ -32,4 +32,7 @@ public interface ICs2ServerService
     Task UpdateRtvMapsAsync(IEnumerable<WorkshopMap> maps);
 
     Task<WorkshopItemInfo?> GetWorkshopItemInfoAsync(string workshopId);
+
+    /// <summary>Reinicia los demás servidores que comparten el volumen del juego con el activo (tras actualizar).</summary>
+    Task RestartSharedServersAsync();
 }

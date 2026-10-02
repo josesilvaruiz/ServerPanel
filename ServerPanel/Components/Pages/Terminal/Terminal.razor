@@ -278,8 +278,8 @@
                                     @foreach (var cmd in cat.Commands)
                                     {
                                         <button type="button" class="term-help-chip"
-                                                @onclick="() => { PasteCmd(session, cmd.Cmd); session.ShowHelp = false; }">
-                                            <span class="term-help-code">@cmd.Cmd</span>
+                                                @onclick="() => { PasteCmd(session, ForActiveServer(cmd.Cmd)); session.ShowHelp = false; }">
+                                            <span class="term-help-code">@ForActiveServer(cmd.Cmd)</span>
                                             <span class="term-help-desc">@cmd.Desc</span>
                                         </button>
                                     }

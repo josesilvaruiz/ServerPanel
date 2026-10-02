@@ -6,9 +6,8 @@ using ServerPanel.Models;
 
 namespace ServerPanel.Services;
 
-// Vigila SIEMPRE el servidor "Producción", sin importar cuál esté seleccionado
-// en la UI (IActiveServerService.Active es un puntero global que cualquiera puede
-// cambiar). Independiente de Cs2MetricsCollectorBackgroundService a propósito: no
+// Vigila SIEMPRE todos los servidores configurados, sin importar cuál tenga seleccionado
+// cada usuario en la UI. Independiente de Cs2MetricsCollectorBackgroundService a propósito: no
 // altera las estadísticas que se guardan para lo que esté activo en el panel.
 public class ProductionDownAlertBackgroundService : BackgroundService
 {
@@ -23,8 +22,6 @@ public class ProductionDownAlertBackgroundService : BackgroundService
     // se asume que la caída es intencional y no se avisa.
     private static readonly TimeSpan ManualActionGracePeriod = TimeSpan.FromMinutes(3);
 
-    private readonly IServerQueryService _serverQuery;
-    private readonly IActiveServerService _activeServer;
     private readonly IManualActionTracker _manualActionTracker;
     private readonly ISshService _ssh;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -33,11 +30,9 @@ public class ProductionDownAlertBackgroundService : BackgroundService
     private readonly ILogger<ProductionDownAlertBackgroundService> _logger;
 
     // null = todavía no sabemos el estado (arranque del panel): no alertar en el primer poll.
-    private bool? _lastKnownOnline;
+    private readonly Dictionary<string, bool?> _lastKnownOnline = new();
 
     public ProductionDownAlertBackgroundService(
-        IServerQueryService serverQuery,
-        IActiveServerService activeServer,
         IManualActionTracker manualActionTracker,
         ISshService ssh,
         IHttpClientFactory httpClientFactory,
@@ -45,8 +40,6 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         IConfiguration config,
         ILogger<ProductionDownAlertBackgroundService> logger)
     {
-        _serverQuery = serverQuery;
-        _activeServer = activeServer;
         _manualActionTracker = manualActionTracker;
         _ssh = ssh;
         _httpClientFactory = httpClientFactory;
@@ -66,20 +59,25 @@ public class ProductionDownAlertBackgroundService : BackgroundService
         }
     }
 
+    // Vigila todos los servidores configurados (o solo los de Notifications:AlertServerNames si se define).
     private async Task CheckAsync(CancellationToken ct)
     {
-        var serverName = _config["Notifications:ProductionServerName"] ?? "Producción";
-        var production = _activeServer.Servers.FirstOrDefault(s => s.Name == serverName);
-        if (production is null)
-        {
-            _logger.LogWarning("ProductionDownAlert: no se encontró el servidor '{Name}' en Servers", serverName);
-            return;
-        }
+        List<ServerConfig> servers;
+        await using (var scope = _scopeFactory.CreateAsyncScope())
+            servers = scope.ServiceProvider.GetRequiredService<IActiveServerService>().Servers.ToList();
 
+        var only = _config.GetSection("Notifications:AlertServerNames").Get<string[]>();
+        foreach (var server in servers.Where(x => only is not { Length: > 0 } || only.Contains(x.Name)))
+            await CheckServerAsync(server, ct);
+    }
+
+    private async Task CheckServerAsync(ServerConfig production, CancellationToken ct)
+    {
         bool isOnline;
         try
         {
-            var info = await _serverQuery.GetServerInfoAsync(production);
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var info = await scope.ServiceProvider.GetRequiredService<IServerQueryService>().GetServerInfoAsync(production);
             isOnline = info.IsOnline;
         }
         catch (Exception ex)
@@ -90,7 +88,8 @@ public class ProductionDownAlertBackgroundService : BackgroundService
 
         // Solo actúa en la transición Online -> Offline: evita reprocesar en cada
         // poll mientras el servidor sigue caído.
-        if (_lastKnownOnline == true && !isOnline)
+        _lastKnownOnline.TryGetValue(production.Name, out var wasOnline);
+        if (wasOnline == true && !isOnline)
         {
             var crashedAtUtc = DateTime.UtcNow;
             var (diagnostics, logs) = await GetCrashDiagnosticsAsync(production);
@@ -113,7 +112,7 @@ public class ProductionDownAlertBackgroundService : BackgroundService
             }
         }
 
-        _lastKnownOnline = isOnline;
+        _lastKnownOnline[production.Name] = isOnline;
     }
 
     private async Task SendAlertEmailAsync(ServerConfig production, string diagnostics, DateTime crashedAtUtc, CancellationToken ct)

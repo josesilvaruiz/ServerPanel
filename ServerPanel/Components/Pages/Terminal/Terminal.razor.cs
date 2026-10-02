@@ -17,6 +17,7 @@ public partial class Terminal : IAsyncDisposable
     [Inject] AuthenticationStateProvider AuthState { get; set; } = default!;
     [Inject] IJSRuntime JS { get; set; } = default!;
     [Inject] IConfiguration Config { get; set; } = default!;
+    [Inject] IActiveServerService ActiveServer { get; set; } = default!;
 
     string _userEmail = "";
     string HostLabel => Config["SshSettings:Host"] ?? Config["Ssh:Host"] ?? "servidor";
@@ -511,6 +512,12 @@ public partial class Terminal : IAsyncDisposable
         SaveLayout();
         await JS.InvokeVoidAsync("setXtermFontSize", s.Id, s.FontSize);
     }
+
+    // Los comandos de ayuda están escritos para producción; se adaptan al servidor seleccionado.
+    string ForActiveServer(string cmd) => cmd
+        .Replace("cs2-server", ActiveServer.Active.KubeDeployment)
+        .Replace("/root/cs2-config", ActiveServer.Active.KubeConfigBasePath)
+        .Replace("-n cs2", $"-n {ActiveServer.Active.KubeNamespace}");
 
     // ── Help categories ──────────────────────────────────────
     sealed record HelpCmd(string Cmd, string Desc);

@@ -10,6 +10,7 @@ namespace ServerPanel.Components.Pages;
 public partial class Admin : IDisposable
 {
     [Inject] IJSRuntime JS { get; set; } = default!;
+    [Inject] IActiveServerService ActiveServer { get; set; } = default!;
 
     string ActiveSection = "map";
     CancellationTokenSource? _consoleCts;
@@ -180,7 +181,7 @@ public partial class Admin : IDisposable
         }
     }
 
-    const string WorkshopCollectionId = "3736332535";
+    string WorkshopCollectionId => ActiveServer.Active.WorkshopCollectionId;
 
     List<WorkshopMap> WorkshopMaps = new();
     WorkshopMap? DraggedMap;

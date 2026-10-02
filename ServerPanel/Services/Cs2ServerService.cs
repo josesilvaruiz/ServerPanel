@@ -382,4 +382,16 @@ public class Cs2ServerService : ICs2ServerService
                 : null
         };
     }
+
+    public async Task RestartSharedServersAsync()
+    {
+        foreach (var name in _activeServer.Active.PvSharedWith)
+        {
+            var other = _activeServer.Servers.FirstOrDefault(x => x.Name == name);
+            if (other is null) continue;
+            _manualActionTracker.MarkAction(other.Name);
+            _logger.LogInformation("Reiniciando {Dep} (comparte volumen con {Name})", other.KubeDeployment, _activeServer.Active.Name);
+            await _ssh.ExecuteAsync(Kube($"rollout restart deployment/{other.KubeDeployment} -n {other.KubeNamespace}"));
+        }
+    }
 }

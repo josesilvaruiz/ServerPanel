@@ -8,18 +8,15 @@ namespace ServerPanel.Services;
 public class MetricsCollectorBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IServerMetricsService _metricsService;
     private readonly ILogger<MetricsCollectorBackgroundService> _logger;
 
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
     public MetricsCollectorBackgroundService(
         IServiceScopeFactory scopeFactory,
-        IServerMetricsService metricsService,
         ILogger<MetricsCollectorBackgroundService> logger)
     {
         _scopeFactory  = scopeFactory;
-        _metricsService = metricsService;
         _logger         = logger;
     }
 
@@ -40,7 +37,9 @@ public class MetricsCollectorBackgroundService : BackgroundService
     {
         try
         {
-            var metrics = await _metricsService.GetMetricsAsync();
+            ServerMetrics metrics;
+            await using (var metricsScope = _scopeFactory.CreateAsyncScope())
+                metrics = await metricsScope.ServiceProvider.GetRequiredService<IServerMetricsService>().GetMetricsAsync();
 
             var snapshot = new VpsMetricSnapshot
             {

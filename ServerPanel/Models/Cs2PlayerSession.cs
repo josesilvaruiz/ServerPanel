@@ -11,4 +11,7 @@ public class Cs2PlayerSession
     public int UserId { get; set; }
 
     public int Ping { get; set; }
+
+    /// <summary>ServerConfig.Name del servidor al que pertenece la fila.</summary>
+    public string ServerKey { get; set; } = "Producción";
 }

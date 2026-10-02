@@ -29,7 +29,7 @@ public class ServerMetricsService : IServerMetricsService
 
         // CS2 pod resource usage via kubectl top
         var topOut = await _ssh.ExecuteAsync(
-            $"kubectl top pod -n {_activeServer.Active.KubeNamespace} -l app=cs2 --no-headers 2>/dev/null | head -1");
+            $"kubectl top pod -n {_activeServer.Active.KubeNamespace} -l app={_activeServer.Active.KubePodLabel} --no-headers 2>/dev/null | head -1");
 
         if (!string.IsNullOrWhiteSpace(topOut))
             ParseKubectlTop(topOut.Trim(), metrics);

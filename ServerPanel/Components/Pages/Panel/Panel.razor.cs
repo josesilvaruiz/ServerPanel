@@ -148,6 +148,7 @@ public partial class Panel
             ActionRunning = true;
             StatusMessage = "Actualizando servidor...";
             var result = await Cs2.UpdateAsync();
+            if (result.Updated) await Cs2.RestartSharedServersAsync();
             await RefreshStatus();
             if (result.AlreadyUpdated)
             {

@@ -15,4 +15,7 @@ public class Cs2ServerSnapshot
     public string? Map { get; set; }
 
     public string? ServerName { get; set; }
+
+    /// <summary>ServerConfig.Name del servidor al que pertenece la fila.</summary>
+    public string ServerKey { get; set; } = "Producción";
 }

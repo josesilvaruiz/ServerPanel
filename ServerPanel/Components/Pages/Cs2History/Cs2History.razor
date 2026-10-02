@@ -8,6 +8,7 @@
 @attribute [Authorize]
 @inject ApplicationDbContext Db
 @inject IJSRuntime JS
+@inject ServerPanel.Contracts.IActiveServerService ActiveServer
 
 <div class="wrap">
 
@@ -336,8 +337,9 @@
         try
         {
             var cutoff = DateTime.UtcNow.AddHours(-24);
+            var serverKey = ActiveServer.Active.Name;
 
-            var g = await Db.Cs2ServerSnapshots
+            var g = await Db.Cs2ServerSnapshots.Where(_sk => _sk.ServerKey == serverKey)
                 .GroupBy(_ => 1)
                 .Select(g => new {
                     Total = g.LongCount(),
@@ -346,7 +348,7 @@
                 })
                 .FirstOrDefaultAsync();
 
-            var h = await Db.Cs2ServerSnapshots
+            var h = await Db.Cs2ServerSnapshots.Where(_sk => _sk.ServerKey == serverKey)
                 .Where(s => s.TimestampUtc >= cutoff)
                 .GroupBy(_ => 1)
                 .Select(g => new {
@@ -358,7 +360,7 @@
                 .FirstOrDefaultAsync();
 
                 // 24h player sessions — used for KPIs and chart
-            var raw24h = await Db.Cs2PlayerSessions
+            var raw24h = await Db.Cs2PlayerSessions.Where(_sk => _sk.ServerKey == serverKey)
                 .Where(s => s.TimestampUtc >= cutoff)
                 .Select(s => new { s.TimestampUtc, s.PlayerName })
                 .OrderBy(s => s.TimestampUtc)
@@ -367,7 +369,7 @@
             var uniquePlayers24h = raw24h.Select(s => s.PlayerName).Distinct().Count();
 
             // Last 100 snapshots for the table
-            Rows = await Db.Cs2ServerSnapshots
+            Rows = await Db.Cs2ServerSnapshots.Where(_sk => _sk.ServerKey == serverKey)
                 .OrderByDescending(s => s.TimestampUtc)
                 .Take(100)
                 .ToListAsync();
@@ -377,7 +379,7 @@
             if (Rows.Count > 0)
             {
                 var oldest = Rows[^1].TimestampUtc;
-                var rawSessions = await Db.Cs2PlayerSessions
+                var rawSessions = await Db.Cs2PlayerSessions.Where(_sk => _sk.ServerKey == serverKey)
                     .Where(s => s.TimestampUtc >= oldest)
                     .Select(s => new { s.TimestampUtc, s.PlayerName })
                     .OrderBy(s => s.TimestampUtc)
@@ -391,7 +393,7 @@
             // Sesiones exactas de conexión/desconexión (últimas 24h) — a diferencia de arriba,
             // esto viene de los eventos reales del log del servidor, no de un sondeo cada
             // minuto, así que capta también visitas de pocos segundos.
-            var connectionEvents = await Db.Cs2PlayerConnectionEvents
+            var connectionEvents = await Db.Cs2PlayerConnectionEvents.Where(_sk => _sk.ServerName == serverKey)
                 .Where(e => e.TimestampUtc >= cutoff)
                 .OrderBy(e => e.TimestampUtc)
                 .Select(e => new { e.TimestampUtc, e.PlayerName, e.EventType })
@@ -498,7 +500,7 @@
             // Mapas favoritos — histórico completo. PlayerHours sale de sumar CurrentPlayers
             // en cada snapshot (uno cada ~60s) y pasarlo a horas; es la mejor medida de
             // "favorito" que da esta tabla: pondera tiempo jugado Y cuánta gente había.
-            var mapAgg = await Db.Cs2ServerSnapshots
+            var mapAgg = await Db.Cs2ServerSnapshots.Where(_sk => _sk.ServerKey == serverKey)
                 .Where(s => s.IsOnline && s.Map != null)
                 .GroupBy(s => s.Map)
                 .Select(g => new {
@@ -511,7 +513,7 @@
 
             // "Veces jugado" no se puede sacar con un GROUP BY (hace falta ver el orden y
             // detectar cambios de mapa consecutivos) — pasada ligera en memoria, solo 2 columnas.
-            var mapTimeline = await Db.Cs2ServerSnapshots
+            var mapTimeline = await Db.Cs2ServerSnapshots.Where(_sk => _sk.ServerKey == serverKey)
                 .Where(s => s.IsOnline && s.Map != null)
                 .OrderBy(s => s.TimestampUtc)
                 .Select(s => s.Map!)
@@ -542,7 +544,7 @@
             maxMapHours = MapStats.Count > 0 ? MapStats.Max(m => m.PlayerHours) : 0;
 
             // 24h chart data
-            var chartRows = await Db.Cs2ServerSnapshots
+            var chartRows = await Db.Cs2ServerSnapshots.Where(_sk => _sk.ServerKey == serverKey)
                 .Where(s => s.TimestampUtc >= cutoff)
                 .OrderBy(s => s.TimestampUtc)
                 .Select(s => new { s.TimestampUtc, s.CurrentPlayers, s.IsOnline })

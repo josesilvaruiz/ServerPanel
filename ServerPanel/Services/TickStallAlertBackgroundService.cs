@@ -28,22 +28,22 @@ public class TickStallAlertBackgroundService : BackgroundService
     // graves de verdad (los vistos en vivo eran de 1.3-2.5 SEGUNDOS), no ese ruido de fondo.
     private const double MinElapsedMs = 500;
 
-    private readonly IActiveServerService _activeServer;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISshService _ssh;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _config;
     private readonly ILogger<TickStallAlertBackgroundService> _logger;
 
-    private DateTime _lastAlertUtc = DateTime.MinValue;
+    private readonly Dictionary<string, DateTime> _lastAlertUtc = new();
 
     public TickStallAlertBackgroundService(
-        IActiveServerService activeServer,
+        IServiceScopeFactory scopeFactory,
         ISshService ssh,
         IHttpClientFactory httpClientFactory,
         IConfiguration config,
         ILogger<TickStallAlertBackgroundService> logger)
     {
-        _activeServer = activeServer;
+        _scopeFactory = scopeFactory;
         _ssh = ssh;
         _httpClientFactory = httpClientFactory;
         _config = config;
@@ -61,12 +61,20 @@ public class TickStallAlertBackgroundService : BackgroundService
         }
     }
 
+    // Vigila todos los servidores configurados (o solo los de Notifications:AlertServerNames si se define).
     private async Task CheckAsync(CancellationToken ct)
     {
-        var serverName = _config["Notifications:ProductionServerName"] ?? "Producción";
-        var production = _activeServer.Servers.FirstOrDefault(s => s.Name == serverName);
-        if (production is null) return;
+        List<ServerConfig> servers;
+        await using (var scope = _scopeFactory.CreateAsyncScope())
+            servers = scope.ServiceProvider.GetRequiredService<IActiveServerService>().Servers.ToList();
 
+        var only = _config.GetSection("Notifications:AlertServerNames").Get<string[]>();
+        foreach (var server in servers.Where(x => only is not { Length: > 0 } || only.Contains(x.Name)))
+            await CheckServerAsync(server, ct);
+    }
+
+    private async Task CheckServerAsync(ServerConfig production, CancellationToken ct)
+    {
         try
         {
             var podName = await ResolvePodNameAsync(production);
@@ -92,10 +100,10 @@ public class TickStallAlertBackgroundService : BackgroundService
                 "TickStallAlert: {Count} congelamiento(s) detectado(s) en producción, peor caso {Worst}ms",
                 elapsedMs.Count, worst);
 
-            if (DateTime.UtcNow - _lastAlertUtc < AlertCooldown)
+            if (_lastAlertUtc.TryGetValue(production.Name, out var last) && DateTime.UtcNow - last < AlertCooldown)
                 return; // ya se avisó recientemente de esta misma racha
 
-            _lastAlertUtc = DateTime.UtcNow;
+            _lastAlertUtc[production.Name] = DateTime.UtcNow;
             await SendAlertEmailAsync(production, elapsedMs.Count, worst, ct);
         }
         catch (Exception ex)

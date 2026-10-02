@@ -24,12 +24,12 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddLocalization();
 builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IActiveServerService, ActiveServerService>();
-builder.Services.AddSingleton<IServerQueryService, ServerQueryService>();
+builder.Services.AddScoped<IActiveServerService, ActiveServerService>();
+builder.Services.AddScoped<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
-builder.Services.AddSingleton<IRconService, RconService>();
-builder.Services.AddSingleton<ICs2ServerService, Cs2ServerService>();
-builder.Services.AddSingleton<IServerMetricsService, ServerMetricsService>();
+builder.Services.AddScoped<IRconService, RconService>();
+builder.Services.AddScoped<ICs2ServerService, Cs2ServerService>();
+builder.Services.AddScoped<IServerMetricsService, ServerMetricsService>();
 builder.Services.AddSingleton<IManualActionTracker, ManualActionTracker>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
