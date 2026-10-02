@@ -29,6 +29,7 @@ builder.Services.AddScoped<IServerQueryService, ServerQueryService>();
 builder.Services.AddSingleton<ISshService, SshService>();
 builder.Services.AddScoped<IRconService, RconService>();
 builder.Services.AddScoped<ICs2ServerService, Cs2ServerService>();
+builder.Services.AddSingleton<IGameServerService, GameServerService>();
 builder.Services.AddScoped<IServerMetricsService, ServerMetricsService>();
 builder.Services.AddSingleton<IManualActionTracker, ManualActionTracker>();
 

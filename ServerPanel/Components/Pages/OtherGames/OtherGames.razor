@@ -1,0 +1,93 @@
+@namespace ServerPanel.Components.Pages
+@page "/otros-juegos"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using ServerPanel.Models
+
+@attribute [Authorize]
+
+<PageTitle>Otros juegos — ServerPanel</PageTitle>
+
+<div class="og-page">
+
+    <div class="og-header">
+        <div class="og-header-icon"><i class="ti ti-device-gamepad-2"></i></div>
+        <div>
+            <div class="og-title">Otros juegos</div>
+            <div class="og-subtitle">Servidores de otros juegos en el mismo VPS que CS2</div>
+        </div>
+        <button class="og-btn og-btn-ghost og-refresh" @onclick="RefreshAll" disabled="@(_busy.Count > 0)">
+            <i class="ti ti-refresh"></i> Actualizar
+        </button>
+    </div>
+
+    @if (Games.Games.Count == 0)
+    {
+        <div class="og-empty">
+            No hay juegos configurados. Añádelos en la sección <code>OtherGames</code> de <code>appsettings.json</code>.
+        </div>
+    }
+
+    <div class="og-grid">
+        @foreach (var game in Games.Games)
+        {
+            var state = StateOf(game);
+            <div class="og-card">
+                <div class="og-card-head">
+                    <div>
+                        <div class="og-card-name">@game.Name</div>
+                        @if (!string.IsNullOrEmpty(game.Description))
+                        {
+                            <div class="og-card-desc">@game.Description</div>
+                        }
+                    </div>
+                    @if (state.Loading)
+                    {
+                        <span class="og-badge og-badge-loading">Comprobando…</span>
+                    }
+                    else if (state.Running)
+                    {
+                        <span class="og-badge og-badge-online"><span class="og-dot og-dot-green"></span>Encendido</span>
+                    }
+                    else
+                    {
+                        <span class="og-badge og-badge-offline"><span class="og-dot og-dot-red"></span>Apagado</span>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(game.Host))
+                {
+                    <div class="og-address">
+                        <i class="ti ti-plug-connected"></i> @game.Host@(game.Port > 0 ? $":{game.Port}" : "")
+                    </div>
+                }
+
+                <div class="og-actions">
+                    <button class="og-btn og-btn-green" @onclick="() => Start(game)" disabled="@(_busy.Contains(game.Name) || state.Running)">
+                        <i class="ti ti-player-play"></i> Arrancar
+                    </button>
+                    <button class="og-btn og-btn-amber" @onclick="() => Restart(game)" disabled="@(_busy.Contains(game.Name) || !state.Running)">
+                        <i class="ti ti-rotate-clockwise"></i> Reiniciar
+                    </button>
+                    <button class="og-btn og-btn-red" @onclick="() => Stop(game)" disabled="@(_busy.Contains(game.Name) || !state.Running)">
+                        <i class="ti ti-player-stop"></i> Parar
+                    </button>
+                    <button class="og-btn og-btn-ghost" @onclick="() => ToggleLogs(game)" disabled="@_busy.Contains(game.Name)">
+                        <i class="ti ti-file-text"></i> @(state.Logs is null ? "Ver log" : "Ocultar log")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(state.Message))
+                {
+                    <div class="og-message @(state.Error ? "og-message-error" : "")">@state.Message</div>
+                }
+
+                @if (state.Logs is not null)
+                {
+                    <pre class="og-logs">@(string.IsNullOrWhiteSpace(state.Logs) ? "(sin salida)" : state.Logs)</pre>
+                }
+            </div>
+        }
+    </div>
+</div>

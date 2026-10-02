@@ -1,0 +1,216 @@
+.og-page {
+    background: var(--bg-page);
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: white;
+}
+
+.og-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: 16px;
+    padding: 1.1rem 1.5rem;
+}
+
+.og-header-icon {
+    font-size: 1.6rem;
+    color: #a78bfa;
+}
+
+.og-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.og-subtitle {
+    font-size: .85rem;
+    color: #475569;
+    margin-top: .15rem;
+}
+
+.og-refresh {
+    margin-left: auto;
+}
+
+.og-empty {
+    background: var(--bg-card);
+    border: 1px dashed var(--bd2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    color: #94a3b8;
+}
+
+.og-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.og-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    min-width: 0;
+}
+
+.og-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.og-card-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.og-card-desc {
+    font-size: .82rem;
+    color: #64748b;
+    margin-top: .15rem;
+}
+
+.og-address {
+    font-family: Consolas, monospace;
+    font-size: .88rem;
+    color: #94a3b8;
+}
+
+.og-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .35rem .85rem;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.og-badge-online {
+    background: rgba(34, 197, 94, .1);
+    border: 1px solid rgba(34, 197, 94, .25);
+    color: #4ade80;
+}
+
+.og-badge-offline {
+    background: rgba(239, 68, 68, .1);
+    border: 1px solid rgba(239, 68, 68, .25);
+    color: #f87171;
+}
+
+.og-badge-loading {
+    background: rgba(148, 163, 184, .1);
+    border: 1px solid rgba(148, 163, 184, .25);
+    color: #94a3b8;
+}
+
+.og-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.og-dot-green {
+    background: #4ade80;
+    box-shadow: 0 0 5px #4ade80;
+}
+
+.og-dot-red {
+    background: #f87171;
+}
+
+.og-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+}
+
+.og-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    padding: .7rem 1rem;
+    border-radius: 12px;
+    font-size: .9rem;
+    font-weight: 600;
+    border: 1px solid;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, transform .1s;
+}
+
+.og-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.og-btn:not(:disabled):active {
+    transform: scale(.98);
+}
+
+.og-btn-green {
+    background: #1a2e1a;
+    color: #4ade80;
+    border-color: #166534;
+}
+
+.og-btn-amber {
+    background: #2e2010;
+    color: #fbbf24;
+    border-color: #92400e;
+}
+
+.og-btn-red {
+    background: #2e1a1a;
+    color: #f87171;
+    border-color: #7f1d1d;
+}
+
+.og-btn-ghost {
+    background: transparent;
+    color: #6b7280;
+    border-color: var(--bd2);
+}
+
+.og-message {
+    font-size: .85rem;
+    color: #94a3b8;
+}
+
+.og-message-error {
+    color: #f87171;
+}
+
+.og-logs {
+    margin: 0;
+    max-height: 260px;
+    overflow: auto;
+    background: var(--bg-input, #0b0f19);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    padding: .75rem;
+    font-size: .75rem;
+    color: #cbd5e1;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+@media (max-width: 640px) {
+    .og-page { padding: .75rem .5rem; min-height: 0; gap: 1rem; }
+    .og-header { flex-wrap: wrap; padding: 1rem; }
+    .og-grid { grid-template-columns: 1fr; }
+}
