@@ -48,21 +48,22 @@ public partial class OtherGames
     }
 
     private Task Start(GameServerConfig game) =>
-        Act(game, Games.StartAsync, "Arrancando… puede tardar un par de minutos en aceptar conexiones.", 5000);
+        Act(game, async g => { await Games.StartAsync(g); return "Arrancando… puede tardar un par de minutos en aceptar conexiones."; }, 5000);
 
+    // Parar apaga limpio y, si el juego tiene copia configurada, la hace antes de terminar.
     private Task Stop(GameServerConfig game) =>
-        Act(game, Games.StopAsync, "Servidor detenido.", 3000);
+        Act(game, Games.StopAsync, 3000);
 
     private Task Restart(GameServerConfig game) =>
-        Act(game, Games.RestartAsync, "Reiniciando…", 5000);
+        Act(game, async g => { await Games.RestartAsync(g); return "Reiniciando…"; }, 5000);
 
-    private async Task Act(GameServerConfig game, Func<GameServerConfig, Task> action, string done, int settleMs)
+    private async Task Act(GameServerConfig game, Func<GameServerConfig, Task<string>> action, int settleMs)
     {
         var state = StateOf(game);
         _busy.Add(game.Name);
         try
         {
-            await action(game);
+            var done = await action(game);
             await Task.Delay(settleMs); // deja que Kubernetes cambie de estado antes de volver a preguntar
             await Refresh(game);
             state.Message = $"{done} ({DateTime.Now:HH:mm:ss})";

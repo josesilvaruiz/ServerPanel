@@ -46,14 +46,53 @@ public partial class GameServerService : IGameServerService
     public Task StartAsync(GameServerConfig game) =>
         Run(game, "arrancando", $"kubectl scale deployment {game.KubeDeployment} -n {game.KubeNamespace} --replicas=1");
 
-    public Task StopAsync(GameServerConfig game) =>
-        Run(game, "parando", $"kubectl scale deployment {game.KubeDeployment} -n {game.KubeNamespace} --replicas=0");
+    public async Task<string> StopAsync(GameServerConfig game)
+    {
+        await Run(game, "parando", $"kubectl scale deployment {game.KubeDeployment} -n {game.KubeNamespace} --replicas=0");
+
+        if (!HasBackup(game))
+            return "Servidor detenido.";
+
+        // La copia se hace con el servidor ya apagado: solo entonces el mundo está completo en disco.
+        var wait = (await _ssh.ExecuteAsync(WaitForPodsGoneCommand(game))).Trim();
+        if (!wait.EndsWith("GONE"))
+            throw new InvalidOperationException(
+                $"{game.Name}: la parada se ha pedido, pero el servidor no terminó de apagarse a tiempo. " +
+                "No se hizo la copia de seguridad para no copiar un mundo a medio guardar; revisa el estado.");
+
+        var result = (await _ssh.ExecuteAsync(BackupCommand(game))).Trim();
+        const string ok = "BACKUP_OK:";
+        if (!result.Contains(ok))
+            throw new InvalidOperationException(
+                $"{game.Name}: servidor detenido, pero la copia de seguridad ha fallado: {result}");
+
+        var file = result[(result.LastIndexOf(ok, StringComparison.Ordinal) + ok.Length)..].Trim();
+        _logger.LogInformation("{Game}: copia de seguridad en {File}", game.Name, file);
+        return $"Servidor detenido. Copia de seguridad: {file}";
+    }
 
     public Task RestartAsync(GameServerConfig game) =>
         Run(game, "reiniciando", $"kubectl rollout restart deployment/{game.KubeDeployment} -n {game.KubeNamespace}");
 
     public Task<string> GetLogsAsync(GameServerConfig game, int tail = 60) =>
         _ssh.ExecuteAsync($"kubectl logs -n {game.KubeNamespace} deployment/{game.KubeDeployment} --tail={Math.Clamp(tail, 1, 500)} 2>/dev/null");
+
+    private static bool HasBackup(GameServerConfig game) =>
+        !string.IsNullOrEmpty(game.BackupSource) && !string.IsNullOrEmpty(game.BackupDir);
+
+    /// <summary>Espera (hasta ~3 min) a que no quede ningún pod del deployment; imprime GONE o TIMEOUT.</summary>
+    private static string WaitForPodsGoneCommand(GameServerConfig game) =>
+        $"SEL=$(kubectl get deployment {game.KubeDeployment} -n {game.KubeNamespace} " +
+        "-o go-template='{{range $k,$v := .spec.selector.matchLabels}}{{$k}}={{$v}},{{end}}' | sed 's/,$//'); " +
+        "R=TIMEOUT; for i in $(seq 1 90); do " +
+        $"if [ -n \"$SEL\" ] && [ -z \"$(kubectl get pods -n {game.KubeNamespace} -l \"$SEL\" -o name 2>/dev/null)\" ]; then R=GONE; break; fi; " +
+        "sleep 2; done; echo $R";
+
+    /// <summary>Comprime BackupSource (solo lectura) en BackupDir y comprueba que el archivo es válido.</summary>
+    private static string BackupCommand(GameServerConfig game) =>
+        $"mkdir -p {game.BackupDir} && chmod 700 {game.BackupDir} && " +
+        $"F={game.BackupDir}/{game.KubeDeployment}-$(date +%Y%m%d-%H%M%S).tar.gz && " +
+        $"tar -czf $F -C {game.BackupSource} . && gzip -t $F && echo BACKUP_OK:$F";
 
     private async Task Run(GameServerConfig game, string what, string command)
     {
@@ -81,8 +120,26 @@ public partial class GameServerService : IGameServerService
                 $"OtherGames: '{game.Name}' tiene un KubeNamespace o KubeDeployment no válido " +
                 "(solo minúsculas, dígitos y guiones).");
         }
+
+        // BackupSource y BackupDir van dentro de un comando de shell: solo rutas absolutas simples.
+        // Las dos o ninguna, y la copia nunca puede escribirse dentro del origen.
+        var hasSource = !string.IsNullOrEmpty(game.BackupSource);
+        var hasDir = !string.IsNullOrEmpty(game.BackupDir);
+        if (hasSource != hasDir ||
+            (hasSource && (!SafePath().IsMatch(game.BackupSource) || game.BackupSource.Contains("..") ||
+                           !SafePath().IsMatch(game.BackupDir) || game.BackupDir.Contains("..") ||
+                           game.BackupDir.TrimEnd('/') == game.BackupSource.TrimEnd('/') ||
+                           game.BackupDir.TrimEnd('/').StartsWith(game.BackupSource.TrimEnd('/') + "/"))))
+        {
+            throw new InvalidOperationException(
+                $"OtherGames: '{game.Name}' tiene un BackupSource/BackupDir no válido (rutas absolutas simples, " +
+                "las dos juntas, y BackupDir fuera de BackupSource).");
+        }
     }
 
     [GeneratedRegex("^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$")]
     private static partial Regex KubeName();
+
+    [GeneratedRegex("^/[A-Za-z0-9_./-]+$")]
+    private static partial Regex SafePath();
 }

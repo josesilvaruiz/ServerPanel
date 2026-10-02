@@ -11,7 +11,11 @@ public interface IGameServerService
 
     Task StartAsync(GameServerConfig game);
 
-    Task StopAsync(GameServerConfig game);
+    /// <summary>
+    /// Apaga el servidor (SIGTERM: el juego guarda el mundo) y, si el juego tiene copia de seguridad
+    /// configurada, espera a que el pod termine y guarda una copia. Devuelve un resumen para mostrar.
+    /// </summary>
+    Task<string> StopAsync(GameServerConfig game);
 
     Task RestartAsync(GameServerConfig game);
 
