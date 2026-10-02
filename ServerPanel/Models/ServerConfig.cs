@@ -2,7 +2,13 @@ namespace ServerPanel.Models;
 
 public class ServerConfig
 {
+    /// <summary>Clave estable del servidor (BD, eventos, selección): no se cambia aunque cambie el nombre que se ve.</summary>
     public string Name         { get; set; } = "";
+
+    /// <summary>Nombre que se muestra en el panel y en los avisos. Si está vacío se usa <see cref="Name"/>.</summary>
+    public string DisplayName  { get; set; } = "";
+
+    public string Label => string.IsNullOrWhiteSpace(DisplayName) ? Name : DisplayName;
     public string Host         { get; set; } = "127.0.0.1";
     public int    Port         { get; set; } = 27015;
     public string RconPassword { get; set; } = "";

@@ -10,7 +10,7 @@
     <select @onchange="OnChange">
         @foreach (var s in ActiveServer.Servers)
         {
-            <option value="@s.Name" selected="@(s.Name == ActiveServer.Active.Name)">@s.Name</option>
+            <option value="@s.Name" selected="@(s.Name == ActiveServer.Active.Name)">@s.Label</option>
         }
     </select>
 </div>

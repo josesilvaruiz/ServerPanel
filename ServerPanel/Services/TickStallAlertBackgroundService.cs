@@ -149,7 +149,7 @@ public class TickStallAlertBackgroundService : BackgroundService
             {
                 userId = $"CS2-{production.Name}",
                 message =
-                    $"El servidor CS2 '{production.Name}' ha tenido congelamientos de tick (lag).\n" +
+                    $"El servidor CS2 '{production.Label}' ha tenido congelamientos de tick (lag).\n" +
                     $"Hora (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}\n" +
                     $"Congelamientos detectados en esta racha: {count}\n" +
                     $"Peor caso: {worstMs:0}ms (el motor lo marca como 'UNEXPECTED LONG FRAME' — no es un pico normal)\n\n" +

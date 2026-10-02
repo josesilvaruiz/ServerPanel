@@ -131,7 +131,7 @@ public class ProductionDownAlertBackgroundService : BackgroundService
             {
                 userId = $"CS2-{production.Name}",
                 message =
-                    $"El servidor CS2 '{production.Name}' ha dejado de responder.\n" +
+                    $"El servidor CS2 '{production.Label}' ha dejado de responder.\n" +
                     $"Hora de la caída (UTC): {crashedAtUtc:yyyy-MM-dd HH:mm:ss}\n\n" +
                     diagnostics,
                 channel = 0 // Email
