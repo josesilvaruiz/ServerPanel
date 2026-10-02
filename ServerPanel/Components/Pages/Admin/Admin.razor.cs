@@ -196,7 +196,19 @@ public partial class Admin : IDisposable
         {
             await Cs2ServerService.UpdateSimpleAdminWorkshopMapsAsync(WorkshopMaps);
             await Cs2ServerService.UpdateRtvMapsAsync(WorkshopMaps);
-            ShowToast(true, "Mapas sincronizados: !map de admin y RTV/nominate actualizados");
+
+            // Recarga los plugins para que los cambios se vean ya, sin reiniciar el servidor.
+            // Si falla (RCON caído, plugin con otro nombre) los ficheros ya están escritos y se aplican al reiniciar.
+            try
+            {
+                await Cs2ServerService.ExecuteConsoleCommandAsync("css_plugins reload \"CS2-SimpleAdmin (RELEASE)\"");
+                await Cs2ServerService.ExecuteConsoleCommandAsync("css_plugins reload \"SimpleRTV\"");
+                ShowToast(true, "Mapas sincronizados y plugins recargados: !map de admin y RTV/nominate ya actualizados");
+            }
+            catch
+            {
+                ShowToast(true, "Mapas sincronizados (no se pudieron recargar los plugins: se aplicará al reiniciar)");
+            }
         }
         catch (Exception ex)
         {
