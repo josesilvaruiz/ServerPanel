@@ -483,3 +483,48 @@
     .top { flex-wrap: wrap; }
     .wrap { padding: .5rem .25rem; }
 }
+
+/* ── Vista global: jugadores únicos y retención ── */
+.btn-global {
+    margin-left: auto;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 0.5px solid var(--bd);
+    background: var(--bg-surface);
+    color: #a78bfa; font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; transition: all .15s;
+}
+.btn-global i { font-size: 16px; }
+.btn-global:hover { background: var(--bg-hover2); }
+.btn-global.active { background: #1e1a2e; border-color: #4c3d80; }
+.btn-global + .btn-refresh { margin-left: 0; }
+
+.scope-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.scope-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.scope-chip {
+    height: 28px; padding: 0 10px;
+    border-radius: 14px;
+    border: 0.5px solid var(--bd);
+    background: var(--bg-surface);
+    color: #94a3b8; font-size: 12px;
+    display: flex; align-items: center; gap: 5px;
+    cursor: pointer; transition: all .15s;
+}
+.scope-chip:hover:not(:disabled) { background: var(--bg-hover2); }
+.scope-chip.active { color: #22d3ee; border-color: #155e75; background: #0c2030; }
+.scope-chip:disabled { opacity: .5; cursor: not-allowed; }
+
+.lbl-note { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 4px; }
+.kpi-sub  { font-size: 12px; font-weight: 500; color: #64748b; }
+
+.num-h { text-align: right; }
+.cohort-tbl td.num { text-align: right; }
+.cohort-cell { color: #e2e8f0; }
+
+@media (max-width: 600px) {
+    .btn-global span { display: none; }
+}
+.player-link { text-decoration: none; }
+.player-link:hover { text-decoration: underline; }

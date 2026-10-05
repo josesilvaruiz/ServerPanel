@@ -5,8 +5,10 @@
 @using Microsoft.EntityFrameworkCore
 @using ServerPanel.Data
 @using ServerPanel.Models
+@using ServerPanel.Services
 @attribute [Authorize]
 @inject ApplicationDbContext Db
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JS
 @inject ServerPanel.Contracts.IActiveServerService ActiveServer
 
@@ -18,12 +20,226 @@
             <p class="top-title">Historial CS2</p>
             <p class="top-sub">Actividad del servidor de juego</p>
         </div>
-        <button type="button" class="btn-refresh" @onclick="LoadAsync" disabled="@Loading">
-            <i class="ti @(Loading ? "ti-loader-2 spin" : "ti-refresh")"></i>
+        <button type="button" class="btn-global @(ShowGlobal ? "active" : "")" @onclick="ToggleGlobalAsync"
+                title="Jugadores únicos y retención (histórico completo)">
+            <i class="ti @(ShowGlobal ? "ti-arrow-left" : "ti-chart-dots-3")"></i>
+            <span>@(ShowGlobal ? "Volver a actividad" : "Jugadores y retención")</span>
+        </button>
+        <button type="button" class="btn-refresh" @onclick="RefreshAsync" disabled="@(ShowGlobal ? GlobalLoading : Loading)">
+            <i class="ti @((ShowGlobal ? GlobalLoading : Loading) ? "ti-loader-2 spin" : "ti-refresh")"></i>
         </button>
     </div>
 
-    @if (Loading)
+    @if (ShowGlobal)
+    {
+        @* ── Vista global: jugadores únicos y retención (histórico completo de conexiones) ── *@
+        @if (ActiveServer.Servers.Count > 1)
+        {
+            <div class="scope-row">
+                <span class="kpi-section-lbl">Servidor</span>
+                <div class="scope-chips">
+                    <button type="button" class="scope-chip @(GlobalScope == ScopeAll ? "active" : "")"
+                            @onclick="() => SetScopeAsync(ScopeAll)" disabled="@GlobalLoading">
+                        <i class="ti ti-server-2"></i> Ambos
+                    </button>
+                    @foreach (var srv in ActiveServer.Servers)
+                    {
+                        var key = srv.Name;
+                        <button type="button" class="scope-chip @(GlobalScope == key ? "active" : "")"
+                                @onclick="() => SetScopeAsync(key)" disabled="@GlobalLoading">
+                            @srv.Label
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (GlobalLoading)
+        {
+            <div class="state-box">
+                <div class="spinner"></div>
+                <p>Calculando estadísticas...</p>
+            </div>
+        }
+        else if (GlobalError is not null)
+        {
+            <div class="state-box state-error">
+                <i class="ti ti-alert-circle"></i>
+                <p>@GlobalError</p>
+            </div>
+        }
+        else if (Global is null || Global.TotalUnique == 0)
+        {
+            <div class="state-box">
+                <i class="ti ti-database-off"></i>
+                <p>Sin conexiones registradas todavía para este alcance.</p>
+            </div>
+        }
+        else
+        {
+            var gs = Global;
+            <div class="kpi-section-lbl">
+                Jugadores únicos · @ScopeLabel
+                @if (gs.FirstEventUtc is { } since) { <span class="lbl-note">(datos desde @ToMadridDate(since))</span> }
+            </div>
+            <div class="kpi-grid kpi-grid-4">
+                <div class="kpi-card">
+                    <span class="kpi-icon ki-purple"><i class="ti ti-users-group"></i></span>
+                    <div>
+                        <p class="kpi-val">@gs.TotalUnique</p>
+                        <p class="kpi-lbl">Únicos (total)</p>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-icon ki-cyan"><i class="ti ti-calendar-week"></i></span>
+                    <div>
+                        <p class="kpi-val">@gs.Unique7d <span class="kpi-sub">/ @gs.Unique30d</span></p>
+                        <p class="kpi-lbl">Únicos 7 d / 30 d</p>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-icon ki-green"><i class="ti ti-user-plus"></i></span>
+                    <div>
+                        <p class="kpi-val">@gs.New7d <span class="kpi-sub">/ @gs.New30d</span></p>
+                        <p class="kpi-lbl">Nuevos 7 d / 30 d</p>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-icon ki-amber"><i class="ti ti-repeat"></i></span>
+                    <div>
+                        <p class="kpi-val">@gs.Returning <span class="kpi-sub">@($"{gs.ReturningPct:0.#} %")</span></p>
+                        <p class="kpi-lbl">Vuelven (≥ 2 días) · media @($"{gs.AvgActiveDays:0.#}") días</p>
+                    </div>
+                </div>
+            </div>
+
+            @if (GlobalScope == ScopeAll && gs.PerServer.Count > 0)
+            {
+                <div class="kpi-section-lbl" style="margin-top:.25rem">Por servidor</div>
+                <div class="kpi-grid kpi-grid-4">
+                    @foreach (var ps in gs.PerServer)
+                    {
+                        <div class="kpi-card">
+                            <span class="kpi-icon ki-cyan"><i class="ti ti-server"></i></span>
+                            <div>
+                                <p class="kpi-val">@ps.UniquePlayers</p>
+                                <p class="kpi-lbl">Únicos · @ServerLabel(ps.ServerKey)</p>
+                            </div>
+                        </div>
+                    }
+                    <div class="kpi-card">
+                        <span class="kpi-icon ki-purple"><i class="ti ti-arrows-exchange"></i></span>
+                        <div>
+                            <p class="kpi-val">@gs.SharedAcrossServers</p>
+                            <p class="kpi-lbl">Juegan en ambos</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Retención · % que vuelve otro día tras su primera visita</div>
+            <div class="kpi-grid kpi-grid-3">
+                @foreach (var r in gs.Retention)
+                {
+                    var cls = r.Pct is null ? "" : r.Pct >= 40 ? "ki-green" : r.Pct >= 20 ? "ki-amber" : "ki-red";
+                    <div class="kpi-card">
+                        <span class="kpi-icon @cls"><i class="ti ti-rotate-clockwise"></i></span>
+                        <div>
+                            <p class="kpi-val">@(r.Pct is { } p ? $"{p:0.#} %" : "—")</p>
+                            <p class="kpi-lbl">@(r.Days == 1 ? "Al día siguiente" : $"En ≤ {r.Days} días") · @r.Returned / @r.Eligible</p>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Cohortes semanales · % que sigue jugando N semanas después</div>
+            <div class="table-wrap">
+                <table class="tbl cohort-tbl">
+                    <thead>
+                        <tr>
+                            <th>Semana de 1ª visita</th>
+                            <th class="num-h">Nuevos</th>
+                            @for (int k = 1; k <= Cs2PlayerStatsCalculator.CohortFollowWeeks; k++)
+                            {
+                                <th class="num-h">+@k sem</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in gs.Cohorts.Reverse())
+                        {
+                            <tr class="@(c.Size == 0 ? "row-empty" : "")">
+                                <td class="mono">@c.WeekStart.ToString("dd/MM/yyyy")</td>
+                                <td class="num">@c.Size</td>
+                                @foreach (var v in c.ReturnPct)
+                                {
+                                    if (v is { } pv)
+                                    {
+                                        var alpha = (0.08 + pv / 100.0 * 0.5).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                                        <td class="num cohort-cell" style="background:rgba(167,139,250,@alpha)">@($"{pv:0} %")</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="num muted">—</td>
+                                    }
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Últimos 30 días</div>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-users"></i> Jugadores únicos por día</p>
+                    <div class="chart-wrap"><canvas id="chart-daily-unique"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-title"><i class="ti ti-user-plus"></i> Jugadores nuevos por día</p>
+                    <div class="chart-wrap"><canvas id="chart-daily-new"></canvas></div>
+                </div>
+            </div>
+
+            <div class="kpi-section-lbl" style="margin-top:.25rem">Jugadores más fieles · top @gs.TopPlayers.Count por días jugados</div>
+            <div class="table-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Jugador</th>
+                            <th class="num-h">Días</th>
+                            <th class="num-h">Conexiones</th>
+                            <th>Primera vez</th>
+                            <th>Última vez</th>
+                            @if (GlobalScope == ScopeAll) { <th>Servidores</th> }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tp in gs.TopPlayers)
+                        {
+                            <tr>
+                                <td>
+                                    @* SteamId64 ya viene validado como 17 dígitos: seguro dentro de la URL *@
+                                    <a class="player-pill player-link" href="https://steamcommunity.com/profiles/@tp.SteamId64"
+                                       target="_blank" rel="noopener noreferrer" title="Perfil de Steam · @tp.SteamId64">@tp.Name</a>
+                                </td>
+                                <td class="num">@tp.ActiveDays</td>
+                                <td class="num muted">@tp.Connects</td>
+                                <td class="mono">@ToMadrid(tp.FirstSeenUtc)</td>
+                                <td class="mono">@ToMadrid(tp.LastSeenUtc)</td>
+                                @if (GlobalScope == ScopeAll)
+                                {
+                                    <td class="map-cell">@string.Join(", ", tp.Servers.Select(ServerLabel))</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="count-lbl">Un jugador = un SteamID (no cuentan bots ni conexiones sin SteamID); "día" = día natural en hora de Madrid.</p>
+        }
+    }
+    else if (Loading)
     {
         <div class="state-box">
             <div class="spinner"></div>
@@ -325,7 +541,93 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender) { await LoadAsync(); return; }
+        if (ShowGlobal)
+        {
+            if (Global is not null && GlobalChartsPending)
+            {
+                GlobalChartsPending = false;
+                await JS.InvokeVoidAsync("spRenderChart", "chart-daily-unique", Global.DailyLabels, Global.DailyUnique, "Únicos", "#a78bfa", "");
+                await JS.InvokeVoidAsync("spRenderChart", "chart-daily-new", Global.DailyLabels, Global.DailyNew, "Nuevos", "#4ade80", "");
+            }
+            return;
+        }
         if (Chart is not null) await RenderChartsAsync();
+    }
+
+    // ── Vista global (jugadores únicos + retención) ──
+    const string ScopeAll = "*";
+
+    Cs2GlobalPlayerStats? Global;
+    bool    ShowGlobal;
+    bool    GlobalLoading;
+    bool    GlobalChartsPending;
+    string? GlobalError;
+    string  GlobalScope = ScopeAll;
+    string? GlobalLoadedScope;
+
+    string ScopeLabel => GlobalScope == ScopeAll ? "ambos servidores" : ServerLabel(GlobalScope);
+
+    string ServerLabel(string key) =>
+        ActiveServer.Servers.FirstOrDefault(s => s.Name == key)?.Label ?? key;
+
+    async Task ToggleGlobalAsync()
+    {
+        ShowGlobal = !ShowGlobal;
+        if (ShowGlobal)
+        {
+            if (GlobalLoadedScope != GlobalScope) await LoadGlobalAsync();
+            else GlobalChartsPending = true; // los canvas se vuelven a crear al cambiar de vista
+        }
+    }
+
+    async Task SetScopeAsync(string scope)
+    {
+        if (GlobalLoading || scope == GlobalScope) return;
+        GlobalScope = scope;
+        await LoadGlobalAsync();
+    }
+
+    Task RefreshAsync() => ShowGlobal ? LoadGlobalAsync() : LoadAsync();
+
+    async Task LoadGlobalAsync()
+    {
+        GlobalLoading = true;
+        GlobalError   = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            // Solo servidores configurados en el panel: el alcance "ambos" no debe arrastrar
+            // eventos de un ServerName desconocido que haya publicado alguien en la cola.
+            var keys = GlobalScope == ScopeAll
+                ? ActiveServer.Servers.Select(s => s.Name).ToList()
+                : ActiveServer.Servers.Where(s => s.Name == GlobalScope).Select(s => s.Name).ToList();
+
+            // Contexto propio: LoadAsync puede seguir usando Db a la vez (DbContext no es concurrente).
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var rows = await db.Cs2PlayerConnectionEvents.AsNoTracking()
+                .Where(e => e.EventType == Cs2ConnectionEventType.Connect
+                         && e.SteamId64 != null
+                         && e.ServerName != null && keys.Contains(e.ServerName))
+                .Select(e => new { e.TimestampUtc, e.PlayerName, e.SteamId64, e.ServerName })
+                .ToListAsync();
+
+            Global = Cs2PlayerStatsCalculator.Compute(
+                rows.Select(r => new Cs2ConnectRecord(r.TimestampUtc, r.PlayerName, r.SteamId64, r.ServerName!)),
+                DateTime.UtcNow,
+                _madrid);
+            GlobalLoadedScope   = GlobalScope;
+            GlobalChartsPending = true;
+        }
+        catch (Exception ex)
+        {
+            Global      = null;
+            GlobalError = ex.Message;
+        }
+        finally
+        {
+            GlobalLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     async Task LoadAsync()
@@ -606,6 +908,9 @@
 
     static string ToMadrid(DateTime utc) =>
         TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("dd/MM HH:mm");
+
+    static string ToMadridDate(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("dd/MM/yyyy");
 
     static string ToMadridTime(DateTime utc) =>
         TimeZoneInfo.ConvertTimeFromUtc(utc, _madrid).ToString("HH:mm");
