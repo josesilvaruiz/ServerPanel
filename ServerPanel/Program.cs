@@ -126,7 +126,10 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit          = 30,
+                // Detrás de Traefik (externalTrafficPolicy Cluster) todas las visitas llegan con la
+                // IP interna del nodo, así que este límite es en la práctica para toda la web, no por
+                // visitante.
+                PermitLimit          = 300,
                 Window               = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit           = 0,
@@ -237,9 +240,6 @@ app.MapPost("/api/analytics/visit", async (
     }
 
     var key = ctx.Request.Headers["X-Analytics-Key"].FirstOrDefault() ?? "";
-    logger.LogWarning(
-        "Analytics Auth Debug | ReceivedKey:{ReceivedKey} | ConfiguredKey:{ConfiguredKey} | Origin:{Origin}",
-        key, analyticsApiKey, origin);
     if (analyticsApiKey.Length == 0 || key != analyticsApiKey)
     {
         logger.LogWarning("Analytics API key inválida — Origin:{Origin} IP:{IP}", origin, ip);
