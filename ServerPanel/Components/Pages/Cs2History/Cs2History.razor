@@ -218,7 +218,11 @@
                         @foreach (var tp in gs.TopPlayers)
                         {
                             <tr>
-                                <td><span class="player-pill">@tp.Name</span></td>
+                                <td>
+                                    @* SteamId64 ya viene validado como 17 dígitos: seguro dentro de la URL *@
+                                    <a class="player-pill player-link" href="https://steamcommunity.com/profiles/@tp.SteamId64"
+                                       target="_blank" rel="noopener noreferrer" title="Perfil de Steam · @tp.SteamId64">@tp.Name</a>
+                                </td>
                                 <td class="num">@tp.ActiveDays</td>
                                 <td class="num muted">@tp.Connects</td>
                                 <td class="mono">@ToMadrid(tp.FirstSeenUtc)</td>
@@ -232,7 +236,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="count-lbl">Un jugador se identifica por su SteamID; "día" = día natural en hora de Madrid.</p>
+            <p class="count-lbl">Un jugador = un SteamID (no cuentan bots ni conexiones sin SteamID); "día" = día natural en hora de Madrid.</p>
         }
     }
     else if (Loading)
@@ -602,6 +606,7 @@
             await using var db = await DbFactory.CreateDbContextAsync();
             var rows = await db.Cs2PlayerConnectionEvents.AsNoTracking()
                 .Where(e => e.EventType == Cs2ConnectionEventType.Connect
+                         && e.SteamId64 != null
                          && e.ServerName != null && keys.Contains(e.ServerName))
                 .Select(e => new { e.TimestampUtc, e.PlayerName, e.SteamId64, e.ServerName })
                 .ToListAsync();

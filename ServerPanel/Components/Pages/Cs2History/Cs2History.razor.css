@@ -526,3 +526,5 @@
 @media (max-width: 600px) {
     .btn-global span { display: none; }
 }
+.player-link { text-decoration: none; }
+.player-link:hover { text-decoration: underline; }

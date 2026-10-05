@@ -7,8 +7,12 @@ public class Cs2PlayerStatsCalculatorTests
     private static readonly TimeZoneInfo Utc = TimeZoneInfo.Utc;
     private static readonly DateTime Now = new(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc); // lunes
 
+    // "1", "2"... -> SteamID64 válido (base + accountId). Cualquier otra cosa se pasa tal cual.
+    private static string? Sid(string? id) =>
+        id is not null && uint.TryParse(id, out var n) && id.Length < 17 ? (76561197960265728UL + n).ToString() : id;
+
     private static Cs2ConnectRecord C(int daysAgo, string name, string? steam, string server = "A", int hour = 10) =>
-        new(Now.Date.AddDays(-daysAgo).AddHours(hour), name, steam, server);
+        new(Now.Date.AddDays(-daysAgo).AddHours(hour), name, Sid(steam), server);
 
     [Fact]
     public void Counts_unique_players_by_steamid_even_if_name_changes()
@@ -25,17 +29,41 @@ public class Cs2PlayerStatsCalculatorTests
     }
 
     [Fact]
-    public void Connect_without_steamid_is_matched_by_unique_name()
+    public void Connects_without_valid_steamid_are_ignored()
     {
         var stats = Cs2PlayerStatsCalculator.Compute(
         [
             C(2, "Pepe", "111"),
-            C(0, "Pepe", null),
+            C(0, "Pepe", null),                      // sin SteamID
+            C(0, "BOT Kyle", "76561197960265728"),   // accountId 0 (bot)
+            C(0, "Raro", "abc"),                     // basura
         ], Now, Utc);
 
         Assert.Equal(1, stats.TotalUnique);
-        Assert.Equal(1, stats.Returning);
+        Assert.Equal(0, stats.Returning);
+        Assert.Equal(1, stats.TopPlayers[0].Connects);
     }
+
+    [Fact]
+    public void Same_name_different_steamids_are_different_players()
+    {
+        var stats = Cs2PlayerStatsCalculator.Compute(
+        [
+            C(1, "Player", "1"),
+            C(1, "Player", "2"),
+        ], Now, Utc);
+
+        Assert.Equal(2, stats.TotalUnique);
+    }
+
+    [Theory]
+    [InlineData("76561198000000000", true)]
+    [InlineData("76561197960265728", false)]
+    [InlineData("7656119800000000", false)]
+    [InlineData("7656119800000000x", false)]
+    [InlineData(null, false)]
+    public void Validates_steamid64(string? id, bool expected) =>
+        Assert.Equal(expected, Cs2PlayerStatsCalculator.IsValidSteamId64(id));
 
     [Fact]
     public void Same_day_reconnects_do_not_count_as_returning()

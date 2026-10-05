@@ -15,6 +15,7 @@ public sealed record Cs2RetentionStat(int Days, int Eligible, int Returned)
 public sealed record Cs2WeeklyCohort(DateOnly WeekStart, int Size, double?[] ReturnPct);
 
 public sealed record Cs2PlayerSummary(
+    string   SteamId64,
     string   Name,
     int      ActiveDays,
     int      Connects,
@@ -57,28 +58,28 @@ public static class Cs2PlayerStatsCalculator
     public const int CohortFollowWeeks = 4;
     public const int DailyWindowDays = 30;
 
+    // SteamID64 de cuentas individuales: 76561197960265728 + accountId. El accountId 0 es el que
+    // sale de un SteamID3 vacío ([U:1:0]) — típico de bots — y no es un jugador real.
+    const ulong SteamId64Base = 76561197960265728UL;
+
+    public static bool IsValidSteamId64(string? id) =>
+        id is { Length: 17 } && id.All(char.IsAsciiDigit)
+        && ulong.TryParse(id, out var v) && v > SteamId64Base && v < SteamId64Base + uint.MaxValue;
+
     public static Cs2GlobalPlayerStats Compute(
         IEnumerable<Cs2ConnectRecord> connects,
         DateTime nowUtc,
         TimeZoneInfo tz,
         int topN = 25)
     {
-        var list = connects.Where(c => !string.IsNullOrWhiteSpace(c.PlayerName)).ToList();
+        // Identidad estricta por SteamID64: lo que no traiga uno válido (bots, líneas de log
+        // incompletas) no cuenta. Así un cambio de nombre no duplica jugadores y dos cuentas con
+        // el mismo nombre no se mezclan.
+        var list = connects
+            .Where(c => IsValidSteamId64(c.SteamId64) && !string.IsNullOrWhiteSpace(c.PlayerName))
+            .ToList();
 
-        // Identidad: SteamID64 siempre que lo haya. Para conexiones sin SteamID se intenta casar
-        // el nombre con un SteamID ya visto (solo si ese nombre corresponde a uno único — si dos
-        // cuentas usan el mismo nombre no adivinamos); si no, se cuenta por nombre.
-        var steamByName = list
-            .Where(c => !string.IsNullOrEmpty(c.SteamId64))
-            .GroupBy(c => c.PlayerName, StringComparer.OrdinalIgnoreCase)
-            .Select(g => (Name: g.Key, Ids: g.Select(c => c.SteamId64!).Distinct().ToList()))
-            .Where(x => x.Ids.Count == 1)
-            .ToDictionary(x => x.Name, x => x.Ids[0], StringComparer.OrdinalIgnoreCase);
-
-        string KeyOf(Cs2ConnectRecord c) =>
-            !string.IsNullOrEmpty(c.SteamId64) ? c.SteamId64!
-            : steamByName.TryGetValue(c.PlayerName, out var id) ? id
-            : "name:" + c.PlayerName.ToLowerInvariant();
+        static string KeyOf(Cs2ConnectRecord c) => c.SteamId64!;
 
         DateOnly DayOf(DateTime utc) =>
             DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), tz));
@@ -168,7 +169,7 @@ public static class Cs2PlayerStatsCalculator
                 .ThenByDescending(p => p.Connects)
                 .ThenByDescending(p => p.Last)
                 .Take(topN)
-                .Select(p => new Cs2PlayerSummary(p.Name, p.Days.Count, p.Connects, p.First, p.Last, p.Servers))
+                .Select(p => new Cs2PlayerSummary(p.Key, p.Name, p.Days.Count, p.Connects, p.First, p.Last, p.Servers))
                 .ToList(),
             PerServer:     perServer,
             SharedAcrossServers: players.Count(p => p.Servers.Count > 1),
