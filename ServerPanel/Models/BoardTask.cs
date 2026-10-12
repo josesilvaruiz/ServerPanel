@@ -29,3 +29,13 @@ public class BoardTask
 
     public DateTime UpdatedAtUtc { get; set; }
 }
+
+/// <summary>A person of the task board team: tasks are assigned to one of them by name.</summary>
+public class BoardMember
+{
+    public long Id { get; set; }
+
+    public string Name { get; set; } = "";
+
+    public DateTime CreatedAtUtc { get; set; }
+}

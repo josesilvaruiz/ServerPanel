@@ -173,3 +173,37 @@
     .card-move { opacity: 1; }
     .modal-row { flex-direction: column; }
 }
+
+/* ── Team ── */
+.team { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.team-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #94a3b8; margin-right: 4px; }
+
+.chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 32px; padding: 0 6px 0 4px;
+    border-radius: 999px;
+    border: 0.5px solid var(--bd);
+    background: var(--bg-surface);
+    color: #e2e8f0; font-size: 13px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+.chip:hover { border-color: var(--bdh, var(--bd)); }
+.chip-on { border-color: var(--th-accent, #60a5fa); background: var(--th-accent-bg, #1e2a3a); }
+.chip-count { font-size: 11px; color: #94a3b8; background: var(--bg-card, rgba(255,255,255,.05)); border-radius: 999px; padding: 0 7px; }
+.chip-x { border: none; background: transparent; color: #64748b; cursor: pointer; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.chip-x:hover { color: #f87171; background: rgba(248,113,113,.12); }
+
+.team-add { display: inline-flex; gap: 4px; }
+.team-add input {
+    height: 32px; width: 160px; padding: 0 12px;
+    border-radius: 999px; border: 0.5px dashed var(--bd);
+    background: transparent; color: white; font-size: 13px;
+}
+.team-add input:focus { outline: none; border-style: solid; border-color: var(--th-accent, #60a5fa); }
+.team-add button, .team-clear {
+    height: 32px; border-radius: 999px; border: 0.5px solid var(--bd);
+    background: var(--bg-surface); color: #94a3b8; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 13px;
+}
+.team-add button:disabled { opacity: .45; cursor: default; }
+.team-clear { color: var(--th-accent, #60a5fa); }

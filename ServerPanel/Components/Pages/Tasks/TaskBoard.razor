@@ -26,6 +26,26 @@
         </form>
     </div>
 
+    <div class="team">
+        <span class="team-lbl"><i class="ti ti-users"></i>Equipo</span>
+        @foreach (var m in _members)
+        {
+            <span class="chip @(_filter == m.Name ? "chip-on" : "")" title="Ver solo sus tareas" @onclick="() => _filter = _filter == m.Name ? null : m.Name">
+                <span class="card-who">@Initials(m.Name)</span>@m.Name
+                <span class="chip-count">@_tasks.Count(t => t.AssignedTo == m.Name && t.State != BoardTaskState.Done)</span>
+                <button type="button" class="chip-x" title="Quitar del equipo" @onclick="() => RemoveMemberAsync(m)" @onclick:stopPropagation><i class="ti ti-x"></i></button>
+            </span>
+        }
+        <form class="team-add" @onsubmit="AddMemberAsync">
+            <input placeholder="Añadir persona…" @bind="_newMember" maxlength="100" />
+            <button type="submit" disabled="@string.IsNullOrWhiteSpace(_newMember)"><i class="ti ti-user-plus"></i></button>
+        </form>
+        @if (_filter is not null)
+        {
+            <button type="button" class="team-clear" @onclick="() => _filter = null"><i class="ti ti-filter-off"></i>Ver todas</button>
+        }
+    </div>
+
     @if (_error is not null)
     {
         <div class="state-box state-error"><i class="ti ti-alert-circle"></i><p>@_error</p></div>
@@ -34,7 +54,7 @@
     <div class="board">
         @foreach (var col in Columns)
         {
-            var cards = _tasks.Where(t => t.State == col.State).OrderBy(t => t.Order).ThenBy(t => t.Id).ToList();
+            var cards = _tasks.Where(t => t.State == col.State && (_filter is null || t.AssignedTo == _filter)).OrderBy(t => t.Order).ThenBy(t => t.Id).ToList();
             <section class="col col-@col.State.ToString().ToLowerInvariant() @(_dragOver == col.State ? "col-over" : "")"
                      ondragover="event.preventDefault()"
                      @ondragenter="() => _dragOver = col.State"
@@ -98,7 +118,19 @@
             <label>Título<input @bind="_editTitle" maxlength="200" /></label>
             <label>Descripción<textarea rows="5" @bind="_editDesc"></textarea></label>
             <div class="modal-row">
-                <label>Asignada a<input @bind="_editWho" maxlength="100" placeholder="Nadie" /></label>
+                <label>Asignada a
+                    <select @bind="_editWho">
+                        <option value="">Nadie</option>
+                        @foreach (var m in _members)
+                        {
+                            <option value="@m.Name">@m.Name</option>
+                        }
+                        @if (!string.IsNullOrEmpty(_editWho) && _members.All(m => m.Name != _editWho))
+                        {
+                            <option value="@_editWho">@_editWho</option>
+                        }
+                    </select>
+                </label>
                 <label>Estado
                     <select @bind="_editState">
                         @foreach (var col in Columns)
@@ -128,6 +160,9 @@
     ];
 
     List<BoardTask> _tasks = new();
+    List<BoardMember> _members = new();
+    string? _newMember;
+    string? _filter;
     string? _error;
     string? _newTitle;
     string? _user;
@@ -150,6 +185,7 @@
         {
             await using var db = await DbFactory.CreateDbContextAsync();
             _tasks = await db.BoardTasks.AsNoTracking().ToListAsync();
+            _members = await db.BoardMembers.AsNoTracking().OrderBy(m => m.Name).ToListAsync();
             _error = null;
         }
         catch (Exception ex) { _error = ex.Message; }
@@ -231,6 +267,29 @@
         await using var db = await DbFactory.CreateDbContextAsync();
         await db.BoardTasks.Where(t => t.Id == _editing.Id).ExecuteDeleteAsync();
         _editing = null;
+        await LoadAsync();
+    }
+
+    async Task AddMemberAsync()
+    {
+        var name = _newMember?.Trim();
+        if (string.IsNullOrEmpty(name)) return;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        if (!await db.BoardMembers.AnyAsync(m => m.Name.ToLower() == name.ToLower()))
+        {
+            db.BoardMembers.Add(new BoardMember { Name = name, CreatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        _newMember = null;
+        await LoadAsync();
+    }
+
+    /// <summary>Removes the person from the team; their tasks keep the name, so nothing is lost.</summary>
+    async Task RemoveMemberAsync(BoardMember member)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        await db.BoardMembers.Where(m => m.Id == member.Id).ExecuteDeleteAsync();
+        if (_filter == member.Name) _filter = null;
         await LoadAsync();
     }
 
