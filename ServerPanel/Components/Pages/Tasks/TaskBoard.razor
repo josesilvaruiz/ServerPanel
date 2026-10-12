@@ -1,0 +1,239 @@
+@namespace ServerPanel.Components.Pages
+@page "/tareas"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using ServerPanel.Data
+@using ServerPanel.Models
+@attribute [Authorize]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthState
+
+<div class="wrap">
+
+    <div class="top">
+        <div class="top-icon"><i class="ti ti-layout-kanban"></i></div>
+        <div>
+            <p class="top-title">Tareas</p>
+            <p class="top-sub">Tablero del sprint: arrastra las tarjetas entre columnas</p>
+        </div>
+        <form class="new" @onsubmit="AddAsync">
+            <input class="new-input" placeholder="Nueva tarea…" @bind="_newTitle" maxlength="200" />
+            <button type="submit" class="btn-add" disabled="@string.IsNullOrWhiteSpace(_newTitle)">
+                <i class="ti ti-plus"></i><span>Añadir</span>
+            </button>
+        </form>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="state-box state-error"><i class="ti ti-alert-circle"></i><p>@_error</p></div>
+    }
+
+    <div class="board">
+        @foreach (var col in Columns)
+        {
+            var cards = _tasks.Where(t => t.State == col.State).OrderBy(t => t.Order).ThenBy(t => t.Id).ToList();
+            <section class="col col-@col.State.ToString().ToLowerInvariant() @(_dragOver == col.State ? "col-over" : "")"
+                     ondragover="event.preventDefault()"
+                     @ondragenter="() => _dragOver = col.State"
+                     @ondrop="() => DropAsync(col.State, null)">
+                <header class="col-head">
+                    <span class="col-dot"></span>
+                    <span class="col-title">@col.Title</span>
+                    <span class="col-count">@cards.Count</span>
+                </header>
+
+                <div class="col-body">
+                    @foreach (var t in cards)
+                    {
+                        <article class="card @(_dragging?.Id == t.Id ? "card-dragging" : "")" draggable="true"
+                                 @ondragstart="() => _dragging = t"
+                                 @ondragend="() => { _dragging = null; _dragOver = null; }"
+                                 @ondrop="() => DropAsync(col.State, t)" @ondrop:stopPropagation
+                                 @onclick="() => Edit(t)">
+                            <p class="card-title">@t.Title</p>
+                            @if (!string.IsNullOrWhiteSpace(t.Description))
+                            {
+                                <p class="card-desc">@t.Description</p>
+                            }
+                            <footer class="card-foot">
+                                <span class="card-id">#@t.Id</span>
+                                @if (!string.IsNullOrWhiteSpace(t.AssignedTo))
+                                {
+                                    <span class="card-who" title="@t.AssignedTo">@Initials(t.AssignedTo)</span>
+                                }
+                                <span class="card-move">
+                                    @if (t.State != BoardTaskState.ToDo)
+                                    {
+                                        <button type="button" title="Mover a la izquierda" @onclick="() => MoveAsync(t, t.State - 1)" @onclick:stopPropagation><i class="ti ti-chevron-left"></i></button>
+                                    }
+                                    @if (t.State != BoardTaskState.Done)
+                                    {
+                                        <button type="button" title="Mover a la derecha" @onclick="() => MoveAsync(t, t.State + 1)" @onclick:stopPropagation><i class="ti ti-chevron-right"></i></button>
+                                    }
+                                </span>
+                            </footer>
+                        </article>
+                    }
+                    @if (cards.Count == 0)
+                    {
+                        <p class="col-empty">Sin tareas</p>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@if (_editing is not null)
+{
+    <div class="modal-bg" @onclick="CancelEdit">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-head">
+                <span class="card-id">#@_editing.Id</span>
+                <button type="button" class="modal-x" @onclick="CancelEdit"><i class="ti ti-x"></i></button>
+            </div>
+            <label>Título<input @bind="_editTitle" maxlength="200" /></label>
+            <label>Descripción<textarea rows="5" @bind="_editDesc"></textarea></label>
+            <div class="modal-row">
+                <label>Asignada a<input @bind="_editWho" maxlength="100" placeholder="Nadie" /></label>
+                <label>Estado
+                    <select @bind="_editState">
+                        @foreach (var col in Columns)
+                        {
+                            <option value="@col.State">@col.Title</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <p class="modal-meta">Creada por @(_editing.CreatedBy ?? "—") el @_editing.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-del" @onclick="DeleteAsync"><i class="ti ti-trash"></i>Borrar</button>
+                <button type="button" class="btn-save" @onclick="SaveAsync" disabled="@string.IsNullOrWhiteSpace(_editTitle)"><i class="ti ti-check"></i>Guardar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    record Column(BoardTaskState State, string Title);
+
+    static readonly Column[] Columns =
+    [
+        new(BoardTaskState.ToDo, "Por hacer"),
+        new(BoardTaskState.Doing, "En curso"),
+        new(BoardTaskState.Done, "Hecho"),
+    ];
+
+    List<BoardTask> _tasks = new();
+    string? _error;
+    string? _newTitle;
+    string? _user;
+    BoardTask? _dragging;
+    BoardTaskState? _dragOver;
+
+    BoardTask? _editing;
+    string? _editTitle, _editDesc, _editWho;
+    BoardTaskState _editState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = (await AuthState.GetAuthenticationStateAsync()).User.Identity?.Name;
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _tasks = await db.BoardTasks.AsNoTracking().ToListAsync();
+            _error = null;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    async Task AddAsync()
+    {
+        var title = _newTitle?.Trim();
+        if (string.IsNullOrEmpty(title)) return;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var last = await db.BoardTasks.Where(t => t.State == BoardTaskState.ToDo).MaxAsync(t => (int?)t.Order) ?? 0;
+        var now = DateTime.UtcNow;
+        db.BoardTasks.Add(new BoardTask { Title = title, State = BoardTaskState.ToDo, Order = last + 1, CreatedBy = _user, CreatedAtUtc = now, UpdatedAtUtc = now });
+        await db.SaveChangesAsync();
+        _newTitle = null;
+        await LoadAsync();
+    }
+
+    Task MoveAsync(BoardTask task, BoardTaskState to) => PlaceAsync(task.Id, to, null);
+
+    async Task DropAsync(BoardTaskState to, BoardTask? before)
+    {
+        var dragged = _dragging;
+        _dragging = null;
+        _dragOver = null;
+        if (dragged is null || dragged.Id == before?.Id) return;
+        await PlaceAsync(dragged.Id, to, before?.Id);
+    }
+
+    /// <summary>Puts the task in column <paramref name="to"/>, before <paramref name="beforeId"/> or at the end, and renumbers that column.</summary>
+    async Task PlaceAsync(long id, BoardTaskState to, long? beforeId)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var task = await db.BoardTasks.FindAsync(id);
+        if (task is null) { await LoadAsync(); return; }
+        var column = await db.BoardTasks.Where(t => t.State == to && t.Id != id).OrderBy(t => t.Order).ThenBy(t => t.Id).ToListAsync();
+        var at = beforeId is null ? column.Count : Math.Max(0, column.FindIndex(t => t.Id == beforeId));
+        column.Insert(at, task);
+        task.State = to;
+        task.UpdatedAtUtc = DateTime.UtcNow;
+        for (var i = 0; i < column.Count; i++) column[i].Order = i + 1;
+        await db.SaveChangesAsync();
+        await LoadAsync();
+    }
+
+    void Edit(BoardTask t)
+    {
+        _editing = t;
+        (_editTitle, _editDesc, _editWho, _editState) = (t.Title, t.Description, t.AssignedTo, t.State);
+    }
+
+    void CancelEdit() => _editing = null;
+
+    async Task SaveAsync()
+    {
+        if (_editing is null || string.IsNullOrWhiteSpace(_editTitle)) return;
+        var id = _editing.Id;
+        var moved = _editState != _editing.State;
+        await using (var db = await DbFactory.CreateDbContextAsync())
+        {
+            var task = await db.BoardTasks.FindAsync(id);
+            if (task is not null)
+            {
+                task.Title = _editTitle.Trim();
+                task.Description = string.IsNullOrWhiteSpace(_editDesc) ? null : _editDesc.Trim();
+                task.AssignedTo = string.IsNullOrWhiteSpace(_editWho) ? null : _editWho.Trim();
+                task.UpdatedAtUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+            }
+        }
+        _editing = null;
+        if (moved) await PlaceAsync(id, _editState, null);
+        else await LoadAsync();
+    }
+
+    async Task DeleteAsync()
+    {
+        if (_editing is null) return;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        await db.BoardTasks.Where(t => t.Id == _editing.Id).ExecuteDeleteAsync();
+        _editing = null;
+        await LoadAsync();
+    }
+
+    static string Initials(string name) =>
+        string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
+}

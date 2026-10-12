@@ -22,4 +22,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<SavedCmd> SavedCmds => Set<SavedCmd>();
     public DbSet<CrashedMapRecord> CrashedMapRecords => Set<CrashedMapRecord>();
     public DbSet<Cs2PlayerConnectionEvent> Cs2PlayerConnectionEvents => Set<Cs2PlayerConnectionEvent>();
+    public DbSet<BoardTask> BoardTasks => Set<BoardTask>();
 }
