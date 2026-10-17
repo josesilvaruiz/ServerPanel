@@ -201,8 +201,10 @@ public partial class Admin : IDisposable
             // Si falla (RCON caído, plugin con otro nombre) los ficheros ya están escritos y se aplican al reiniciar.
             try
             {
-                await Cs2ServerService.ExecuteConsoleCommandAsync("css_plugins reload \"CS2-SimpleAdmin (RELEASE)\"");
-                await Cs2ServerService.ExecuteConsoleCommandAsync("css_plugins reload \"SimpleRTV\"");
+                var r1 = await Cs2ServerService.ExecuteConsoleCommandAsync("css_plugins reload \"CS2-SimpleAdmin (RELEASE)\"");
+                var r2 = await Cs2ServerService.ExecuteConsoleCommandAsync("css_plugins reload \"SimpleRTV\"");
+                if (r1.StartsWith("[RCON") || r2.StartsWith("[RCON"))
+                    throw new InvalidOperationException(r1.StartsWith("[RCON") ? r1 : r2);
                 ShowToast(true, "Mapas sincronizados y plugins recargados: !map de admin y RTV/nominate ya actualizados");
             }
             catch
@@ -383,7 +385,13 @@ public partial class Admin : IDisposable
         DraggedMap = null;
         try
         {
-            await Cs2ServerService.ExecuteConsoleCommandAsync($"host_workshop_map {map.Id}");
+            // RconService no lanza: devuelve "[RCON ...]" si no está configurado o falla la conexión.
+            var output = await Cs2ServerService.ExecuteConsoleCommandAsync($"host_workshop_map {map.Id}");
+            if (output.StartsWith("[RCON"))
+            {
+                ShowToast(false, $"No se pudo cambiar a {map.Name}: {output}");
+                return;
+            }
             CurrentMap = map.Name;
             ShowToast(true, $"Cargando: {map.Name}");
         }
